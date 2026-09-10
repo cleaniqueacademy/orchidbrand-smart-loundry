@@ -1,0 +1,20 @@
+{
+  "name": "orchidbrand-smart-loundry",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "bun --filter '*' dev",
+    "dev:backend": "bun --filter orchidbrand-backend dev",
+    "dev:frontend": "bun --filter orchidbrand-frontend dev",
+    "build": "bun --filter '*' build",
+    "db:push": "bun --filter orchidbrand-backend db:push",
+    "docker:db": "docker compose up -d postgres",
+    "docker:db:down": "docker compose stop postgres",
+    "docker:up": "docker compose --profile full-stack up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  }
+}

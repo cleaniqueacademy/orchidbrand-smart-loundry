@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orchid_laundry_postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: orchid_laundry
+    volumes:
+      - orchid_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orchid_laundry"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orchid-network
+
+  # (Opsional jika ingin full-docker di masa depan)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: orchid_laundry_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/orchid_laundry
+      - JWT_SECRET=orchid_brand_super_secret_jwt_key_2026
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orchid-network
+    profiles:
+      - full-stack
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: orchid_laundry_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - PORT=5173
+      - VITE_PROXY_TARGET=http://backend:5000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    depends_on:
+      - backend
+    networks:
+      - orchid-network
+    profiles:
+      - full-stack
+
+volumes:
+  orchid_postgres_data:
+    driver: local
+
+networks:
+  orchid-network:
+    driver: bridge

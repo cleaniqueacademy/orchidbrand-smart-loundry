@@ -1,8 +1,8 @@
 # Orchid Brand - Smart Laundry 🧺
 
-Sistem manajemen operasional dan keuangan bisnis laundry modern berbasis **Bun**, dibangun dengan arsitektur terpisah yang bersih: **Frontend (Vite + React)** dan **Backend API (Bun + Hono + Drizzle ORM SQLite)**.
+Platform Multi-Tenant SaaS manajemen operasional dan keuangan bisnis laundry modern berbasis **Bun**, dibangun dengan arsitektur terpisah yang bersih: **Frontend (Vite + React)** dan **Backend API (Bun + Hono + Drizzle ORM PostgreSQL)**.
 
-Dirancang untuk skala multi-tenant sederhana (1 User = 1 Outlet Laundry), pencatatan arus kas lengkap (uang masuk dari order & uang keluar operasional), database pelanggan, serta notifikasi WhatsApp otomatis saat cucian siap diambil.
+Dirancang untuk skala cloud multi-tenant (1 User = 1 Outlet Laundry), pencatatan arus kas lengkap (uang masuk dari order & uang keluar operasional), database pelanggan, serta notifikasi WhatsApp otomatis saat cucian siap diambil.
 
 ---
 
@@ -12,9 +12,9 @@ Dirancang untuk skala multi-tenant sederhana (1 User = 1 Outlet Laundry), pencat
 | :--- | :--- | :--- |
 | **Runtime & Toolchain** | **[Bun](https://bun.sh/)** | Package manager, bundler, dan runtime backend berkinerja tinggi. |
 | **Backend API** | **[Hono](https://hono.dev/)** on Bun | Framework REST API ultra cepat, ringan, type-safe, dan modular. |
-| **Database & ORM** | **SQLite (`bun:sqlite`) + [Drizzle ORM](https://orm.drizzle.team/)** | Database file lokal zero-config, performa tinggi, dan schema type-safe. |
+| **Database & ORM** | **PostgreSQL + [Drizzle ORM](https://orm.drizzle.team/)** | Database relational production-grade, handal untuk multi-tenant SaaS cloud, type-safe. |
 | **Frontend Web** | **Vite + React (TypeScript)** | Single Page Application (SPA) responsif dan interaktif. |
-| **Styling & UI** | **Tailwind CSS + Lucide Icons** | Desain antarmuka modern, bersih, dan nyaman digunakan di mobile/desktop. |
+| **Styling & UI** | **Tailwind CSS + Lucide Icons** | Desain antarmuka modern (Biru Tua, Biru Muda, Hitam, Putih). |
 | **Customer Notification** | **WhatsApp Direct Link & API Gateway** | Kirim nota & pemberitahuan cucian selesai langsung ke nomor WhatsApp customer. |
 
 ---
@@ -93,44 +93,63 @@ orchidbrand-smart-loundry/
 
 ---
 
-## 📦 Memulai Aplikasi (Getting Started)
+## 🐳 Menjalankan dengan Docker (Paling Mudah)
 
-### Prasyarat
-- **Bun** (v1.1+ telah terpasang di sistem).
-
-### 1. Instalasi Dependensi
-Jalankan instalasi untuk seluruh workspace:
+### 1. Jalankan Seluruh Aplikasi (Backend + Frontend + Database)
+Cukup jalankan satu perintah dari root direktori:
 ```bash
+docker compose up --build -d
+```
+
+### 2. Akses Aplikasi
+- **Frontend Web App**: [http://localhost:5173](http://localhost:5173)
+- **Backend Hono API**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+
+### 3. Perintah Docker Lainnya
+```bash
+# Melihat log container secara realtime
+docker compose logs -f
+
+# Menghentikan container
+docker compose down
+```
+
+> **Catatan Persistensi Data**: Data PostgreSQL disimpan secara persisten di Docker volume `postgres_data`, sehingga data transaksi, order, dan customer tetap aman meskipun container dimatikan.
+---
+
+## 💻 Menjalankan Secara Lokal (Development)
+
+Dengan konfigurasi Bun Monorepo Workspaces, Anda **cukup menjalankan 1 perintah dari root direktori** untuk menjalankan Backend API (port 5000) dan Frontend Web (port 5173) secara bersamaan:
+
+```bash
+# 1. Pastikan dependencies terpasang
 bun install
+
+# 2. Cukup 1 perintah untuk menjalankan backend + frontend sekaligus:
+bun dev
 ```
 
-### 2. Konfigurasi Lingkungan (`.env`)
+Akses aplikasi di:
+- **Frontend Dashboard:** [http://localhost:5173](http://localhost:5173)
+- **Backend Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
-Di folder `backend/.env`:
-```env
-PORT=5000
-JWT_SECRET=orchid_brand_secret_jwt_key_2026
-DATABASE_URL=file:./data/laundry.db
-```
-
-Di folder `frontend/.env`:
-```env
-VITE_API_URL=http://localhost:5000/api
-```
-
-### 3. Migrasi / Inisiasi Database
+### Perintah Khusus Lainnya (Opsional)
 ```bash
-cd backend
+# Menjalankan backend saja
+bun run dev:backend
+
+# Menjalankan frontend saja
+bun run dev:frontend
+
+# Push perubahan skema database Drizzle
 bun run db:push
 ```
 
-### 4. Menjalankan Server & Client Bersamaan
-Dari root folder:
-```bash
-bun run dev
-```
-- **Backend API**: `http://localhost:5000`
-- **Frontend App**: `http://localhost:5173`
+---
+
+## 📑 Dokumentasi & Roadmap
+- 📘 **[Product Requirements Document (PRD)](file:///c:/KAIRAV/project/orchidbrand-loundy/PRD.md)**: Arsitektur sistem, spesifikasi fitur lengkap, skema relasional, dan daftar endpoint API.
+- 📋 **[TODO List & Roadmap](file:///c:/KAIRAV/project/orchidbrand-loundy/TODO.md)**: Status fitur yang sudah selesai dan daftar backlog yang belum dikerjakan berdasarkan prioritas (P0, P1, P2).
 
 ---
 
