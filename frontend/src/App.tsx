@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { CashflowStats, Order, Customer, Expense, Tenant, TabType } from "./types";
+import {
+  CashflowStats,
+  Order,
+  Customer,
+  Expense,
+  Tenant,
+  TabType,
+  User,
+  Role,
+} from "./types";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Header } from "./components/layout/Header";
 import { OverviewTab } from "./components/tabs/OverviewTab";
@@ -7,17 +16,67 @@ import { OrdersTab } from "./components/tabs/OrdersTab";
 import { CashflowTab } from "./components/tabs/CashflowTab";
 import { CustomersTab } from "./components/tabs/CustomersTab";
 import { TenantsTab } from "./components/tabs/TenantsTab";
+import { UsersTab } from "./components/tabs/UsersTab";
+import { ReportsTab } from "./components/tabs/ReportsTab";
 import { CreateOrderModal } from "./components/modals/CreateOrderModal";
 import { CreateExpenseModal } from "./components/modals/CreateExpenseModal";
 import { CreateCustomerModal } from "./components/modals/CreateCustomerModal";
 import { CreateTenantModal } from "./components/modals/CreateTenantModal";
+import { CreateUserModal } from "./components/modals/CreateUserModal";
+import { EditCustomerModal } from "./components/modals/EditCustomerModal";
+import { LoginPage } from "./components/auth/LoginPage";
 
+const AUTH_KEY = "orchid_auth_user";
 const API_BASE = "/api";
+
+function readSavedUser(): User | null {
+  try {
+    const saved = localStorage.getItem(AUTH_KEY);
+    if (!saved) return null;
+    const u = JSON.parse(saved);
+    // Validasi wajib ada id dan role yang benar
+    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff"].includes(u.role)) {
+      localStorage.removeItem(AUTH_KEY);
+      return null;
+    }
+    return u as User;
+  } catch {
+    localStorage.removeItem(AUTH_KEY);
+    return null;
+  }
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [tenantId] = useState("tenant-01");
-  const [apiConnected, setApiConnected] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => readSavedUser());
+
+  const [currentUserRole, setCurrentUserRole] = useState<Role>(() => {
+    try {
+      const saved = localStorage.getItem("orchid_auth_user");
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role) return u.role;
+      }
+    } catch {}
+    return "tenant_owner";
+  });
+
+  const [tenantId, setTenantId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("orchid_auth_user");
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role === "tenant_owner" && u.tenantId) {
+          return u.tenantId;
+        }
+        if (u && u.role === "superadmin") {
+          return "all";
+        }
+      }
+    } catch {}
+    return "tenant-01";
+  });
+
   const [loading, setLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -37,12 +96,16 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   // Modal states
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
   const [showTenantModal, setShowTenantModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [preselectedCustomerId, setPreselectedCustomerId] = useState<string>("");
 
   // Fetch all initial data
@@ -50,55 +113,91 @@ export default function App() {
     try {
       setLoading(true);
 
-      // 1. Health check
-      const healthRes = await fetch(`${API_BASE}/health`).catch(() => null);
-      setApiConnected(healthRes ? healthRes.ok : false);
-
-      // 2. Stats
+      // 1. Stats
       const statsRes = await fetch(`${API_BASE}/stats/cashflow?tenantId=${tenantId}`);
       if (statsRes.ok) {
         const json = await statsRes.json();
         if (json.success) setStats(json.data);
       }
 
-      // 3. Orders
+      // 2. Orders
       const ordersRes = await fetch(`${API_BASE}/orders?tenantId=${tenantId}`);
       if (ordersRes.ok) {
         const json = await ordersRes.json();
         if (json.success) setOrders(json.data);
       }
 
-      // 4. Customers
+      // 3. Customers
       const custRes = await fetch(`${API_BASE}/customers?tenantId=${tenantId}`);
       if (custRes.ok) {
         const json = await custRes.json();
         if (json.success) setCustomers(json.data);
       }
 
-      // 5. Expenses
+      // 4. Expenses
       const expRes = await fetch(`${API_BASE}/expenses?tenantId=${tenantId}`);
       if (expRes.ok) {
         const json = await expRes.json();
         if (json.success) setExpenses(json.data);
       }
 
-      // 6. Tenants (Superadmin view)
+      // 5. Tenants
       const tenantsRes = await fetch(`${API_BASE}/tenants`);
       if (tenantsRes.ok) {
         const json = await tenantsRes.json();
         if (json.success) setTenants(json.data);
       }
+
+      // 6. Users (Super Admin data)
+      const usersRes = await fetch(`${API_BASE}/users`);
+      if (usersRes.ok) {
+        const json = await usersRes.json();
+        if (json.success) setUsers(json.data);
+      }
     } catch (err) {
       console.error("Fetch error:", err);
-      setApiConnected(false);
     } finally {
       setLoading(false);
     }
   }, [tenantId]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [fetchData, currentUser]);
+
+  const handleLoginSuccess = (user: User) => {
+    try {
+      localStorage.setItem("orchid_auth_user", JSON.stringify(user));
+    } catch (e) {
+      console.error(e);
+    }
+    setCurrentUser(user);
+    setCurrentUserRole(user.role);
+    if (user.role === "tenant_owner" && user.tenantId) {
+      setTenantId(user.tenantId);
+    } else if (user.role === "superadmin") {
+      setTenantId("all");
+    }
+    setActiveTab("overview");
+  };
+
+  const handleLogout = () => {
+    // Clear localStorage
+    try {
+      localStorage.removeItem("orchid_auth_user");
+      localStorage.removeItem("orchid_auth_tenant");
+      // Tambahan: clear semua key orchid
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("orchid_")) localStorage.removeItem(key);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    // Hard reload agar semua state React bersih total
+    window.location.replace("/");
+  };
 
   // Order status update
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -222,6 +321,72 @@ export default function App() {
     }
   };
 
+  // Edit Customer
+  const handleEditCustomer = (cust: Customer) => {
+    setCustomerToEdit(cust);
+    setShowEditCustomerModal(true);
+  };
+
+  const handleUpdateCustomer = async (
+    id: string,
+    updatedData: { name: string; phone: string; address?: string; notes?: string }
+  ) => {
+    const res = await fetch(`${API_BASE}/customers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchData();
+    } else {
+      alert("Gagal memperbarui pelanggan: " + (data.message || "Terjadi kesalahan"));
+    }
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/customers/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+      } else {
+        alert("Gagal menghapus pelanggan: " + (data.message || "Terjadi kesalahan"));
+      }
+    } catch (err: any) {
+      console.error("Delete customer error:", err);
+    }
+  };
+
+  // Toggle User Status (Aktif / Nonaktif)
+  const handleToggleUserStatus = async (userId: string, currentStatus: "active" | "inactive") => {
+    const nextStatus = currentStatus === "active" ? "inactive" : "active";
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error("Toggle status error:", err);
+    }
+  };
+
+  // Update User Subscription Date (Offline Model)
+  const handleUpdateUserSubscription = async (userId: string, subscriptionUntil: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionUntil }),
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error("Update subscription error:", err);
+    }
+  };
+
   // Create Tenant
   const handleCreateTenant = async (tenantData: {
     outletName: string;
@@ -244,6 +409,39 @@ export default function App() {
     }
   };
 
+  // Create User (Super Admin)
+  const handleCreateUser = async (userData: {
+    name: string;
+    email: string;
+    password?: string;
+    role: Role;
+    tenantId?: string;
+    status: "active" | "inactive";
+    subscriptionUntil?: string;
+  }) => {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchData();
+    } else {
+      alert("Gagal menambah pengguna: " + (data.message || "Unknown error"));
+    }
+  };
+
+  // Delete User (Super Admin)
+  const handleDeleteUser = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error("Delete user error:", err);
+    }
+  };
+
   // WhatsApp Link Helper
   const getWaLink = (order: Order) => {
     if (!order.customer?.phone) return "#";
@@ -256,36 +454,51 @@ export default function App() {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
 
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Clean Modern Sidebar */}
+    <div className="min-h-screen bg-zinc-50/50 flex text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
+      {/* Shadcn Sidebar */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         activeOrdersCount={stats.activeOrdersCount}
         readyOrdersCount={stats.readyOrdersCount}
         tenantId={tenantId}
-        apiConnected={apiConnected}
+        onSelectTenant={(id) => setTenantId(id)}
+        tenants={tenants}
+        currentUserRole={currentUserRole}
+        currentUser={currentUser}
+        onToggleRole={(role) => {
+          setCurrentUserRole(role);
+          if (role === "superadmin") {
+            setTenantId("all");
+          } else {
+            setTenantId(tenants[0]?.id || "tenant-01");
+          }
+        }}
+        onOpenTenantModal={() => setShowTenantModal(true)}
+        onLogout={handleLogout}
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}
       />
 
-      {/* Main Content Area with Header */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
         <Header
           activeTab={activeTab}
+          currentUserRole={currentUserRole}
+          currentUser={currentUser}
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
           onRefresh={fetchData}
+          onLogout={handleLogout}
           loading={loading}
-          onOpenOrderModal={() => {
-            setPreselectedCustomerId("");
-            setShowOrderModal(true);
-          }}
-          onOpenExpenseModal={() => setShowExpenseModal(true)}
         />
 
         {/* Dynamic Tab Body */}
-        <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {activeTab === "overview" && (
             <OverviewTab
               stats={stats}
@@ -332,6 +545,8 @@ export default function App() {
                 setPreselectedCustomerId(customerId);
                 setShowOrderModal(true);
               }}
+              onEditCustomer={handleEditCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
             />
           )}
 
@@ -339,6 +554,29 @@ export default function App() {
             <TenantsTab
               tenants={tenants}
               onOpenTenantModal={() => setShowTenantModal(true)}
+              onSelectTenant={(id) => setTenantId(id)}
+              currentTenantId={tenantId}
+            />
+          )}
+
+          {activeTab === "users" && (
+            <UsersTab
+              users={users}
+              tenants={tenants}
+              onOpenUserModal={() => setShowUserModal(true)}
+              onDeleteUser={handleDeleteUser}
+              onToggleStatus={handleToggleUserStatus}
+              onUpdateSubscription={handleUpdateUserSubscription}
+            />
+          )}
+
+          {activeTab === "reports" && (
+            <ReportsTab
+              orders={orders}
+              expenses={expenses}
+              tenants={tenants}
+              currentTenantId={tenantId}
+              customers={customers}
             />
           )}
         </main>
@@ -365,10 +603,27 @@ export default function App() {
         onSubmit={handleCreateCustomer}
       />
 
+      <EditCustomerModal
+        isOpen={showEditCustomerModal}
+        onClose={() => {
+          setShowEditCustomerModal(false);
+          setCustomerToEdit(null);
+        }}
+        customer={customerToEdit}
+        onSubmit={handleUpdateCustomer}
+      />
+
       <CreateTenantModal
         isOpen={showTenantModal}
         onClose={() => setShowTenantModal(false)}
         onSubmit={handleCreateTenant}
+      />
+
+      <CreateUserModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        tenants={tenants}
+        onSubmit={handleCreateUser}
       />
     </div>
   );

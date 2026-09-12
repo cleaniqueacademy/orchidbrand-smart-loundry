@@ -4,11 +4,11 @@ import {
   TrendingDown,
   DollarSign,
   Waves,
-  MessageCircle,
   CheckCircle2,
   ArrowRight,
-  Plus
+  Plus,
 } from "lucide-react";
+import WhatsAppIcon from "../common/WhatsAppIcon";
 import { CashflowStats, Order, TabType } from "../../types";
 
 interface OverviewTabProps {
@@ -33,151 +33,158 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const readyOrders = orders.filter((o) => o.status === "ready");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-950 via-blue-950 to-blue-900 rounded-2xl p-6 sm:p-8 text-white border border-blue-900/40">
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 bg-sky-400/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Orchid Smart Laundry
-            </h2>
-            <p className="text-sky-300/70 text-xs mt-1.5">Kasir & Arus Kas Realtime</p>
-          </div>
+      {/* Welcome Banner — blue gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 rounded-xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {/* Decorative blobs */}
+        <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-24 h-24 bg-sky-400/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={onOpenOrderModal}
-              className="bg-sky-400 hover:bg-sky-300 text-blue-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition"
-            >
-              <Plus className="w-4 h-4" /> Order Baru
-            </button>
-            <button
-              onClick={onOpenExpenseModal}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition border border-white/15"
-            >
-              <DollarSign className="w-4 h-4 text-sky-300" /> Catat Biaya
-            </button>
-          </div>
+        <div className="relative z-10">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            Orchid Smart Laundry
+          </h2>
+          <p className="text-blue-200 text-xs mt-1">
+            Dashboard kasir, pemantauan cucian, dan pembukuan arus kas
+          </p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2">
+          <button
+            onClick={onOpenOrderModal}
+            className="bg-white hover:bg-blue-50 text-blue-900 font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" /> Order Baru
+          </button>
+          <button
+            onClick={onOpenExpenseModal}
+            className="bg-white/15 hover:bg-white/25 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition border border-white/20 backdrop-blur-sm"
+          >
+            <DollarSign className="w-3.5 h-3.5" /> Catat Biaya
+          </button>
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Uang Masuk */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      {/* 4 Metric Cards (Shadcn UI style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Pemasukan */}
+        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Pemasukan
             </span>
-            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center border border-sky-100">
-              <TrendingUp className="w-4 h-4 text-sky-600" />
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+              <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-950 tracking-tight">
+          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
             Rp {stats.totalIncome.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Belum lunas:{" "}
-            <span className="text-sky-700 font-semibold">
+          <p className="text-[11px] text-zinc-400 mt-1">
+            Belum tertagih:{" "}
+            <span className="text-amber-700 font-medium">
               Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
             </span>
           </p>
         </div>
 
-        {/* Uang Keluar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        {/* Pengeluaran */}
+        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Pengeluaran
             </span>
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
-              <TrendingDown className="w-4 h-4 text-slate-500" />
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
+              <TrendingDown className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-900 tracking-tight">
+          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
             Rp {stats.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Total operasional</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Operasional outlet</p>
         </div>
 
         {/* Laba Bersih */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Laba Bersih
             </span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center border border-blue-100">
-              <DollarSign className="w-4 h-4 text-blue-700" />
+            <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center border border-zinc-200">
+              <DollarSign className="w-3.5 h-3.5" />
             </div>
           </div>
           <div
-            className={`mt-3 text-2xl font-black tracking-tight ${
-              stats.netProfit >= 0 ? "text-blue-950" : "text-rose-600"
+            className={`mt-2 text-xl sm:text-2xl font-bold tracking-tight ${
+              stats.netProfit >= 0 ? "text-emerald-700" : "text-rose-700"
             }`}
           >
             Rp {stats.netProfit.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Masuk − Keluar</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Pemasukan − Biaya</p>
         </div>
 
         {/* Cucian Aktif */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Dalam Proses
             </span>
-            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center border border-sky-100">
-              <Waves className="w-4 h-4 text-sky-600" />
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
+              <Waves className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-950 tracking-tight">
-            {stats.activeOrdersCount}
+          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+            {stats.activeOrdersCount} Order
           </div>
-          <p className="text-[11px] text-sky-700 font-semibold mt-1">
-            {stats.readyOrdersCount} siap diambil
+          <p className="text-[11px] text-emerald-700 font-medium mt-1">
+            {stats.readyOrdersCount} pesanan siap diambil
           </p>
         </div>
       </div>
 
-      {/* 2-Column Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* 2-Column Section: Ready for Pickup & Financial Snapshot */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Siap Diambil */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-950 text-sm">Siap Diambil</h3>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-3.5">
+            <div>
+              <h3 className="font-bold text-zinc-900 text-sm">Cucian Siap Diambil</h3>
+              <p className="text-xs text-zinc-400">Hubungi pelanggan melalui WhatsApp</p>
+            </div>
             <button
               onClick={() => setActiveTab("orders")}
-              className="text-xs text-blue-900 hover:text-sky-600 font-semibold flex items-center gap-1 transition"
+              className="text-xs text-zinc-700 hover:text-zinc-900 font-medium flex items-center gap-1 transition"
             >
               Lihat Semua <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {readyOrders.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
-              Tidak ada cucian menunggu pengambilan
+            <div className="text-center py-10 border border-dashed border-zinc-200 rounded-lg text-zinc-400 text-xs">
+              Tidak ada cucian yang sedang menunggu pengambilan saat ini
             </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {readyOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 gap-3 hover:border-sky-200 transition"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-zinc-50 border border-zinc-200/80 gap-3 hover:border-zinc-300 transition"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                      <span className="font-bold text-slate-950 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="font-semibold text-zinc-900 text-xs">
                         {order.customer?.name || "Pelanggan"}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 ml-3.5">
-                      <span className="font-mono font-semibold text-slate-700">{order.invoiceNo}</span>
+                    <p className="text-[11px] text-zinc-500 mt-1 ml-3.5">
+                      <span className="font-mono font-semibold text-zinc-700">{order.invoiceNo}</span>
                       {" · "}
-                      {order.serviceType} {order.weightOrQty} {order.unit}
+                      {order.serviceType} ({order.weightOrQty} {order.unit})
                       {" · "}
-                      <span className="font-semibold text-blue-950">
+                      <span className="font-bold text-zinc-900">
                         Rp {order.totalAmount.toLocaleString("id-ID")}
                       </span>
                     </p>
@@ -188,13 +195,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       href={getWaLink(order)}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-black text-sky-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition"
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center gap-1.5 transition shadow-xs"
                     >
-                      <MessageCircle className="w-3.5 h-3.5" /> WA
+                      <WhatsAppIcon className="w-3.5 h-3.5" /> WA
                     </a>
                     <button
                       onClick={() => onUpdateStatus(order.id, "completed")}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition"
+                      className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 font-medium text-xs flex items-center gap-1.5 transition border border-zinc-200"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
                     </button>
@@ -206,32 +213,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Financial Snapshot */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-slate-950 text-sm mb-4">Ringkasan Kas</h3>
+            <h3 className="font-bold text-zinc-900 text-sm mb-3">Ringkasan Kasir</h3>
 
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs py-2.5 border-b border-slate-100">
-                <span className="text-slate-500">Total Order</span>
-                <span className="font-bold text-slate-950">{stats.totalOrdersCount}</span>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between items-center py-2 border-b border-zinc-100">
+                <span className="text-zinc-500">Total Transaksi</span>
+                <span className="font-bold text-zinc-900">{stats.totalOrdersCount} Order</span>
               </div>
-              <div className="flex justify-between items-center text-xs py-2.5 border-b border-slate-100">
-                <span className="text-slate-500">Pemasukan</span>
-                <span className="font-bold text-blue-950">
+              <div className="flex justify-between items-center py-2 border-b border-zinc-100">
+                <span className="text-zinc-500">Pemasukan Lunas</span>
+                <span className="font-bold text-emerald-700">
                   Rp {stats.totalIncome.toLocaleString("id-ID")}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-xs py-2.5 border-b border-slate-100">
-                <span className="text-slate-500">Pengeluaran</span>
-                <span className="font-bold text-slate-700">
+              <div className="flex justify-between items-center py-2 border-b border-zinc-100">
+                <span className="text-zinc-500">Pengeluaran Biaya</span>
+                <span className="font-bold text-rose-700">
                   Rp {stats.totalExpense.toLocaleString("id-ID")}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-xs py-3">
-                <span className="font-semibold text-slate-950">Laba Bersih</span>
+              <div className="flex justify-between items-center py-2.5">
+                <span className="font-semibold text-zinc-900">Laba Bersih</span>
                 <span
-                  className={`font-black text-sm ${
-                    stats.netProfit >= 0 ? "text-blue-950" : "text-rose-600"
+                  className={`font-bold text-sm ${
+                    stats.netProfit >= 0 ? "text-emerald-700" : "text-rose-700"
                   }`}
                 >
                   Rp {stats.netProfit.toLocaleString("id-ID")}
@@ -242,9 +249,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
           <button
             onClick={() => setActiveTab("cashflow")}
-            className="mt-4 w-full py-2.5 rounded-xl bg-slate-50 hover:bg-sky-50 text-blue-950 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-slate-200 hover:border-sky-200"
+            className="mt-4 w-full py-2 rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 font-medium text-xs flex items-center justify-center gap-1.5 transition border border-zinc-200"
           >
-            Buku Kas Lengkap <ArrowRight className="w-3.5 h-3.5" />
+            Lihat Buku Kas Lengkap <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

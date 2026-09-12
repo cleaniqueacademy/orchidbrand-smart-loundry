@@ -99,14 +99,226 @@ app.post("/api/tenants", async (c) => {
   }
 });
 
+app.put("/api/tenants/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { outletName, phone, address, status, subscriptionUntil } = body;
+
+    const updateData: any = {};
+    if (outletName !== undefined) updateData.outletName = outletName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (address !== undefined) updateData.address = address;
+    if (status !== undefined) updateData.status = status;
+    if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
+
+    await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+
+    return c.json({ success: true, message: "Data tenant berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.patch("/api/tenants/:id/status", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { status, subscriptionUntil } = body;
+
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
+
+    await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    return c.json({ success: true, message: "Status cabang / langganan berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.delete("/api/tenants/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(tenants).where(eq(tenants.id, id));
+    return c.json({ success: true, message: "Tenant berhasil dihapus" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Authentication & Login (Validasi Status Aktif & Langganan Offline)
+app.post("/api/auth/login", async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+    const foundUser = (await db.select().from(users).where(eq(users.email, email)))[0];
+    if (!foundUser) {
+      return c.json({ success: false, message: "Email atau kata sandi tidak ditemukan." }, 401);
+    }
+    if (foundUser.passwordHash !== password) {
+      return c.json({ success: false, message: "Kata sandi salah." }, 401);
+    }
+    if (foundUser.status === "inactive") {
+      return c.json({
+        success: false,
+        message: "Akun Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi langganan offline Anda.",
+      }, 403);
+    }
+    if (foundUser.subscriptionUntil) {
+      const expDate = new Date(foundUser.subscriptionUntil);
+      if (!isNaN(expDate.getTime()) && expDate < new Date()) {
+        return c.json({
+          success: false,
+          message: `Masa langganan Anda telah berakhir pada ${foundUser.subscriptionUntil}. Silakan hubungi Super Admin untuk perpanjangan.`,
+        }, 403);
+      }
+    }
+    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
+    return c.json({
+      success: true,
+      message: "Login berhasil",
+      user: {
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        role: foundUser.role,
+        status: foundUser.status,
+        subscriptionUntil: foundUser.subscriptionUntil,
+        tenantId: userTenant ? userTenant.id : null,
+        tenantName: userTenant ? userTenant.outletName : null,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// User Management (Super Admin)
+app.get("/api/users", async (c) => {
+  try {
+    const allUsers = await db.select().from(users);
+    const allTenants = await db.select().from(tenants);
+
+    const enrichedUsers = allUsers.map((u) => {
+      const userTenant = allTenants.find((t) => t.userId === u.id);
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        status: u.status || "active",
+        subscriptionUntil: u.subscriptionUntil || null,
+        createdAt: u.createdAt,
+        tenantId: userTenant ? userTenant.id : null,
+        tenantName: userTenant ? userTenant.outletName : null,
+      };
+    });
+
+    return c.json({ success: true, data: enrichedUsers });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.post("/api/users", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { name, email, password, role, tenantId, status, subscriptionUntil } = body;
+
+    const newUserId = `user-${Date.now()}`;
+    await db.insert(users).values({
+      id: newUserId,
+      name,
+      email,
+      passwordHash: password || "123456",
+      role: role || "staff",
+      status: status || "active",
+      subscriptionUntil: subscriptionUntil || null,
+    });
+
+    // If a tenant is specified and user is tenant_owner, link them
+    if (tenantId && role === "tenant_owner") {
+      await db.update(tenants).set({ userId: newUserId }).where(eq(tenants.id, tenantId));
+    }
+
+    return c.json({
+      success: true,
+      message: "Pengguna berhasil ditambahkan",
+      data: {
+        id: newUserId,
+        name,
+        email,
+        role: role || "staff",
+        status: status || "active",
+        subscriptionUntil: subscriptionUntil || null,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.put("/api/users/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { name, email, role, password, tenantId, status, subscriptionUntil } = body;
+
+    const updatePayload: any = {};
+    if (name !== undefined) updatePayload.name = name;
+    if (email !== undefined) updatePayload.email = email;
+    if (role !== undefined) updatePayload.role = role;
+    if (password !== undefined) updatePayload.passwordHash = password;
+    if (status !== undefined) updatePayload.status = status;
+    if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
+
+    await db.update(users).set(updatePayload).where(eq(users.id, id));
+
+    if (tenantId) {
+      await db.update(tenants).set({ userId: id }).where(eq(tenants.id, tenantId));
+    }
+
+    return c.json({ success: true, message: "Data pengguna berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.patch("/api/users/:id/status", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { status, subscriptionUntil } = body;
+
+    const updatePayload: any = {};
+    if (status !== undefined) updatePayload.status = status;
+    if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
+
+    await db.update(users).set(updatePayload).where(eq(users.id, id));
+    return c.json({ success: true, message: "Status akun berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.delete("/api/users/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(users).where(eq(users.id, id));
+    return c.json({ success: true, message: "Pengguna berhasil dihapus" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
 // 3. Customers
 app.get("/api/customers", async (c) => {
   try {
-    const tenantId = c.req.query("tenantId") || "tenant-01";
-    const custList = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.tenantId, tenantId));
+    const tenantId = c.req.query("tenantId");
+    const custList =
+      tenantId && tenantId !== "all"
+        ? await db.select().from(customers).where(eq(customers.tenantId, tenantId))
+        : await db.select().from(customers);
 
     return c.json({ success: true, data: custList });
   } catch (error: any) {
@@ -134,15 +346,47 @@ app.post("/api/customers", async (c) => {
   }
 });
 
+app.put("/api/customers/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { name, phone, address, notes } = body;
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (address !== undefined) updateData.address = address;
+    if (notes !== undefined) updateData.notes = notes;
+
+    await db.update(customers).set(updateData).where(eq(customers.id, id));
+    return c.json({ success: true, message: "Data pelanggan berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.delete("/api/customers/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(customers).where(eq(customers.id, id));
+    return c.json({ success: true, message: "Pelanggan berhasil dihapus" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
 // 4. Orders
 app.get("/api/orders", async (c) => {
   try {
-    const tenantId = c.req.query("tenantId") || "tenant-01";
-    const orderList = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.tenantId, tenantId))
-      .orderBy(desc(orders.createdAt));
+    const tenantId = c.req.query("tenantId");
+    const orderList =
+      tenantId && tenantId !== "all"
+        ? await db
+            .select()
+            .from(orders)
+            .where(eq(orders.tenantId, tenantId))
+            .orderBy(desc(orders.createdAt))
+        : await db.select().from(orders).orderBy(desc(orders.createdAt));
 
     const custList = await db.select().from(customers);
 
@@ -261,12 +505,15 @@ app.patch("/api/orders/:id/payment", async (c) => {
 // 5. Expenses (Uang Keluar)
 app.get("/api/expenses", async (c) => {
   try {
-    const tenantId = c.req.query("tenantId") || "tenant-01";
-    const expList = await db
-      .select()
-      .from(expenses)
-      .where(eq(expenses.tenantId, tenantId))
-      .orderBy(desc(expenses.expenseDate));
+    const tenantId = c.req.query("tenantId");
+    const expList =
+      tenantId && tenantId !== "all"
+        ? await db
+            .select()
+            .from(expenses)
+            .where(eq(expenses.tenantId, tenantId))
+            .orderBy(desc(expenses.expenseDate))
+        : await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
 
     return c.json({ success: true, data: expList });
   } catch (error: any) {
@@ -309,10 +556,17 @@ app.delete("/api/expenses/:id", async (c) => {
 // 6. Cashflow Statistics & Dashboard
 app.get("/api/stats/cashflow", async (c) => {
   try {
-    const tenantId = c.req.query("tenantId") || "tenant-01";
+    const tenantId = c.req.query("tenantId");
 
-    const orderList = await db.select().from(orders).where(eq(orders.tenantId, tenantId));
-    const expList = await db.select().from(expenses).where(eq(expenses.tenantId, tenantId));
+    const orderList =
+      tenantId && tenantId !== "all"
+        ? await db.select().from(orders).where(eq(orders.tenantId, tenantId))
+        : await db.select().from(orders);
+
+    const expList =
+      tenantId && tenantId !== "all"
+        ? await db.select().from(expenses).where(eq(expenses.tenantId, tenantId))
+        : await db.select().from(expenses);
 
     const totalIncome = orderList
       .filter((o) => o.paymentStatus === "paid")

@@ -24,9 +24,13 @@ export async function initPostgresTables() {
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'tenant_owner',
+        status TEXT NOT NULL DEFAULT 'active',
+        subscription_until TEXT,
         created_at TEXT NOT NULL
       );
     `;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';`;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS tenants (
@@ -35,9 +39,13 @@ export async function initPostgresTables() {
         outlet_name TEXT NOT NULL,
         phone TEXT NOT NULL,
         address TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        subscription_until TEXT,
         created_at TEXT NOT NULL
       );
     `;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (

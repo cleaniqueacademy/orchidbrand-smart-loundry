@@ -56,9 +56,27 @@ export interface Tenant {
   outletName: string;
   phone: string;
   address: string;
+  status: "active" | "inactive";
+  subscriptionUntil?: string | null;
   owner?: { id: string; name: string; email: string; role: string } | null;
   totalOrders: number;
   totalOmset: number;
 }
 
-export type TabType = "overview" | "orders" | "cashflow" | "customers" | "tenants";
+export type Role = "superadmin" | "tenant_owner" | "staff";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  status: "active" | "inactive";
+  subscriptionUntil?: string | null;
+  createdAt: string;
+  tenantId?: string | null;
+  tenantName?: string | null;
+}
+
+export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
+
+export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users";
