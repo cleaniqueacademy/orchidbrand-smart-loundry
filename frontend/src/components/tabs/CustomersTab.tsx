@@ -314,15 +314,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Hapus pelanggan "${selectedCustomer.name}"? Data riwayat pelanggan ini akan dihapus.`
-                        )
-                      ) {
-                        onDeleteCustomer(selectedCustomer.id);
-                      }
-                    }}
+                    onClick={() => onDeleteCustomer(selectedCustomer.id)}
                     className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition shadow-xs"
                     title="Hapus Pelanggan"
                   >

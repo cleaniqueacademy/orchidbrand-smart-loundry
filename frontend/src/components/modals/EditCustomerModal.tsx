@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, UserCheck, Phone, MapPin, FileText } from "lucide-react";
 import { Customer } from "../../types";
+import { useToast } from "../common/ToastContext";
 
 interface EditCustomerModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
   customer,
   onSubmit,
 }) => {
+  const toast = useToast();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -40,7 +42,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
-      alert("Nama dan nomor WhatsApp pelanggan wajib diisi!");
+      toast.warning("Form Belum Lengkap", "Nama dan nomor WhatsApp pelanggan wajib diisi!");
       return;
     }
 
@@ -54,7 +56,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
       });
       onClose();
     } catch (err: any) {
-      alert("Gagal memperbarui data pelanggan: " + (err.message || "Terjadi kesalahan"));
+      toast.error("Gagal Memperbarui Pelanggan", err.message || "Terjadi kesalahan");
     } finally {
       setSubmitting(false);
     }

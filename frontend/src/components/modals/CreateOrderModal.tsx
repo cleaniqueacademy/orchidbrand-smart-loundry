@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, ShoppingBag } from "lucide-react";
 import { Customer } from "../../types";
+import { useToast } from "../common/ToastContext";
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   initialCustomerId = "",
   onSubmit,
 }) => {
+  const toast = useToast();
   const [customerId, setCustomerId] = useState(initialCustomerId);
   const [serviceType, setServiceType] = useState("Cuci Komplit (Kg)");
   const [weightOrQty, setWeightOrQty] = useState(3.5);
@@ -55,7 +57,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId) {
-      alert("Silakan pilih pelanggan terlebih dahulu!");
+      toast.warning("Pelanggan Belum Dipilih", "Silakan pilih pelanggan terlebih dahulu!");
       return;
     }
     try {

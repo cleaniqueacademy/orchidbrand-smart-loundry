@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Building2 } from "lucide-react";
+import { useToast } from "../common/ToastContext";
 
 interface CreateTenantModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const toast = useToast();
   const [outletName, setOutletName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -32,7 +34,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!outletName.trim() || !ownerName.trim() || !ownerEmail.trim()) {
-      alert("Nama outlet, nama pemilik, dan email wajib diisi!");
+      toast.warning("Form Belum Lengkap", "Nama outlet, nama pemilik, dan email wajib diisi!");
       return;
     }
     try {

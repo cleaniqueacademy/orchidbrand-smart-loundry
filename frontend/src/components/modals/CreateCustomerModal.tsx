@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Users } from "lucide-react";
+import { useToast } from "../common/ToastContext";
 
 interface CreateCustomerModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const toast = useToast();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -28,7 +30,7 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
-      alert("Nama dan nomor WhatsApp wajib diisi!");
+      toast.warning("Form Belum Lengkap", "Nama dan nomor WhatsApp pelanggan wajib diisi!");
       return;
     }
     try {

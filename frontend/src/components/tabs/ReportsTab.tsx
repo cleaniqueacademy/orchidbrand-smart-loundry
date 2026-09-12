@@ -23,6 +23,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Order, Expense, Tenant, Customer } from "../../types";
+import { useToast } from "../common/ToastContext";
 
 interface ReportsTabProps {
   orders: Order[];
@@ -39,6 +40,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
   currentTenantId,
   customers,
 }) => {
+  const toast = useToast();
   // Filters: Rentang Waktu (Date Range)
   const [startDate, setStartDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
@@ -268,10 +270,16 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    toast.success(
+      "Laporan CSV Berhasil Diunduh",
+      `File ${filename} telah disimpan ke perangkat Anda.`
+    );
   };
 
   // 2. Trigger Print PDF Dialog
   const handlePrintPDF = () => {
+    toast.info("Mempersiapkan Dokumen Cetak", "Membuka dialog pencetakan browser...");
     window.print();
   };
 

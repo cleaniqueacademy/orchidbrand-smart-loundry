@@ -25,6 +25,8 @@ import { CreateTenantModal } from "./components/modals/CreateTenantModal";
 import { CreateUserModal } from "./components/modals/CreateUserModal";
 import { EditCustomerModal } from "./components/modals/EditCustomerModal";
 import { LoginPage } from "./components/auth/LoginPage";
+import { useToast } from "./components/common/ToastContext";
+import { useConfirm } from "./components/common/ConfirmContext";
 
 const AUTH_KEY = "orchid_auth_user";
 const API_BASE = "/api";
@@ -47,6 +49,8 @@ function readSavedUser(): User | null {
 }
 
 export default function App() {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [currentUser, setCurrentUser] = useState<User | null>(() => readSavedUser());
 
@@ -173,6 +177,7 @@ export default function App() {
     } catch (e) {
       console.error(e);
     }
+    toast.success("Login Berhasil", `Selamat datang kembali, ${user.name}!`);
     setCurrentUser(user);
     setCurrentUserRole(user.role);
     if (user.role === "tenant_owner" && user.tenantId) {
@@ -183,24 +188,55 @@ export default function App() {
     setActiveTab("overview");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: "Keluar dari Sistem?",
+      description: "Apakah Anda yakin ingin keluar dari akun Orchid Smart Laundry? Anda perlu login kembali untuk mengakses data operasional.",
+      confirmText: "Ya, Keluar",
+      cancelText: "Tetap Masuk",
+      variant: "warning",
+    });
+
+    if (!confirmed) return;
+
+    toast.info("Mengeluarkan Akun...", "Sesi Anda telah diakhiri.");
     // Clear localStorage
     try {
       localStorage.removeItem("orchid_auth_user");
       localStorage.removeItem("orchid_auth_tenant");
-      // Tambahan: clear semua key orchid
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith("orchid_")) localStorage.removeItem(key);
       });
     } catch (e) {
       console.error(e);
     }
-    // Hard reload agar semua state React bersih total
-    window.location.replace("/");
+    setTimeout(() => {
+      window.location.replace("/");
+    }, 400);
+  };
+
+  const handleSelectTenant = (id: string) => {
+    setTenantId(id);
+    if (id === "all") {
+      toast.info("Mode Agregat Pusat", "Menampilkan data gabungan dari seluruh cabang outlet.");
+    } else {
+      const t = tenants.find((item) => item.id === id);
+      toast.info("Inspeksi Cabang", `Sekarang memantau: ${t?.outletName || id}`);
+    }
   };
 
   // Order status update
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    const targetOrder = orders.find((o) => o.id === orderId);
+    const statusLabels: Record<string, string> = {
+      pending: "Antrian",
+      washing: "Sedang Dicuci",
+      drying_ironing: "Setrika / Lipat",
+      ready: "Siap Diambil",
+      completed: "Selesai",
+    };
+    const label = statusLabels[newStatus] || newStatus;
+
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
         method: "PATCH",
@@ -210,12 +246,22 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         fetchData();
+        toast.success(
+          "Status Cucian Diperbarui",
+          targetOrder
+            ? `Pesanan ${targetOrder.invoiceNo} kini di tahap: ${label}`
+            : `Status berhasil diubah ke ${label}`
+        );
         if (data.waData?.waUrl && (newStatus === "ready" || newStatus === "completed")) {
+          toast.info("Notifikasi WhatsApp", "Membuka WhatsApp untuk mengirim pesan ke pelanggan...");
           window.open(data.waData.waUrl, "_blank");
         }
+      } else {
+        toast.error("Gagal Memperbarui Status", data.message || "Terjadi kesalahan pada server");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Update status error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -225,6 +271,7 @@ export default function App() {
     paymentStatus: string,
     paymentMethod = "cash"
   ) => {
+    const targetOrder = orders.find((o) => o.id === orderId);
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}/payment`, {
         method: "PATCH",
@@ -232,9 +279,20 @@ export default function App() {
         body: JSON.stringify({ paymentStatus, paymentMethod }),
       });
       const data = await res.json();
-      if (data.success) fetchData();
-    } catch (err) {
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Pembayaran Berhasil Dicatat",
+          targetOrder
+            ? `Pesanan ${targetOrder.invoiceNo} telah ditandai Lunas (${paymentMethod})`
+            : `Status pembayaran diubah ke Lunas (${paymentMethod})`
+        );
+      } else {
+        toast.error("Gagal Update Pembayaran", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
       console.error("Update payment error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -250,20 +308,28 @@ export default function App() {
     notes?: string;
   }) => {
     const totalAmount = orderData.weightOrQty * orderData.pricePerUnit;
-    const res = await fetch(`${API_BASE}/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tenantId,
-        ...orderData,
-        totalAmount,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal membuat order: " + (data.message || "Unknown error"));
+    try {
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          ...orderData,
+          totalAmount,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Pesanan Berhasil Dibuat",
+          `Nota ${data.data?.invoiceNo || ""} sebesar Rp ${totalAmount.toLocaleString("id-ID")} telah tercatat.`
+        );
+      } else {
+        toast.error("Gagal Membuat Order", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -274,30 +340,61 @@ export default function App() {
     notes: string;
     expenseDate: string;
   }) => {
-    const res = await fetch(`${API_BASE}/expenses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tenantId,
-        ...expenseData,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal mencatat biaya: " + (data.message || "Unknown error"));
+    try {
+      const res = await fetch(`${API_BASE}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          ...expenseData,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Pengeluaran Berhasil Dicatat",
+          `${expenseData.category}: Rp ${expenseData.amount.toLocaleString("id-ID")} (${expenseData.notes})`
+        );
+      } else {
+        toast.error("Gagal Mencatat Biaya", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
-  // Delete Expense
+  // Delete Expense with Confirmation Modal
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm("Hapus catatan pengeluaran ini?")) return;
+    const exp = expenses.find((e) => e.id === id);
+    const confirmed = await confirm({
+      title: "Hapus Catatan Pengeluaran?",
+      description: exp ? (
+        <span>
+          Apakah Anda yakin ingin menghapus catatan biaya <strong>{exp.category}</strong> (<em>"{exp.notes}"</em>) sebesar{" "}
+          <strong className="text-rose-600 font-mono">Rp {exp.amount.toLocaleString("id-ID")}</strong>? Tindakan ini tidak dapat dibatalkan.
+        </span>
+      ) : (
+        "Apakah Anda yakin ingin menghapus catatan pengeluaran ini? Tindakan ini tidak dapat dibatalkan."
+      ),
+      confirmText: "Hapus Pengeluaran",
+      cancelText: "Batal",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`${API_BASE}/expenses/${id}`, { method: "DELETE" });
-      if (res.ok) fetchData();
-    } catch (err) {
+      if (res.ok) {
+        fetchData();
+        toast.success("Catatan Pengeluaran Dihapus", "Catatan biaya berhasil dihapus dari buku kas.");
+      } else {
+        toast.error("Gagal Menghapus Biaya", "Server mengembalikan respons gagal.");
+      }
+    } catch (err: any) {
       console.error("Delete expense error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server.");
     }
   };
 
@@ -308,16 +405,24 @@ export default function App() {
     address?: string;
     notes?: string;
   }) => {
-    const res = await fetch(`${API_BASE}/customers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenantId, ...custData }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal menambah customer: " + (data.message || "Unknown error"));
+    try {
+      const res = await fetch(`${API_BASE}/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId, ...custData }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Pelanggan Berhasil Ditambahkan",
+          `${custData.name} (${custData.phone}) siap menerima pesanan laundry.`
+        );
+      } else {
+        toast.error("Gagal Menambah Pelanggan", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -331,59 +436,132 @@ export default function App() {
     id: string,
     updatedData: { name: string; phone: string; address?: string; notes?: string }
   ) => {
-    const res = await fetch(`${API_BASE}/customers/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedData),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal memperbarui pelanggan: " + (data.message || "Terjadi kesalahan"));
+    try {
+      const res = await fetch(`${API_BASE}/customers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Data Pelanggan Diperbarui",
+          `Informasi kontak ${updatedData.name} berhasil diperbarui.`
+        );
+      } else {
+        toast.error("Gagal Memperbarui Pelanggan", data.message || "Terjadi kesalahan");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
+  // Delete Customer with Confirmation Modal
   const handleDeleteCustomer = async (id: string) => {
+    const cust = customers.find((c) => c.id === id);
+    const confirmed = await confirm({
+      title: "Hapus Data Pelanggan?",
+      description: cust ? (
+        <span>
+          Apakah Anda yakin ingin menghapus data pelanggan <strong>{cust.name}</strong> ({cust.phone})?
+          Seluruh histori pesanan dan kontak pelanggan ini akan dihapus dari direktori.
+        </span>
+      ) : (
+        "Apakah Anda yakin ingin menghapus data pelanggan ini? Tindakan ini tidak dapat dibatalkan."
+      ),
+      confirmText: "Hapus Pelanggan",
+      cancelText: "Batal",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`${API_BASE}/customers/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
         fetchData();
+        toast.success("Pelanggan Berhasil Dihapus", `Data ${cust?.name || "pelanggan"} telah dihapus.`);
       } else {
-        alert("Gagal menghapus pelanggan: " + (data.message || "Terjadi kesalahan"));
+        toast.error("Gagal Menghapus Pelanggan", data.message || "Terjadi kesalahan");
       }
     } catch (err: any) {
       console.error("Delete customer error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
-  // Toggle User Status (Aktif / Nonaktif)
+  // Toggle User Status (Aktif / Nonaktif) with Confirmation for Deactivation
   const handleToggleUserStatus = async (userId: string, currentStatus: "active" | "inactive") => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (targetUser?.role === "superadmin") {
+      toast.warning("Aksi Dibatasi", "Akun Super Admin selalu berstatus aktif.");
+      return;
+    }
+
     const nextStatus = currentStatus === "active" ? "inactive" : "active";
+
+    if (currentStatus === "active") {
+      const confirmed = await confirm({
+        title: "Nonaktifkan Akun Pengguna?",
+        description: targetUser ? (
+          <span>
+            Apakah Anda yakin ingin menonaktifkan akun <strong>{targetUser.name}</strong> ({targetUser.email})?
+            Pengguna tidak akan dapat login ke dalam sistem selama status akun nonaktif.
+          </span>
+        ) : (
+          "Pengguna tidak akan dapat login ke dalam sistem selama status akun nonaktif."
+        ),
+        confirmText: "Nonaktifkan Akun",
+        cancelText: "Batal",
+        variant: "warning",
+      });
+      if (!confirmed) return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
-      if (res.ok) fetchData();
-    } catch (err) {
+      if (res.ok) {
+        fetchData();
+        toast.success(
+          "Status Akun Diperbarui",
+          `Akun ${targetUser?.name || "Pengguna"} sekarang ${nextStatus === "active" ? "Aktif" : "Nonaktif"}.`
+        );
+      } else {
+        toast.error("Gagal Mengubah Status", "Respons server tidak berhasil.");
+      }
+    } catch (err: any) {
       console.error("Toggle status error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
   // Update User Subscription Date (Offline Model)
   const handleUpdateUserSubscription = async (userId: string, subscriptionUntil: string) => {
+    const targetUser = users.find((u) => u.id === userId);
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscriptionUntil }),
       });
-      if (res.ok) fetchData();
-    } catch (err) {
+      if (res.ok) {
+        fetchData();
+        toast.success(
+          "Masa Langganan Diperbarui",
+          `Akun ${targetUser?.name || "Pengguna"} aktif hingga ${subscriptionUntil}.`
+        );
+      } else {
+        toast.error("Gagal Memperbarui Langganan", "Respons server gagal.");
+      }
+    } catch (err: any) {
       console.error("Update subscription error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -396,16 +574,24 @@ export default function App() {
     ownerEmail: string;
     password?: string;
   }) => {
-    const res = await fetch(`${API_BASE}/tenants`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(tenantData),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal membuat tenant: " + (data.message || "Unknown error"));
+    try {
+      const res = await fetch(`${API_BASE}/tenants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tenantData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Cabang Outlet Berhasil Didaftarkan",
+          `${tenantData.outletName} telah dibuat dengan pemilik ${tenantData.ownerName}.`
+        );
+      } else {
+        toast.error("Gagal Membuat Tenant", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -419,26 +605,63 @@ export default function App() {
     status: "active" | "inactive";
     subscriptionUntil?: string;
   }) => {
-    const res = await fetch(`${API_BASE}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchData();
-    } else {
-      alert("Gagal menambah pengguna: " + (data.message || "Unknown error"));
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        toast.success(
+          "Pengguna Berhasil Ditambahkan",
+          `Akun ${userData.name} (${userData.role}) berhasil didaftarkan.`
+        );
+      } else {
+        toast.error("Gagal Menambah Pengguna", data.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
-  // Delete User (Super Admin)
+  // Delete User (Super Admin) with Confirmation Modal
   const handleDeleteUser = async (id: string) => {
+    const targetUser = users.find((u) => u.id === id);
+    if (targetUser?.role === "superadmin") {
+      toast.warning("Aksi Ditolak", "Akun Super Admin utama tidak dapat dihapus.");
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Hapus Akun Pengguna?",
+      description: targetUser ? (
+        <span>
+          Apakah Anda yakin ingin menghapus akun <strong>{targetUser.name}</strong> ({targetUser.email})?
+          Akses pengguna ke sistem akan dicabut secara permanen.
+        </span>
+      ) : (
+        "Akses pengguna ke sistem akan dicabut secara permanen."
+      ),
+      confirmText: "Hapus Pengguna",
+      cancelText: "Batal",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`${API_BASE}/users/${id}`, { method: "DELETE" });
-      if (res.ok) fetchData();
-    } catch (err) {
+      if (res.ok) {
+        fetchData();
+        toast.success("Pengguna Dihapus", `Akun ${targetUser?.name || "pengguna"} berhasil dihapus dari sistem.`);
+      } else {
+        toast.error("Gagal Menghapus Pengguna", "Server gagal memproses penghapusan.");
+      }
+    } catch (err: any) {
       console.error("Delete user error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
@@ -467,7 +690,7 @@ export default function App() {
         activeOrdersCount={stats.activeOrdersCount}
         readyOrdersCount={stats.readyOrdersCount}
         tenantId={tenantId}
-        onSelectTenant={(id) => setTenantId(id)}
+        onSelectTenant={handleSelectTenant}
         tenants={tenants}
         currentUserRole={currentUserRole}
         currentUser={currentUser}
@@ -554,7 +777,7 @@ export default function App() {
             <TenantsTab
               tenants={tenants}
               onOpenTenantModal={() => setShowTenantModal(true)}
-              onSelectTenant={(id) => setTenantId(id)}
+              onSelectTenant={handleSelectTenant}
               currentTenantId={tenantId}
             />
           )}

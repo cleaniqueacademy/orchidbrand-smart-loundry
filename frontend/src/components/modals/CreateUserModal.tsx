@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, UserPlus, ShieldCheck } from "lucide-react";
 import { Role, Tenant } from "../../types";
+import { useToast } from "../common/ToastContext";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   tenants,
   onSubmit,
 }) => {
+  const toast = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("123456");
@@ -38,7 +40,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
-      alert("Nama dan email wajib diisi!");
+      toast.warning("Form Belum Lengkap", "Nama dan email pengguna wajib diisi!");
       return;
     }
 

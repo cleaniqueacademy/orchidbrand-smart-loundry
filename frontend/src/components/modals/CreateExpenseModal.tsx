@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, DollarSign } from "lucide-react";
+import { useToast } from "../common/ToastContext";
 
 interface CreateExpenseModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const toast = useToast();
   const [category, setCategory] = useState("Deterjen & Pewangi");
   const [amount, setAmount] = useState(50000);
   const [notes, setNotes] = useState("");
@@ -28,7 +30,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!notes.trim()) {
-      alert("Silakan isi keterangan pengeluaran!");
+      toast.warning("Keterangan Kosong", "Silakan isi keterangan pengeluaran!");
       return;
     }
     try {

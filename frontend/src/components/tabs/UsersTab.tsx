@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Plus, User, ShieldCheck, Mail, Store, Trash2, Calendar } from "lucide-react";
 import { User as UserType, Role, Tenant } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
+import { useToast } from "../common/ToastContext";
 
 interface UsersTabProps {
   users: UserType[];
@@ -35,6 +36,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   onToggleStatus,
   onUpdateSubscription,
 }) => {
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -128,7 +130,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
           <button
             onClick={() => {
               if (u.role === "superadmin") {
-                alert("Akun Super Admin selalu aktif.");
+                toast.warning("Aksi Dibatasi", "Akun Super Admin selalu berstatus aktif.");
                 return;
               }
               onToggleStatus(u.id, u.status || "active");
@@ -256,12 +258,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
         <button
           onClick={() => {
             if (u.role === "superadmin") {
-              alert("Akun Super Admin utama tidak dapat dihapus.");
+              toast.warning("Aksi Ditolak", "Akun Super Admin utama tidak dapat dihapus.");
               return;
             }
-            if (confirm(`Hapus pengguna ${u.name}?`)) {
-              onDeleteUser(u.id);
-            }
+            onDeleteUser(u.id);
           }}
           disabled={u.role === "superadmin"}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-30 disabled:cursor-not-allowed"

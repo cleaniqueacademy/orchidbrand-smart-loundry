@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { CashflowStats, Order, TabType } from "../../types";
+import { useConfirm } from "../common/ConfirmContext";
 
 interface OverviewTabProps {
   stats: CashflowStats;
@@ -30,7 +31,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   getWaLink,
   setActiveTab,
 }) => {
+  const confirm = useConfirm();
   const readyOrders = orders.filter((o) => o.status === "ready");
+
+  const handleCompleteOrder = async (order: Order) => {
+    const confirmed = await confirm({
+      title: "Tandai Cucian Selesai?",
+      description: (
+        <span>
+          Tandai pesanan <strong>{order.invoiceNo}</strong> untuk pelanggan{" "}
+          <strong>{order.customer?.name || "Pelanggan"}</strong> sebagai selesai / sudah diambil?
+        </span>
+      ),
+      confirmText: "Ya, Tandai Selesai",
+      cancelText: "Batal",
+      variant: "info",
+    });
+
+    if (confirmed) {
+      onUpdateStatus(order.id, "completed");
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -200,7 +221,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       <WhatsAppIcon className="w-3.5 h-3.5" /> WA
                     </a>
                     <button
-                      onClick={() => onUpdateStatus(order.id, "completed")}
+                      onClick={() => handleCompleteOrder(order)}
                       className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 font-medium text-xs flex items-center gap-1.5 transition border border-zinc-200"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
