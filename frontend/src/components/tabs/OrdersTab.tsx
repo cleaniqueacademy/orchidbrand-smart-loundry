@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Phone } from "lucide-react";
+import { Plus, Phone, Printer, Edit3, Trash2, XCircle } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, OrderStatus, DateFilterPreset } from "../../types";
 import {
@@ -14,6 +14,10 @@ interface OrdersTabProps {
   onUpdateStatus: (orderId: string, status: string) => void;
   onUpdatePayment: (orderId: string, paymentStatus: string, paymentMethod?: string) => void;
   getWaLink: (order: Order) => string;
+  onOpenReceiptModal: (order: Order) => void;
+  onOpenEditOrderModal: (order: Order) => void;
+  onCancelOrder: (order: Order) => void;
+  onDeleteOrder: (orderId: string) => void;
 }
 
 const statusBadgeStyles: Record<OrderStatus, string> = {
@@ -22,6 +26,7 @@ const statusBadgeStyles: Record<OrderStatus, string> = {
   drying_ironing: "bg-blue-50 text-blue-800 border-blue-200",
   ready: "bg-emerald-50 text-emerald-800 border-emerald-200",
   completed: "bg-blue-900 text-white border-blue-900",
+  cancelled: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -30,11 +35,20 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onUpdateStatus,
   onUpdatePayment,
   getWaLink,
+  onOpenReceiptModal,
+  onOpenEditOrderModal,
+  onCancelOrder,
+  onDeleteOrder,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [datePreset, setDatePreset] = useState<DateFilterPreset>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [quickPayOrder, setQuickPayOrder] = useState<Order | null>(null);
+
+  const isOrderOverdue = (order: Order) =>
+    order.status === "ready" &&
+    Date.now() - new Date(order.createdAt).getTime() > 3 * 24 * 60 * 60 * 1000;
 
   // Filtering data
   const filteredOrders = orders.filter((order) => {
@@ -44,10 +58,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       (order.customer?.name &&
         order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (order.customer?.phone && order.customer.phone.includes(searchQuery)) ||
+      (order.rackNumber && order.rackNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       order.serviceType.toLowerCase().includes(searchQuery.toLowerCase());
 
     // 2. Status filter
-    const matchStatus = statusFilter === "all" || order.status === statusFilter;
+    const matchStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "overdue"
+        ? isOrderOverdue(order)
+        : order.status === statusFilter;
 
     // 3. Payment filter
     const matchPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
@@ -74,6 +94,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               minute: "2-digit",
             })}
           </div>
+          {order.rackNumber && (
+            <div className="inline-flex items-center gap-1 font-mono font-bold text-[9.5px] text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded mt-1">
+              <span>📍 {order.rackNumber}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -118,14 +143,20 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       header: "Status Bayar",
       cell: (order) =>
         order.paymentStatus === "paid" ? (
-          <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-            Lunas ({order.paymentMethod || "cash"})
-          </span>
+          <button
+            type="button"
+            onClick={() => setQuickPayOrder(order)}
+            className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full transition cursor-pointer"
+            title="Klik untuk ubah metode atau batalkan lunas"
+          >
+            Lunas ({order.paymentMethod || "cash"}) ▾
+          </button>
         ) : (
           <button
-            onClick={() => onUpdatePayment(order.id, "paid", "cash")}
-            className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full transition"
-            title="Klik untuk tandai Lunas"
+            type="button"
+            onClick={() => setQuickPayOrder(order)}
+            className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full transition cursor-pointer"
+            title="Klik untuk pilih metode pelunasan kasir"
           >
             Belum Lunas ✎
           </button>
@@ -135,40 +166,100 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       id: "status",
       header: "Status Cucian",
       cell: (order) => (
-        <select
-          value={order.status}
-          onChange={(e) => onUpdateStatus(order.id, e.target.value)}
-          className={`text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer outline-none transition ${
-            statusBadgeStyles[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
-          }`}
-        >
-          <option value="pending">Antrian</option>
-          <option value="washing">Sedang Dicuci</option>
-          <option value="drying_ironing">Setrika / Lipat</option>
-          <option value="ready">Siap Diambil</option>
-          <option value="completed">Selesai</option>
-        </select>
+        <div>
+          <select
+            value={order.status}
+            onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+            className={`text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer outline-none transition w-full ${
+              statusBadgeStyles[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+            }`}
+          >
+            <option value="pending">Antrian</option>
+            <option value="washing">Sedang Dicuci</option>
+            <option value="drying_ironing">Setrika / Lipat</option>
+            <option value="ready">Siap Diambil</option>
+            <option value="completed">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+          {isOrderOverdue(order) && (
+            <div
+              className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md mt-1 flex items-center gap-1 shadow-xs"
+              title="Cucian sudah lebih dari 3 hari siap diambil tapi belum diambil tetangga/pelanggan"
+            >
+              <span>⚠️ Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h</span>
+            </div>
+          )}
+        </div>
       ),
     },
     {
       id: "actions",
-      header: "WhatsApp",
+      header: "Aksi Kasir",
       align: "right",
       cell: (order) => (
-        <a
-          href={getWaLink(order)}
-          target="_blank"
-          rel="noreferrer"
-          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1.5 transition ${
-            order.status === "ready"
-              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-              : "bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200"
-          }`}
-          title="Kirim Notifikasi WhatsApp"
-        >
-          <WhatsAppIcon className="w-3.5 h-3.5" />
-          <span>WA</span>
-        </a>
+        <div className="flex items-center justify-end gap-1.5">
+          {/* Cetak Struk Kasir Thermal */}
+          <button
+            type="button"
+            onClick={() => onOpenReceiptModal(order)}
+            className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition"
+            title="Cetak Struk Thermal (58mm / 80mm)"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Edit Data Pesanan */}
+          <button
+            type="button"
+            onClick={() => onOpenEditOrderModal(order)}
+            className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition"
+            title="Koreksi / Edit Pesanan"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* WhatsApp Notification */}
+          <a
+            href={getWaLink(order)}
+            target="_blank"
+            rel="noreferrer"
+            className={`p-1.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition ${
+              isOrderOverdue(order)
+                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                : order.status === "ready"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                : "bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200"
+            }`}
+            title={
+              isOrderOverdue(order)
+                ? "Kirim Pengingat Cucian Menginap via WhatsApp"
+                : "Kirim Pesan WhatsApp"
+            }
+          >
+            <WhatsAppIcon className="w-3.5 h-3.5" />
+          </a>
+
+          {/* Batalkan atau Hapus Pesanan */}
+          {order.status !== "cancelled" ? (
+            <button
+              type="button"
+              onClick={() => onCancelOrder(order)}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition"
+              title="Batalkan Pesanan Ini"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onDeleteOrder(order.id)}
+              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition"
+              title="Hapus Pesanan Permanen"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       ),
     },
   ];
@@ -180,7 +271,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pesanan Laundry</h2>
           <p className="text-xs text-zinc-500">
-            Daftar pesanan aktif, histori transaksi, dan pengiriman notifikasi WhatsApp
+            Daftar pesanan aktif, cetak struk thermal, koreksi kasir, dan pengiriman notifikasi WhatsApp
           </p>
         </div>
 
@@ -211,11 +302,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
             >
               <option value="all">Semua Status</option>
+              <option value="overdue">⚠️ Menginap (&gt;3 Hari)</option>
               <option value="pending">Antrian</option>
               <option value="washing">Sedang Dicuci</option>
               <option value="drying_ironing">Setrika / Lipat</option>
               <option value="ready">Siap Diambil</option>
               <option value="completed">Selesai</option>
+              <option value="cancelled">Dibatalkan</option>
             </select>
 
             {/* Payment Filter */}
@@ -233,6 +326,98 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         emptyMessage="Tidak ada pesanan yang sesuai dengan kriteria pencarian dan filter."
         initialPageSize={10}
       />
+
+      {/* Modal Pelunasan Cepat Kasir */}
+      {quickPayOrder && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-in fade-in duration-100">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-3">
+              <div>
+                <h4 className="font-extrabold text-sm text-slate-950">Pelunasan Tagihan Kasir</h4>
+                <p className="text-[11px] font-mono text-slate-500 font-semibold">{quickPayOrder.invoiceNo}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickPayOrder(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl mb-3 border border-slate-100 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-slate-500 text-[11px] block">Pelanggan:</span>
+                <span className="font-bold text-slate-900">{quickPayOrder.customer?.name || "Pelanggan Umum"}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500 text-[11px] block">Total Tagihan:</span>
+                <span className="font-black text-slate-950 text-sm">
+                  Rp {quickPayOrder.totalAmount.toLocaleString("id-ID")}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] font-bold text-slate-700 mb-2">Pilih Metode Pembayaran Lunas:</p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdatePayment(quickPayOrder.id, "paid", "cash");
+                  setQuickPayOrder(null);
+                }}
+                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
+              >
+                <span className="text-base">💵</span>
+                <span>Tunai</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdatePayment(quickPayOrder.id, "paid", "qris");
+                  setQuickPayOrder(null);
+                }}
+                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
+              >
+                <span className="text-base">📱</span>
+                <span>QRIS</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdatePayment(quickPayOrder.id, "paid", "transfer");
+                  setQuickPayOrder(null);
+                }}
+                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
+              >
+                <span className="text-base">🏦</span>
+                <span>Transfer</span>
+              </button>
+            </div>
+
+            {quickPayOrder.paymentStatus === "paid" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdatePayment(quickPayOrder.id, "unpaid", "cash");
+                  setQuickPayOrder(null);
+                }}
+                className="w-full py-2 text-xs text-amber-800 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 font-semibold transition text-center"
+              >
+                Kembalikan ke Status Belum Lunas
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setQuickPayOrder(null)}
+                className="w-full py-2 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition text-center"
+              >
+                Tutup
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

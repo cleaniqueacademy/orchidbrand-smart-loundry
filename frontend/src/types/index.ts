@@ -7,9 +7,10 @@ export interface CashflowStats {
   activeOrdersCount: number;
   readyOrdersCount: number;
   completedOrdersCount: number;
+  cancelledOrdersCount?: number;
 }
 
-export type OrderStatus = "pending" | "washing" | "drying_ironing" | "ready" | "completed";
+export type OrderStatus = "pending" | "washing" | "drying_ironing" | "ready" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "unpaid";
 
 export interface Order {
@@ -26,6 +27,7 @@ export interface Order {
   paymentStatus: PaymentStatus;
   paymentMethod: string;
   notes?: string;
+  rackNumber?: string | null;
   createdAt: string;
   completedAt?: string | null;
   customer?: { id: string; name: string; phone: string } | null;

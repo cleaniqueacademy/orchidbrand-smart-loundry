@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, ShoppingBag } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, ShoppingBag, UserPlus, Users } from "lucide-react";
 import { Customer } from "../../types";
 import { useToast } from "../common/ToastContext";
 
@@ -9,7 +9,13 @@ interface CreateOrderModalProps {
   customers: Customer[];
   initialCustomerId?: string;
   onSubmit: (orderData: {
-    customerId: string;
+    customerId?: string;
+    newCustomer?: {
+      name: string;
+      phone: string;
+      address?: string;
+      notes?: string;
+    };
     serviceType: string;
     weightOrQty: number;
     unit: string;
@@ -17,6 +23,7 @@ interface CreateOrderModalProps {
     paymentStatus: string;
     paymentMethod: string;
     notes?: string;
+    rackNumber?: string;
   }) => Promise<void>;
 }
 
@@ -28,7 +35,14 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   onSubmit,
 }) => {
   const toast = useToast();
+  const [customerMode, setCustomerMode] = useState<"existing" | "new">("existing");
   const [customerId, setCustomerId] = useState(initialCustomerId);
+
+  // New Customer Fields
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerAddress, setNewCustomerAddress] = useState("");
+
   const [serviceType, setServiceType] = useState("Cuci Komplit (Kg)");
   const [weightOrQty, setWeightOrQty] = useState(3.5);
   const [unit, setUnit] = useState("kg");
@@ -36,7 +50,15 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
+  const [rackNumber, setRackNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialCustomerId) {
+      setCustomerId(initialCustomerId);
+      setCustomerMode("existing");
+    }
+  }, [initialCustomerId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -50,20 +72,55 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       u = "pcs";
     }
     if (type.includes("Setrika")) price = 6000;
+    if (type.includes("Sepatu")) {
+      price = 25000;
+      u = "pasang";
+    }
+    if (type.includes("Karpet")) {
+      price = 15000;
+      u = "meter";
+    }
     setPricePerUnit(price);
     setUnit(u);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId) {
-      toast.warning("Pelanggan Belum Dipilih", "Silakan pilih pelanggan terlebih dahulu!");
-      return;
+
+    if (customerMode === "existing") {
+      if (!customerId) {
+        toast.warning(
+          "Pelanggan Belum Dipilih",
+          "Silakan pilih pelanggan dari daftar atau klik '+ Pelanggan Baru'!"
+        );
+        return;
+      }
+    } else {
+      if (!newCustomerName.trim()) {
+        toast.warning("Nama Pelanggan Wajib Diisi", "Silakan masukkan nama pelanggan baru!");
+        return;
+      }
+      if (!newCustomerPhone.trim()) {
+        toast.warning(
+          "Nomor WhatsApp Wajib Diisi",
+          "Silakan masukkan nomor telepon / WhatsApp pelanggan baru!"
+        );
+        return;
+      }
     }
+
     try {
       setSubmitting(true);
       await onSubmit({
-        customerId,
+        customerId: customerMode === "existing" ? customerId : undefined,
+        newCustomer:
+          customerMode === "new"
+            ? {
+                name: newCustomerName.trim(),
+                phone: newCustomerPhone.trim(),
+                address: newCustomerAddress.trim(),
+              }
+            : undefined,
         serviceType,
         weightOrQty,
         unit,
@@ -71,7 +128,15 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         paymentStatus,
         paymentMethod,
         notes,
+        rackNumber: rackNumber.trim() || undefined,
       });
+
+      // Reset form states
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewCustomerAddress("");
+      setNotes("");
+      setRackNumber("");
       onClose();
     } finally {
       setSubmitting(false);
@@ -81,9 +146,10 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const totalAmount = weightOrQty * pricePerUnit;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-slate-200 my-auto">
+        {/* Header Modal */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sky-100 text-blue-950 flex items-center justify-center border border-sky-200">
               <ShoppingBag className="w-5 h-5 text-sky-700" />
@@ -92,7 +158,9 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               <h3 className="font-extrabold text-base sm:text-lg text-slate-950">
                 Tambah Order Laundry Baru
               </h3>
-              <p className="text-xs text-slate-500">Catat pesanan pelanggan & terhubung ke kasir</p>
+              <p className="text-xs text-slate-500">
+                Catat transaksi & pelanggan langsung tersimpan di sistem
+              </p>
             </div>
           </div>
           <button
@@ -103,26 +171,140 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Section: Pelanggan (Pilih Terdaftar vs + Pelanggan Baru) */}
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1">
-              Pilih Pelanggan <span className="text-sky-600">*</span>
-            </label>
-            <select
-              required
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
-            >
-              <option value="">-- Pilih Pelanggan --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.phone})
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                <span>Pelanggan</span>
+                <span className="text-sky-600">*</span>
+              </label>
+
+              {/* Toggle Segmented Switcher */}
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[11px] font-semibold border border-slate-200/60">
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("existing")}
+                  className={`px-2.5 py-1 rounded-md transition flex items-center gap-1 ${
+                    customerMode === "existing"
+                      ? "bg-white text-slate-900 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Users className="w-3 h-3" />
+                  <span>Terdaftar ({customers.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("new")}
+                  className={`px-2.5 py-1 rounded-md transition flex items-center gap-1 ${
+                    customerMode === "new"
+                      ? "bg-blue-900 text-white shadow-xs"
+                      : "text-blue-700 hover:text-blue-900 hover:bg-blue-50"
+                  }`}
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span>+ Pelanggan Baru</span>
+                </button>
+              </div>
+            </div>
+
+            {customerMode === "existing" ? (
+              <div className="space-y-1">
+                <select
+                  required={customerMode === "existing"}
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
+                >
+                  <option value="">-- Pilih Pelanggan Terdaftar --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.phone})
+                    </option>
+                  ))}
+                </select>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerMode("new")}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Pelanggan belum ada?</span>
+                    <span className="font-bold">+ Input Data Baru di Sini</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Inline Form Pelanggan Baru */
+              <div className="bg-blue-50/70 border border-blue-200/90 rounded-2xl p-3.5 space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-blue-950 flex items-center gap-1.5">
+                    <UserPlus className="w-3.5 h-3.5 text-blue-700" />
+                    Data Pelanggan Baru
+                  </span>
+                  <span className="text-[10px] bg-blue-200/70 text-blue-900 font-bold px-2 py-0.5 rounded-full">
+                    Auto-Save ke Database
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Nama Lengkap <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required={customerMode === "new"}
+                    placeholder="Contoh: Ibu Rahmawati / Mas Dimas"
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    className="w-full text-xs border border-blue-200 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      No. WhatsApp / HP <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required={customerMode === "new"}
+                      placeholder="Contoh: 081234567890"
+                      value={newCustomerPhone}
+                      onChange={(e) => setNewCustomerPhone(e.target.value)}
+                      className="w-full text-xs border border-blue-200 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Alamat / Kos (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Kos Melati Kamar 3"
+                      value={newCustomerAddress}
+                      onChange={(e) => setNewCustomerAddress(e.target.value)}
+                      className="w-full text-xs border border-blue-200 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-0.5 text-[10.5px] text-blue-800">
+                  <span>💡 Tersimpan otomatis, tidak perlu bolak-balik buka menu Pelanggan.</span>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerMode("existing")}
+                    className="font-semibold text-slate-600 hover:text-slate-900 underline shrink-0 ml-2"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Paket Layanan */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Paket Layanan</label>
             <select
@@ -136,9 +318,12 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               </option>
               <option value="Setrika Saja (Kg)">Setrika Saja (Rp 6.000/kg)</option>
               <option value="Bedcover King (Pcs)">Bedcover King (Rp 35.000/pcs)</option>
+              <option value="Cuci Sepatu">Cuci Sepatu (Rp 25.000/pasang)</option>
+              <option value="Cuci Karpet">Cuci Karpet (Rp 15.000/meter)</option>
             </select>
           </div>
 
+          {/* Berat / Jumlah & Harga */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">
@@ -176,6 +361,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             </span>
           </div>
 
+          {/* Status Bayar & Metode Bayar */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Status Bayar</label>
@@ -202,23 +388,41 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1">
-              Catatan Order (Opsional)
-            </label>
-            <input
-              type="text"
-              placeholder="Contoh: baju putih dipisah, lipat rapi"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
-            />
+          {/* Catatan & No. Rak / Keranjang */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Catatan Order (Opsional)
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: jangan campur putih"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                <span>No. Rak / Keranjang</span>
+                <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Cegah Tertukar</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Rak B-03 / Keranjang 4"
+                value={rackNumber}
+                onChange={(e) => setRackNumber(e.target.value)}
+                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
+              />
+            </div>
           </div>
 
+          {/* Buttons */}
           <div className="flex gap-2.5 pt-3">
             <button
               type="button"
               onClick={onClose}
+              disabled={submitting}
               className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 transition"
             >
               Batal

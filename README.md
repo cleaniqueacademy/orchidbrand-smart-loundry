@@ -29,35 +29,52 @@ Dirancang untuk skala cloud multi-tenant (1 User = 1 Outlet Laundry), pencatatan
   - 1 User mengelola 1 Tenant/Outlet secara terisolasi.
   - Mengelola tarif layanan, operasional cucian, dan buku kas outlet sendiri.
 
-### 2. Manajemen Order & Data Customer
-- **Data Customer**:
-  - Menyimpan profil pelanggan: Nama, Nomor Telepon/WhatsApp, dan Alamat.
-  - Riwayat transaksi laundry per customer.
+### 2. Manajemen Order & Kasir Lengkap
+- **Pencatatan Order Fleksibel & Cepat**:
+  - Pilihan pelanggan terdaftar atau **+ Pelanggan Baru (Inline)** langsung dari modal pesanan tanpa perlu bolak-balik menu.
+  - Dukungan layanan kiloan (Reguler/Express), satuan (Bedcover, Jas, Sepatu, Karpet), dan setrika.
+  - **Nomor Rak / Keranjang Penyimpanan (`rackNumber`)**: Mencatat posisi rak cucian untuk mencegah pakaian tertukar antar tetangga.
 - **Siklus Status Order**:
-  - `Antrian / Diterima` ➔ `Sedang Dicuci` ➔ `Proses Pengeringan/Setrika` ➔ `Selesai / Siap Diambil` ➔ `Sudah Diambil`.
-- **Layanan & Tarif**:
-  - Kiloan (Reguler / Express), Satuan (Bedcover, Jas, Sepatu, dll.), Setrika saja.
-- **Status Pembayaran**:
-  - `Lunas` (Cash / Transfer / QRIS) atau `Belum Lunas`.
+  - `Antrian (pending)` ➔ `Sedang Dicuci (washing)` ➔ `Pengeringan & Setrika (drying_ironing)` ➔ `Siap Diambil (ready)` ➔ `Selesai (completed)` serta dukungan pembatalan pesanan aman (`cancelled`).
+- **Koreksi & Pembatalan Pesanan Kasir**:
+  - Modal **Edit Pesanan** (`EditOrderModal`) untuk mengubah berat/qty, tarif, total harga, paket layanan, no. rak, dan catatan cucian.
+  - Tombol **Batalkan Pesanan** dengan dialog konfirmasi aman (tidak dihitung dalam omset aktif).
+  - Tombol **Hapus Pesanan Permanen** untuk pesanan yang batal atau salah input.
+- **Pelunasan Cepat Kasir (Quick Pay)**:
+  - Toggle 1-klik status bayar `Belum Lunas` ➔ `Lunas` dengan pilihan metode: **Tunai (Cash)**, **QRIS**, atau **Transfer Bank**.
+- **Filter "Cucian Menginap" (>3 Hari Belum Diambil)**:
+  - Indikator badge peringatan otomatis pada cucian yang sudah selesai diproses namun belum diambil pelanggan selama lebih dari 3 hari.
 
-### 3. Notifikasi WhatsApp Customer
-- Saat order ditandai **Selesai / Siap Diambil**, sistem otomatis menyiapkan tombol notifikasi WhatsApp 1-klik (`wa.me`) dengan format pesan yang rapi:
-  - Nomor Invoice / Nota.
-  - Nama Customer & Ringkasan Cucian.
-  - Total Biaya & Status Pembayaran (Lunas / Sisa Bayar).
-  - Alamat & Kontak Outlet Laundry.
-- Dapat dihubungkan ke WhatsApp Gateway (seperti Fonnte / Wablas) untuk pengiriman otomatis di latar belakang.
+### 3. Cetak Struk Kasir Thermal & QR Code Nota
+- **Thermal Receipt Printer**:
+  - Pratinjau struk kasir bergaya kertas kasir thermal asli.
+  - Pilihan lebar kertas standar: **58mm** (printer Bluetooth portabel) dan **80mm** (printer meja POS).
+  - Cetak langsung via browser (`window.print()`) dengan CSS print layout presisi.
+- **QR Code Invoice Dinamis**:
+  - QR code otomatis di-generate di badan struk berbasis nomor nota pesanan.
+- **Kirim Nota via WhatsApp 1-Klik**:
+  - Tombol langsung di modal struk untuk mengirim nota digital lengkap ke WhatsApp pelanggan.
 
-### 4. Pencatatan Keuangan & Arus Kas (Cashflow)
+### 4. Notifikasi WhatsApp Cerdas & Kontekstual
+- Sistem secara dinamis menghasilkan pesan WhatsApp sesuai kondisi terkini:
+  - **Pesanan Diterima / Antrian:** Konfirmasi penerimaan cucian, nomor nota, rincian biaya & status bayar.
+  - **Siap Diambil:** Notifikasi cucian selesai dan siap diambil, lengkap dengan **No. Rak / Keranjang**.
+  - **Pengingat Cucian Menginap (>3 Hari):** Template ramah mengingatkan tetangga untuk segera mengambil pakaian.
+  - **Selesai Diambil:** Ucapan terima kasih dan doa kepuasan pelanggan.
+  - **Dibatalkan:** Informasi resmi pembatalan pesanan.
+- Kompatibel dengan direct link `wa.me` kasir dan siap dihubungkan ke WhatsApp Gateway API (Fonnte/Wablas).
+
+### 5. Pencatatan Keuangan, Arus Kas & Laporan Resmi
 - **Uang Masuk (Income)**:
-  - Otomatis tercatat saat order laundry dibayar/lunas.
+  - Otomatis terhitung dari order yang telah berstatus `Lunas` (mengabaikan order yang dibatalkan).
+- **Piutang**:
+  - Pelacakan akumulasi uang yang belum dibayarkan pelanggan (`unpaid`).
 - **Uang Keluar (Expenses)**:
-  - Pencatatan pengeluaran operasional per kategori:
-    - Bahan baku: Sabun deterjen, pewangi/softener, pemutih, plastik laundry.
-    - Utilitas: Token listrik, air PAM, gas pengering.
-    - Operasional: Gaji karyawan, sewa tempat, perawatan/servis mesin, dll.
-- **Dashboard & Laporan Laba Bersih**:
-  - Ringkasan pemasukan, pengeluaran, dan laba bersih (net profit) harian, mingguan, dan bulanan.
+  - Form pencatatan biaya operasional toko (deterjen, pewangi, listrik, air PAM, gas, gaji karyawan, servis mesin).
+- **Buku Kas & Ekspor Dokumen Resmi**:
+  - Ringkasan omset, total biaya, dan laba bersih (*net profit*).
+  - **Export CSV (Excel):** Buku kas terstruktur format UTF-8 BOM siap buka langsung di Microsoft Excel.
+  - **Cetak Laporan PDF:** Dokumen laporan resmi ber-kop surat outlet dengan pilihan filter rentang tanggal (*Date Range Picker*).
 
 ---
 
@@ -65,29 +82,34 @@ Dirancang untuk skala cloud multi-tenant (1 User = 1 Outlet Laundry), pencatatan
 
 ```plaintext
 orchidbrand-smart-loundry/
-├── backend/                  # REST API Server (Bun + Hono + Drizzle)
+├── backend/                  # REST API Server (Bun + Hono + Drizzle + PostgreSQL)
 │   ├── src/
-│   │   ├── db/              # Schema Drizzle & koneksi SQLite
-│   │   ├── routes/          # Endpoint API (auth, tenant, order, customer, expense)
-│   │   ├── middlewares/     # Auth JWT & validasi
-│   │   └── index.ts         # Entry point server Hono
-│   ├── data/                # File database SQLite (local)
-│   ├── drizzle.config.ts
+│   │   ├── db/              # Schema Drizzle pg-core, koneksi & migration otomatis
+│   │   ├── index.ts         # Server Hono, routing API & logic WhatsApp
+│   │   └── seed.ts          # Seeder data demo saat startup
+│   ├── Dockerfile
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── frontend/                 # Client Web App (Vite + React + Tailwind)
+├── frontend/                 # Client Web App (Vite + React 18 + TypeScript + Tailwind)
 │   ├── src/
-│   │   ├── components/      # Komponen UI (Navbar, Card, Modal, Tabel)
-│   │   ├── pages/           # Halaman (Dashboard, Order, Customer, Cashflow, Admin)
-│   │   ├── services/        # Client API request (Hono client/fetch)
-│   │   ├── App.tsx
+│   │   ├── components/      # UI Modular (Tabs, Modals, Layout, Common Table)
+│   │   │   ├── tabs/        # Overview, Orders, Cashflow, Customers, Reports, Tenants, Users
+│   │   │   ├── modals/      # CreateOrder, EditOrder, ReceiptModal, CreateExpense, dll.
+│   │   │   └── common/      # ShadcnDataTable, Toast, Confirm, Icons
+│   │   ├── types/           # Interface Order, Customer, Expense, Tenant, User
+│   │   ├── App.tsx          # Root Orchestrator & State Handler
 │   │   └── main.tsx
+│   ├── Dockerfile
+│   ├── nginx.conf
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── vite.config.ts
 │
-├── package.json              # Root workspace untuk menjalankan backend & frontend
+├── docker-compose.yml        # Multi-container Postgres + Backend + Frontend
+├── package.json              # Root Bun workspaces (`bun dev`)
+├── PRD.md                    # Product Requirements Document
+├── TODO.md                   # Roadmap & Status Fitur
 └── README.md
 ```
 
@@ -166,9 +188,11 @@ erDiagram
     USER {
         string id PK
         string name
-        string email
+        string email UK
         string password_hash
-        string role "superadmin | tenant_owner"
+        string role "superadmin | tenant_owner | staff"
+        string status "active | inactive"
+        string subscription_until
     }
 
     TENANT {
@@ -177,6 +201,8 @@ erDiagram
         string outlet_name
         string phone
         string address
+        string status "active | inactive"
+        string subscription_until
     }
 
     CUSTOMER {
@@ -185,18 +211,24 @@ erDiagram
         string name
         string phone
         string address
+        string notes
     }
 
     ORDER {
         string id PK
         string tenant_id FK
         string customer_id FK
-        string invoice_no
+        string invoice_no UK
         string service_type
         float weight_or_qty
+        string unit "kg | pcs | meter | pasang"
+        float price_per_unit
         float total_amount
-        string status "pending | processing | ready | completed"
+        string status "pending | washing | drying_ironing | ready | completed | cancelled"
         string payment_status "unpaid | paid"
+        string payment_method "cash | qris | transfer"
+        string rack_number "Lokasi Rak/Keranjang"
+        string notes
     }
 
     EXPENSE {

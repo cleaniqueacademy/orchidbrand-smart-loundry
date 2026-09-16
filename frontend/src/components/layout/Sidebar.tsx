@@ -75,17 +75,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const operationalNav = [
-    { id: "overview" as TabType, label: "Ringkasan", icon: Sparkles },
+    {
+      id: "overview" as TabType,
+      label: currentUserRole === "superadmin" ? "Dashboard Pusat" : "Dashboard Outlet",
+      icon: currentUserRole === "superadmin" ? Building2 : Sparkles,
+    },
     {
       id: "orders" as TabType,
-      label: "Pesanan",
+      label: currentUserRole === "superadmin" ? "Semua Pesanan" : "Kasir & Pesanan",
       icon: ShoppingBag,
       count: activeOrdersCount > 0 ? activeOrdersCount : undefined,
       highlight: readyOrdersCount > 0 ? readyOrdersCount : undefined,
     },
-    { id: "cashflow" as TabType, label: "Arus Kas", icon: DollarSign },
-    { id: "customers" as TabType, label: "Pelanggan", icon: Users },
-    { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
+    {
+      id: "cashflow" as TabType,
+      label: currentUserRole === "superadmin" ? "Arus Kas Jaringan" : "Buku Kas",
+      icon: DollarSign,
+    },
+    {
+      id: "customers" as TabType,
+      label: currentUserRole === "superadmin" ? "Semua Pelanggan" : "Pelanggan",
+      icon: Users,
+    },
+    {
+      id: "reports" as TabType,
+      label: currentUserRole === "superadmin" ? "Laporan Konsolidasi" : "Laporan Keuangan",
+      icon: FileSpreadsheet,
+    },
   ];
 
   const adminNav = [

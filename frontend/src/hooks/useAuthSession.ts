@@ -1,0 +1,126 @@
+import { useState } from "react";
+import { User, Role, Tenant } from "../types";
+import { useToast } from "../components/common/ToastContext";
+import { useConfirm } from "../components/common/ConfirmContext";
+
+const AUTH_KEY = "orchid_auth_user";
+const API_BASE = "/api";
+
+function readSavedUser(): User | null {
+  try {
+    const saved = localStorage.getItem(AUTH_KEY);
+    if (!saved) return null;
+    const u = JSON.parse(saved);
+    // Validasi wajib ada id dan role yang benar
+    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff"].includes(u.role)) {
+      localStorage.removeItem(AUTH_KEY);
+      return null;
+    }
+    return u as User;
+  } catch {
+    localStorage.removeItem(AUTH_KEY);
+    return null;
+  }
+}
+
+export function useAuthSession() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => readSavedUser());
+
+  const [currentUserRole, setCurrentUserRole] = useState<Role>(() => {
+    try {
+      const saved = localStorage.getItem(AUTH_KEY);
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role) return u.role;
+      }
+    } catch {}
+    return "tenant_owner";
+  });
+
+  const [tenantId, setTenantId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(AUTH_KEY);
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role === "tenant_owner" && u.tenantId) {
+          return u.tenantId;
+        }
+        if (u && u.role === "superadmin") {
+          return "all";
+        }
+      }
+    } catch {}
+    return "tenant-01";
+  });
+
+  const handleLoginSuccess = (user: User) => {
+    try {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    } catch (e) {
+      console.error(e);
+    }
+    toast.success("Login Berhasil", `Selamat datang kembali, ${user.name}!`);
+    setCurrentUser(user);
+    setCurrentUserRole(user.role);
+    if (user.role === "tenant_owner" && user.tenantId) {
+      setTenantId(user.tenantId);
+    } else if (user.role === "superadmin") {
+      setTenantId("all");
+    }
+  };
+
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: "Keluar dari Sistem?",
+      description:
+        "Apakah Anda yakin ingin keluar dari akun Orchid Smart Laundry? Anda perlu login kembali untuk mengakses data operasional.",
+      confirmText: "Ya, Keluar",
+      cancelText: "Tetap Masuk",
+      variant: "warning",
+    });
+
+    if (!confirmed) return;
+
+    toast.info("Mengeluarkan Akun...", "Sesi Anda telah diakhiri.");
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: "POST" });
+    } catch {}
+    // Clear localStorage
+    try {
+      localStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem("orchid_auth_tenant");
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("orchid_")) localStorage.removeItem(key);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setTimeout(() => {
+      window.location.replace("/");
+    }, 400);
+  };
+
+  const handleSelectTenant = (id: string, tenants: Tenant[]) => {
+    setTenantId(id);
+    if (id === "all") {
+      toast.info("Mode Agregat Pusat", "Menampilkan data gabungan dari seluruh cabang outlet.");
+    } else {
+      const t = tenants.find((item) => item.id === id);
+      toast.info("Inspeksi Cabang", `Sekarang memantau: ${t?.outletName || id}`);
+    }
+  };
+
+  return {
+    currentUser,
+    currentUserRole,
+    setCurrentUserRole,
+    tenantId,
+    setTenantId,
+    handleLoginSuccess,
+    handleLogout,
+    handleSelectTenant,
+  };
+}

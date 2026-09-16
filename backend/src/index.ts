@@ -193,6 +193,10 @@ app.post("/api/auth/login", async (c) => {
   }
 });
 
+app.post("/api/auth/logout", async (c) => {
+  return c.json({ success: true, message: "Logout berhasil" });
+});
+
 // User Management (Super Admin)
 app.get("/api/users", async (c) => {
   try {
@@ -408,13 +412,36 @@ app.post("/api/orders", async (c) => {
   try {
     const body = await c.req.json();
     const tenantId = body.tenantId || "tenant-01";
+    let customerId = body.customerId;
+
+    if (!customerId && body.newCustomer) {
+      if (!body.newCustomer.name || !body.newCustomer.phone) {
+        return c.json({ success: false, message: "Nama dan nomor telepon pelanggan baru wajib diisi" }, 400);
+      }
+      const newCust = {
+        id: `cust-${Date.now()}`,
+        tenantId,
+        name: String(body.newCustomer.name).trim(),
+        phone: String(body.newCustomer.phone).trim(),
+        address: body.newCustomer.address ? String(body.newCustomer.address).trim() : "",
+        notes: body.newCustomer.notes ? String(body.newCustomer.notes).trim() : "",
+        createdAt: new Date().toISOString(),
+      };
+      await db.insert(customers).values(newCust);
+      customerId = newCust.id;
+    }
+
+    if (!customerId) {
+      return c.json({ success: false, message: "Pelanggan belum dipilih atau belum diisi" }, 400);
+    }
+
     const count = (await db.select().from(orders)).length + 1;
     const invoiceNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${String(count).padStart(3, "0")}`;
 
     const newOrder = {
       id: `ord-${Date.now()}`,
       tenantId,
-      customerId: body.customerId,
+      customerId,
       invoiceNo,
       serviceType: body.serviceType,
       weightOrQty: Number(body.weightOrQty),
@@ -425,6 +452,7 @@ app.post("/api/orders", async (c) => {
       paymentStatus: body.paymentStatus || "unpaid",
       paymentMethod: body.paymentMethod || "cash",
       notes: body.notes || "",
+      rackNumber: body.rackNumber ? String(body.rackNumber).trim() : null,
       createdAt: new Date().toISOString(),
     };
 
@@ -465,8 +493,9 @@ app.patch("/api/orders/:id/status", async (c) => {
       const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
       const outletName = tenant ? tenant.outletName : "Orchid Brand Smart Laundry";
       const paymentNote = existing.paymentStatus === "paid" ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${existing.totalAmount.toLocaleString("id-ID")})`;
+      const rackText = existing.rackNumber ? `\n📍 *Lokasi Rak/Keranjang:* ${existing.rackNumber}` : "";
 
-      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n🧺 *Layanan:* ${existing.serviceType} (${existing.weightOrQty} ${existing.unit})\n💰 *Status Bayar:* ${paymentNote}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n🧺 *Layanan:* ${existing.serviceType} (${existing.weightOrQty} ${existing.unit})\n💰 *Status Bayar:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
       waData = {
         phone: cleanPhone,
@@ -497,6 +526,54 @@ app.patch("/api/orders/:id/payment", async (c) => {
       .where(eq(orders.id, id));
 
     return c.json({ success: true, message: "Status pembayaran berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Update Order (Edit Detail Kasir)
+app.put("/api/orders/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+
+    const existingResults = await db.select().from(orders).where(eq(orders.id, id));
+    if (!existingResults[0]) {
+      return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+    }
+
+    const updateData: any = {};
+    if (body.customerId !== undefined) updateData.customerId = body.customerId;
+    if (body.serviceType !== undefined) updateData.serviceType = body.serviceType;
+    if (body.weightOrQty !== undefined) updateData.weightOrQty = Number(body.weightOrQty);
+    if (body.unit !== undefined) updateData.unit = body.unit;
+    if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit);
+    if (body.totalAmount !== undefined) updateData.totalAmount = Number(body.totalAmount);
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+      if (body.status === "completed" || body.status === "ready") {
+        updateData.completedAt = new Date().toISOString();
+      }
+    }
+    if (body.paymentStatus !== undefined) updateData.paymentStatus = body.paymentStatus;
+    if (body.paymentMethod !== undefined) updateData.paymentMethod = body.paymentMethod;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.rackNumber !== undefined) updateData.rackNumber = body.rackNumber ? String(body.rackNumber).trim() : null;
+
+    await db.update(orders).set(updateData).where(eq(orders.id, id));
+
+    return c.json({ success: true, message: "Order berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Delete Order
+app.delete("/api/orders/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(orders).where(eq(orders.id, id));
+    return c.json({ success: true, message: "Order berhasil dihapus" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -569,11 +646,11 @@ app.get("/api/stats/cashflow", async (c) => {
         : await db.select().from(expenses);
 
     const totalIncome = orderList
-      .filter((o) => o.paymentStatus === "paid")
+      .filter((o) => o.paymentStatus === "paid" && o.status !== "cancelled")
       .reduce((sum, o) => sum + o.totalAmount, 0);
 
     const pendingPaymentAmount = orderList
-      .filter((o) => o.paymentStatus === "unpaid")
+      .filter((o) => o.paymentStatus === "unpaid" && o.status !== "cancelled")
       .reduce((sum, o) => sum + o.totalAmount, 0);
 
     const totalExpense = expList.reduce((sum, e) => sum + e.amount, 0);
@@ -585,6 +662,7 @@ app.get("/api/stats/cashflow", async (c) => {
 
     const readyOrdersCount = orderList.filter((o) => o.status === "ready").length;
     const completedOrdersCount = orderList.filter((o) => o.status === "completed").length;
+    const cancelledOrdersCount = orderList.filter((o) => o.status === "cancelled").length;
 
     return c.json({
       success: true,
@@ -593,10 +671,11 @@ app.get("/api/stats/cashflow", async (c) => {
         pendingPaymentAmount,
         totalExpense,
         netProfit,
-        totalOrdersCount: orderList.length,
+        totalOrdersCount: orderList.filter((o) => o.status !== "cancelled").length,
         activeOrdersCount,
         readyOrdersCount,
         completedOrdersCount,
+        cancelledOrdersCount,
       },
     });
   } catch (error: any) {

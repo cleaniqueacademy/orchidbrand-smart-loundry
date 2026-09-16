@@ -33,6 +33,7 @@ const statusBadgeStyles: Record<OrderStatus, string> = {
   drying_ironing: "bg-blue-50 text-blue-800 border-blue-200",
   ready: "bg-emerald-50 text-emerald-800 border-emerald-200",
   completed: "bg-blue-900 text-white border-blue-900",
+  cancelled: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 export const CustomersTab: React.FC<CustomersTabProps> = ({

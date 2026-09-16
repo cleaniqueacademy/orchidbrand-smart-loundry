@@ -46,6 +46,7 @@ export const orders = pgTable("orders", {
   paymentStatus: text("payment_status").notNull().default("unpaid"), // 'unpaid' | 'paid'
   paymentMethod: text("payment_method").default("cash"), // 'cash' | 'transfer' | 'qris'
   notes: text("notes"),
+  rackNumber: text("rack_number"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   completedAt: text("completed_at"),
 });

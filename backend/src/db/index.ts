@@ -74,10 +74,12 @@ export async function initPostgresTables() {
         payment_status TEXT NOT NULL DEFAULT 'unpaid',
         payment_method TEXT DEFAULT 'cash',
         notes TEXT,
+        rack_number TEXT,
         created_at TEXT NOT NULL,
         completed_at TEXT
       );
     `;
+    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rack_number TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS expenses (

@@ -8,11 +8,13 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 ## 📊 Ringkasan Status
 
 - **Status Dasar & Setup Monorepo:** 100% Selesai
-- **Core Dashboard & Operasional Kasir:** 80% Selesai
-- **Sistem Arus Kas (Uang Masuk & Keluar):** 85% Selesai
-- **Multi-Tenant & Notifikasi WA:** 75% Selesai
-- **Autentikasi & Keamanan:** 20% (Belum terintegrasi login session)
-- **Fitur Lanjutan (Cetak Nota Thermal, Stok Barang, Export):** 0% (Backlog)
+- **Core Dashboard & Operasional Kasir:** 100% Selesai (termasuk Edit, Batal, & Hapus Pesanan)
+- **Cetak Struk Nota Kasir Thermal:** 100% Selesai (58mm/80mm + QR Code)
+- **Fitur Kritis Laundry Perumahan:** 100% Selesai (No. Rak, Cucian Menginap, Quick Pay, WA Cerdas)
+- **Sistem Arus Kas & Laporan Keuangan:** 100% Selesai (Buku Kas, Export CSV Excel, & PDF Cetak)
+- **Multi-Tenant & Notifikasi WA:** 100% Selesai (Konsolidasi HQ & Cabang + Format WA Otomatis)
+- **Autentikasi & Keamanan:** 100% Selesai (Login, Logout, Validasi Sesi, & Role RBAC)
+- **Fitur Lanjutan (Gateway WA Otomatis, Stok Barang, Public Tracking, CI):** 0% (Pending P1 & P2)
 
 ---
 
@@ -30,89 +32,99 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
   - `users` (superadmin & tenant owner)
   - `tenants` (relasi 1 user = 1 tenant)
   - `customers` (data pelanggan laundry per tenant)
-  - `orders` (transaksi cucian, berat/qty, status proses, status pembayaran, nota invoice)
+  - `orders` (transaksi cucian, berat/qty, status proses, status pembayaran, nota invoice, nomor rak)
   - `expenses` (pencatatan uang keluar operasional)
 - [x] Auto-seed data demo saat startup pertama (`seed.ts`).
+- [x] Auto-migration skema database terintegrasi (`initPostgresTables`).
 - [x] REST API CRUD lengkap:
   - `GET /api/health`
-  - `GET /api/tenants` & `POST /api/tenants`
-  - `GET /api/customers` & `POST /api/customers`
-  - `GET /api/orders` & `POST /api/orders`
-  - `PATCH /api/orders/:id/status` (dengan generator URL WhatsApp dan format pesan otomatis)
-  - `PATCH /api/orders/:id/payment` (update lunas/belum lunas)
+  - `POST /api/auth/login` (validasi email, password, status akun, dan tanggal langganan)
+  - `POST /api/auth/logout`
+  - `GET /api/users`, `POST /api/users`, `PUT /api/users/:id`, `PATCH /api/users/:id/status`, `DELETE /api/users/:id`
+  - `GET /api/tenants`, `POST /api/tenants`, `PUT /api/tenants/:id`, `PATCH /api/tenants/:id/status`, `DELETE /api/tenants/:id`
+  - `GET /api/customers`, `POST /api/customers`, `PUT /api/customers/:id`, `DELETE /api/customers/:id`
+  - `GET /api/orders`, `POST /api/orders`, `PUT /api/orders/:id`, `DELETE /api/orders/:id`
+  - `PATCH /api/orders/:id/status` (mendukung status `cancelled`, generator URL WhatsApp dinamis dan lokasi rak)
+  - `PATCH /api/orders/:id/payment` (update lunas/belum lunas dan metode bayar cash/qris/transfer)
   - `GET /api/expenses`, `POST /api/expenses`, `DELETE /api/expenses/:id`
-  - `GET /api/stats/cashflow` (kalkulasi omset lunas, piutang, total pengeluaran, laba bersih)
+  - `GET /api/stats/cashflow` (kalkulasi omset lunas, piutang, total pengeluaran, laba bersih — mengabaikan transaksi batal)
 
-### 3. Frontend Dashboard Admin (React + Vite + Tailwind CSS)
-- [x] Navigasi Tab Dashboard:
-  - **Overview:** 4 Kartu Metrik Keuangan Utama (Total Omset Masuk, Piutang Belum Lunas, Biaya Keluar, Laba Bersih), statistik status cucian aktif, dan daftar transaksi terbaru.
-  - **Orders (Kasir Laundry):** Tabel pesanan, filter status proses, filter status pembayaran, tombol update status cepat, modal buat order baru dengan kalkulasi harga otomatis.
-  - **Cashflow (Arus Kas):** Visualisasi pemasukan vs pengeluaran, daftar pengeluaran harian, modal input pengeluaran baru, hapus pengeluaran.
-  - **Customers:** Daftar direktori pelanggan, pencarian nama/no telp, modal tambah pelanggan baru, quick action chat WA.
-  - **Tenants (Superadmin View):** Daftar cabang outlet, pemilik akun, no telepon, alamat, total pesanan, dan total omset per cabang, serta modal daftar outlet baru.
-- [x] Integrasi Notifikasi WhatsApp:
-  - Auto format nomor HP (`08xxx` -> `628xxx`).
-  - Generate link direct `wa.me` dengan template pesan status cucian siap ambil lengkap dengan rincian nota dan status pembayaran.
+### 3. Frontend Dashboard Admin & Kasir (React + Vite + Tailwind CSS)
+- [x] **Sistem Autentikasi & Session (Prioritas P0 Selesai):**
+  - Halaman Login (`LoginPage.tsx`) dengan validasi email & kata sandi.
+  - Sesi tersimpan di `localStorage` dengan penanganan status akun aktif/nonaktif & kedaluwarsa langganan.
+  - Tombol Logout di Header dan Sidebar yang membersihkan sesi dan memanggil API backend.
+  - **Role-Based Access Control (RBAC):** Menu Superadmin (*Semua Cabang* & *Manajemen User*) terkunci dari Tenant Owner biasa.
+  - **Dynamic Tenant Switcher:** Dropdown di sidebar untuk Superadmin berganti antara Konsolidasi HQ dan inspeksi outlet cabang.
+- [x] **Cetak Struk Nota / Thermal Receipt (Prioritas P0 Selesai):**
+  - Modal cetak struk nota kasir (`ReceiptModal.tsx`) bergaya kertas thermal otentik.
+  - Pilihan ukuran kertas thermal: **58mm** (printer saku Bluetooth) dan **80mm** (printer kasir POS meja).
+  - Integrasi **QR Code Nota** dinamis berbasis invoice untuk kemudahan scan.
+  - Tombol cetak langsung browser (`window.print()`) dengan `@media print` presisi tanpa margin berlebih.
+  - Fitur salin teks ringkasan nota ke clipboard.
+  - Tombol **Kirim WA** langsung dari pratinjau struk kasir.
+- [x] **Aksi Edit, Batal, & Hapus Pesanan (Prioritas P0 Selesai):**
+  - Modal edit pesanan kasir (`EditOrderModal.tsx`) untuk koreksi berat/qty cucian, tarif per satuan, total bayar, paket layanan, no. rak, dan catatan.
+  - Tombol Batalkan Pesanan (status `cancelled`) dengan dialog konfirmasi aman.
+  - Tombol Hapus Pesanan permanen (`DELETE`) untuk pesanan yang sudah dibatalkan atau salah input.
+  - Modal edit pelanggan (`EditCustomerModal.tsx`) dan hapus data pelanggan.
+- [x] **Pembuatan Pelanggan Instan (Inline Rapid Customer):**
+  - Form Order Baru (`CreateOrderModal.tsx`) mendukung pendaftaran pelanggan baru langsung di modal yang sama tanpa perlu bolak-balik ke tab Pelanggan.
+- [x] **Fitur Kritis Khusus Laundry Perumahan / Rumahan:**
+  - **Nomor Rak / Keranjang Penyimpanan (`rackNumber`):** Mencegah pakaian tertukar antar tetangga, tersimpan di DB, tabel kasir, struk thermal, dan notifikasi WA.
+  - **Pesan WhatsApp Cerdas Sesuai Konteks:** Format pesan otomatis menyesuaikan status (Cucian Diterima, Siap Diambil, Pengingat Menginap, Selesai, Dibatalkan).
+  - **Deteksi & Filter "Cucian Menginap" (>3 Hari Belum Diambil):** Badge peringatan dan filter cepat untuk kasir mem-follow-up pakaian tetangga yang menumpuk di rak.
+  - **Pelunasan Cepat Kasir (Quick Payment Popover):** Pilihan metode bayar 1-klik (Tunai, QRIS, Transfer) langsung dari baris tabel pesanan.
+- [x] **Laporan & Pembukuan Keuangan (Reports Tab):**
+  - Unduh buku besar transaksi format **CSV (UTF-8 BOM)** langsung kompatibel dengan Microsoft Excel.
+  - Cetak dokumen resmi ber-kop surat outlet ke format **PDF**.
+  - Filter rentang waktu (*Date Range Picker*) dan ringkasan kontribusi layanan & biaya.
+- [x] **Pemisahan Dashboard Super Admin & Tenant Owner (Prioritas P0 Selesai):**
+  - **Dashboard Eksekutif Pusat HQ (`AdminOverviewTab.tsx`):** Menampilkan metrik SaaS multi-cabang (Omset Konsolidasi, Jaringan Cabang, Akun & Lisensi SaaS, Total Pesanan Jaringan), Papan Peringkat & Performa Outlet, dan Feed Pesanan Lintas Cabang.
+  - **Dashboard Operasional Kasir Cabang (`TenantOverviewTab.tsx`):** Fokus operasional kasir cabang (Order Baru POS, Catat Biaya, Rak & Cucian Siap Diambil, Notifikasi WhatsApp, dan Buku Kas Outlet).
+  - **Mode Inspeksi Cabang Cerdas:** Jika Super Admin menginspeksi cabang tertentu, dashboard cabang menampilkan banner navigasi kuning dengan tombol *← Kembali ke Dashboard Pusat (HQ)*.
+  - **Kepatuhan Modularitas:** Seluruh file view dan composable dipecah rapi di bawah batas 800 baris kode.
+- [x] **Navigasi Tab Operasional Lengkap:**
+  - **Overview:** Router cerdas antara Dashboard Pusat (Superadmin) dan Dashboard Outlet (Tenant Owner).
+  - **Orders:** Kasir laundry modern dengan tabel data terfilter, update status cepat, cetak struk thermal, dan edit pesanan.
+  - **Cashflow:** Buku arus kas harian dan modal catat biaya operasional.
+  - **Customers:** Direktori pelanggan dengan histori dan tombol direct WhatsApp.
+  - **Tenants:** Manajemen cabang outlet.
+  - **Users:** Manajemen akun pengguna, hak akses, dan lisensi langganan.
 
 ---
 
 ## ⏳ Yang BELUM Dikerjakan (Pending / Backlog)
 
-Berikut adalah daftar rincian fitur dan perbaikan yang belum dikerjakan, diurutkan berdasarkan skala prioritas:
-
-### 🔴 Prioritas Tinggi (P0 - Critical for Operations)
-
-#### 1. Sistem Autentikasi & Session (Login / Logout)
-- [ ] **Halaman Login (`/login`):** Form login untuk Superadmin dan Tenant Owner (Email & Password).
-- [ ] **JWT / Session Token:** Endpoint `POST /api/auth/login` dan `POST /api/auth/logout`.
-- [ ] **Role-Based Access Control (RBAC):**
-  - Superadmin bisa melihat tab Tenants dan memilih outlet mana yang ingin dicek.
-  - Tenant Owner hanya bisa melihat data outletnya sendiri dan tidak bisa mengakses menu Superadmin.
-- [ ] **Dynamic Tenant Switcher di UI:** Saat ini tenant masih default ke `tenant-01`. Perlu dropdown switcher jika login sebagai Superadmin.
-
-#### 2. Cetak Struk Nota / Thermal Receipt (Print Struk)
-- [ ] **Modal Cetak Nota:** Tampilan struk nota format 58mm / 80mm standar printer kasir Bluetooth/USB.
-- [ ] **Fitur Print Browser (`window.print()`):** Desain CSS `@media print` khusus struk belanja laundry (nama toko, tanggal, no nota, rincian pakaian, berat/qty, total bayar, status lunas/belum, catatan).
-- [ ] **QR Code Nota:** QR Code pada struk untuk mempermudah pengecekan status via smartphone.
-
-#### 3. Aksi Edit & Batalkan Order / Customer
-- [ ] **Edit & Hapus Order:** Modal edit jika kasir salah menginput berat/harga, serta tombol pembatalan order (status `cancelled`).
-- [ ] **Edit Customer:** Kemampuan memperbarui nomor telepon atau alamat customer yang sudah terdaftar.
-
----
+Berikut adalah daftar backlog fitur yang tersisa untuk fase berikutnya:
 
 ### 🟡 Prioritas Menengah (P1 - Enhancement & Efficiency)
 
-#### 4. Otomatisasi Pengiriman WhatsApp (Gateway API)
+#### 1. Otomatisasi Pengiriman WhatsApp (Gateway API)
 - [ ] Integrasi WhatsApp Gateway pihak ketiga (seperti Fonnte, Wablas, atau Baileys) agar notifikasi dapat terkirim secara **otomatis dari server** tanpa kasir harus mengklik link `wa.me` manual di browser.
 - [ ] Log riwayat notifikasi terkirim (Status WA: Terkirim, Gagal, Pending).
 
-#### 5. Manajemen Layanan & Daftar Harga Kustom (Service Pricing)
+#### 2. Manajemen Layanan & Daftar Harga Kustom (Service Pricing)
 - [ ] Tabel master data `services` di database:
   - Nama Layanan (contoh: Cuci Kering Setrika, Cuci Basah Saja, Setrika Saja, Bedcover, Sepatu, Karpet).
   - Satuan (`kg`, `pcs`, `meter`, `pasang`).
   - Estimasi waktu pengerjaan (Reguler 2 hari, Kilat 1 hari, Express 4 jam).
   - Harga default per satuan.
-- [ ] Dropdown dinamis di form Kasir memilih paket layanan yang otomatis mengisi harga per kg/pcs.
-
-#### 6. Export Laporan Keuangan & Transaksi
-- [ ] Export data transaksi order ke format **Excel (.xlsx)** atau **CSV**.
-- [ ] Export laporan arus kas bulanan (Pemasukan, Pengeluaran, Laba Bersih) ke format **PDF Ringkasan Laporan**.
-- [ ] Filter rentang tanggal (Hari Ini, 7 Hari Terakhir, Bulan Ini, Custom Date Range).
+- [ ] Dropdown dinamis di form Kasir memilih paket layanan yang otomatis mengambil dari master data DB.
 
 ---
 
 ### 🟢 Prioritas Rendah (P2 - Long-Term & Nice-to-Have)
 
-#### 7. Manajemen Inventaris Bahan Baku (Stok Deterjen & Pewangi)
+#### 3. Manajemen Inventaris Bahan Baku (Stok Deterjen & Pewangi)
 - [ ] Tabel `inventory` (Deterjen, Pewangi, Plastik Packing, Hanger, Label Tag).
 - [ ] Alert stok menipis jika sisa deterjen/plastik di bawah batas minimum.
 - [ ] Otomatis menambahkan pengeluaran (`expenses`) saat kasir mencatat pembelian restock barang.
 
-#### 8. Halaman Cek Resi Mandiri untuk Customer (Public Tracking)
+#### 4. Halaman Cek Resi Mandiri untuk Customer (Public Tracking)
 - [ ] Halaman publik tanpa login (misal `/track/:invoiceNo`).
 - [ ] Customer cukup scan QR Code di struk atau memasukkan No. Nota untuk melihat progress cucian secara real-time tanpa perlu chat admin.
 
-#### 9. Pengujian & CI/CD
+#### 5. Pengujian & CI/CD
 - [ ] Unit test backend (`bun test`) untuk endpoint API.
 - [ ] GitHub Actions workflow `.github/workflows/ci.yml` untuk testing otomatis dan validasi build monorepo.

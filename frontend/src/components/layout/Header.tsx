@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, RefreshCw, ShieldCheck, Store, ChevronRight, Calendar, LogOut } from "lucide-react";
+import { Menu, RefreshCw, ShieldCheck, Store, ChevronRight, Calendar } from "lucide-react";
 import { TabType, Role, User } from "../../types";
 
 interface HeaderProps {
@@ -94,33 +94,6 @@ export const Header: React.FC<HeaderProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-zinc-900" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
-
-          {/* User Profile + Logout */}
-          {onLogout && (
-            <div className="flex items-center gap-1.5 pl-1 sm:pl-2 sm:border-l sm:border-blue-100">
-              {currentUser && (
-                <div className="hidden lg:flex items-center gap-2 pr-1">
-                  {/* avatar — biru tua, teks putih */}
-                  <div className="w-7 h-7 rounded-lg bg-blue-900 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
-                    {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : "U"}
-                  </div>
-                  <div className="text-left text-xs leading-tight">
-                    {/* nama — tetap hitam */}
-                    <div className="font-semibold text-zinc-900 truncate max-w-[120px]">{currentUser.name}</div>
-                    <div className="text-[10px] text-zinc-400 truncate max-w-[120px]">{currentUser.email}</div>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={onLogout}
-                className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition flex items-center gap-1.5 text-xs font-medium shadow-xs"
-                title="Keluar dari Akun"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </header>
