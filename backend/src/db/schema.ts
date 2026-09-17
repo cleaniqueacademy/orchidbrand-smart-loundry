@@ -20,6 +20,7 @@ export const tenants = pgTable("tenants", {
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
   subscriptionUntil: text("subscription_until"),
   waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
+  services: text("services"), // JSON stringified array of LaundryService
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -43,7 +44,7 @@ export const orders = pgTable("orders", {
   unit: text("unit").notNull().default("kg"), // 'kg' | 'pcs'
   pricePerUnit: doublePrecision("price_per_unit").notNull(),
   totalAmount: doublePrecision("total_amount").notNull(),
-  status: text("status").notNull().default("pending"), // 'pending' | 'washing' | 'drying_ironing' | 'ready' | 'completed'
+  status: text("status").notNull().default("process"), // 'process' | 'ready' | 'completed' | 'cancelled'
   paymentStatus: text("payment_status").notNull().default("unpaid"), // 'unpaid' | 'paid'
   paymentMethod: text("payment_method").default("cash"), // 'cash' | 'transfer' | 'qris'
   notes: text("notes"),
@@ -56,7 +57,8 @@ export const orders = pgTable("orders", {
 export const expenses = pgTable("expenses", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull().references(() => tenants.id),
-  category: text("category").notNull(), // 'Deterjen & Pewangi', 'Listrik & Air', etc.
+  type: text("type").notNull().default("expense"), // 'expense' | 'income'
+  category: text("category").notNull(), // 'Deterjen & Pewangi', 'Listrik & Air', 'Penjualan Retail', etc.
   amount: doublePrecision("amount").notNull(),
   notes: text("notes").notNull(),
   expenseDate: text("expense_date").notNull().$defaultFn(() => new Date().toISOString().slice(0, 10)),

@@ -25,6 +25,8 @@ const tabBreadcrumbs: Record<TabType, string> = {
   tenants: "Cabang",
   users: "Pengguna",
   settings: "Pengaturan",
+  "create-order": "Buat Pesanan",
+  "edit-order": "Edit Pesanan",
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -79,8 +81,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Role Badge */}
           {currentUserRole === "superadmin" ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200/80 px-2.5 py-1 rounded-md">
-              <ShieldCheck className="w-3.5 h-3.5 text-zinc-500" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200/90 px-2.5 py-1 rounded-md shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
               <span>Super Admin</span>
             </span>
           ) : (

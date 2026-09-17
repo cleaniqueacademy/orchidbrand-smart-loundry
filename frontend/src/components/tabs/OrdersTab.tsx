@@ -1,5 +1,18 @@
 import React, { useState } from "react";
-import { Plus, Phone, Printer, Edit3, Trash2, XCircle, Store } from "lucide-react";
+import {
+  Plus,
+  Phone,
+  Printer,
+  Edit3,
+  Trash2,
+  XCircle,
+  Store,
+  CheckCircle,
+  Lock,
+  Clock,
+  CheckCircle2,
+  ShoppingBag,
+} from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
 import {
@@ -22,13 +35,14 @@ interface OrdersTabProps {
   onDeleteOrder: (orderId: string) => void;
 }
 
-const statusBadgeStyles: Record<OrderStatus, string> = {
-  pending: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  washing: "bg-sky-50 text-sky-800 border-sky-200",
-  drying_ironing: "bg-blue-50 text-blue-800 border-blue-200",
+const statusBadgeStyles: Record<string, string> = {
+  process: "bg-amber-50 text-amber-800 border-amber-200",
   ready: "bg-emerald-50 text-emerald-800 border-emerald-200",
   completed: "bg-blue-900 text-white border-blue-900",
   cancelled: "bg-rose-50 text-rose-700 border-rose-200",
+  pending: "bg-amber-50 text-amber-800 border-amber-200",
+  washing: "bg-amber-50 text-amber-800 border-amber-200",
+  drying_ironing: "bg-amber-50 text-amber-800 border-amber-200",
 };
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -72,6 +86,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         ? true
         : statusFilter === "overdue"
         ? isOrderOverdue(order)
+        : statusFilter === "process"
+        ? ["process", "pending", "washing", "drying_ironing"].includes(order.status)
         : order.status === statusFilter;
 
     const matchPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
@@ -87,7 +103,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       id: "invoice",
       header: "No. Nota",
       cell: (order) => (
-        <div>
+        <div className="whitespace-nowrap">
           <div className="font-mono font-bold text-zinc-900 text-xs">{order.invoiceNo}</div>
           <div className="text-[10px] text-zinc-400 mt-0.5">
             {new Date(order.createdAt).toLocaleDateString("id-ID", {
@@ -113,9 +129,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             cell: (order: Order) => {
               const outlet = tenants.find((t) => t.id === order.tenantId);
               return (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md whitespace-nowrap">
                   <Store className="w-3 h-3 text-blue-700 shrink-0" />
-                  <span className="truncate max-w-[120px]">
+                  <span>
                     {outlet?.outletName || "Cabang Melati"}
                   </span>
                 </span>
@@ -129,10 +145,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       header: "Pelanggan",
       cell: (order) => (
         <div>
-          <div className="font-semibold text-zinc-900 text-xs">
+          <div className="font-semibold text-zinc-900 text-xs whitespace-nowrap">
             {order.customer?.name || "Pelanggan Umum"}
           </div>
-          <div className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
+          <div className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5 whitespace-nowrap">
             <Phone className="w-2.5 h-2.5 text-zinc-400" />
             <span className="font-mono">{order.customer?.phone || "-"}</span>
           </div>
@@ -144,9 +160,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       header: "Layanan",
       cell: (order) => (
         <div>
-          <div className="text-zinc-800 text-xs font-medium">{order.serviceType}</div>
-          <div className="text-[10px] text-zinc-400 mt-0.5">
-            {order.weightOrQty} {order.unit} @ Rp {order.pricePerUnit.toLocaleString("id-ID")}
+          <div className="text-zinc-800 text-xs font-medium truncate max-w-[200px]" title={order.serviceType}>
+            {order.serviceType}
+          </div>
+          <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">
+            {order.items && order.items.length > 1
+              ? `${order.items.length} item • Total ${order.weightOrQty} ${order.unit}`
+              : `${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`}
           </div>
         </div>
       ),
@@ -155,7 +175,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       id: "total",
       header: "Total",
       cell: (order) => (
-        <span className="font-bold text-zinc-900 text-xs font-mono">
+        <span className="font-bold text-zinc-900 text-xs whitespace-nowrap">
           Rp {order.totalAmount.toLocaleString("id-ID")}
         </span>
       ),
@@ -163,12 +183,23 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     {
       id: "payment",
       header: "Pembayaran",
+      className: "whitespace-nowrap min-w-[110px]",
       cell: (order) =>
-        order.paymentStatus === "paid" ? (
+        isSuperAdmin || order.status === "completed" ? (
+          <span
+            className={`inline-flex items-center justify-center text-[10px] font-semibold px-2.5 py-1 rounded-full select-none whitespace-nowrap ${
+              order.paymentStatus === "paid" || order.status === "completed"
+                ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                : "text-amber-700 bg-amber-50 border border-amber-200"
+            }`}
+          >
+            {order.paymentStatus === "paid" || order.status === "completed" ? "Lunas" : "Belum Lunas"}
+          </span>
+        ) : order.paymentStatus === "paid" ? (
           <button
             type="button"
             onClick={() => setQuickPayOrder(order)}
-            className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full transition cursor-pointer"
+            className="inline-flex items-center justify-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition cursor-pointer whitespace-nowrap"
             title="Ubah status bayar"
           >
             Lunas ▾
@@ -177,7 +208,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           <button
             type="button"
             onClick={() => setQuickPayOrder(order)}
-            className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full transition cursor-pointer"
+            className="inline-flex items-center justify-center text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-full transition cursor-pointer whitespace-nowrap"
             title="Ubah status bayar"
           >
             Belum Lunas
@@ -187,32 +218,79 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     {
       id: "status",
       header: "Status",
-      cell: (order) => (
-        <div>
-          <select
-            value={order.status}
-            onChange={(e) => onUpdateStatus(order.id, e.target.value)}
-            className={`text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer outline-none transition w-full ${
-              statusBadgeStyles[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
-            }`}
-          >
-            <option value="pending">Antrian</option>
-            <option value="washing">Sedang Dicuci</option>
-            <option value="drying_ironing">Setrika / Lipat</option>
-            <option value="ready">Siap Diambil</option>
-            <option value="completed">Selesai</option>
-            <option value="cancelled">Dibatalkan</option>
-          </select>
-          {isOrderOverdue(order) && (
-            <div
-              className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md mt-1 flex items-center gap-1"
-              title="Cucian belum diambil"
-            >
-              <span>Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h</span>
+      className: "whitespace-nowrap min-w-[125px]",
+      cell: (order) => {
+        if (isSuperAdmin) {
+          const statusLabels: Record<string, string> = {
+            process: "Diproses",
+            ready: "Siap Diambil",
+            completed: "Selesai",
+            cancelled: "Dibatalkan",
+            pending: "Diproses",
+            washing: "Diproses",
+            drying_ironing: "Diproses",
+          };
+          return (
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                className={`inline-flex items-center justify-center text-[11px] font-semibold px-2.5 py-1 rounded-lg border select-none whitespace-nowrap shrink-0 ${
+                  statusBadgeStyles[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                }`}
+              >
+                {statusLabels[order.status] || order.status}
+              </span>
+              {isOrderOverdue(order) && (
+                <span
+                  className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0"
+                  title="Cucian belum diambil"
+                >
+                  Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h
+                </span>
+              )}
             </div>
-          )}
-        </div>
-      ),
+          );
+        }
+
+        return (
+          <div className="flex items-center gap-1.5 whitespace-nowrap min-w-[115px]">
+            {order.status === "completed" ? (
+              <div
+                className="inline-flex items-center justify-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 select-none whitespace-nowrap shrink-0"
+                title="Pesanan Selesai (Terkunci)"
+              >
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Selesai</span>
+                <Lock className="w-3 h-3 text-emerald-700 ml-0.5 opacity-60 shrink-0" />
+              </div>
+            ) : (
+              <select
+                value={
+                  ["pending", "washing", "drying_ironing"].includes(order.status)
+                    ? "process"
+                    : order.status
+                }
+                onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border cursor-pointer outline-none transition whitespace-nowrap shrink-0 ${
+                  statusBadgeStyles[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                }`}
+              >
+                <option value="process">Diproses</option>
+                <option value="ready">Siap Diambil</option>
+                <option value="completed">Selesai</option>
+                <option value="cancelled">Dibatalkan</option>
+              </select>
+            )}
+            {isOrderOverdue(order) && (
+              <span
+                className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0"
+                title="Cucian belum diambil"
+              >
+                Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "actions",
@@ -230,15 +308,28 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <Printer className="w-3.5 h-3.5" />
           </button>
 
-          {/* Edit Data Pesanan */}
-          <button
-            type="button"
-            onClick={() => onOpenEditOrderModal(order)}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition cursor-pointer"
-            title="Edit Pesanan"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-          </button>
+          {/* Edit Data Pesanan (Khusus Operasional Kasir) */}
+          {!isSuperAdmin && (
+            order.status === "completed" ? (
+              <button
+                type="button"
+                disabled
+                className="p-1.5 rounded-lg text-zinc-300 bg-zinc-50 border border-zinc-200 cursor-not-allowed"
+                title="Pesanan Selesai (Terkunci)"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpenEditOrderModal(order)}
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition cursor-pointer"
+                title="Edit Pesanan"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+            )
+          )}
 
           {/* WhatsApp Notification */}
           <a
@@ -257,30 +348,44 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <WhatsAppIcon className="w-3.5 h-3.5" />
           </a>
 
-          {/* Batalkan atau Hapus Pesanan */}
-          {order.status !== "cancelled" ? (
-            <button
-              type="button"
-              onClick={() => onCancelOrder(order)}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition cursor-pointer"
-              title="Batalkan Pesanan"
-            >
-              <XCircle className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onDeleteOrder(order.id)}
-              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
-              title="Hapus Pesanan"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+          {/* Batalkan atau Hapus Pesanan (Khusus Operasional Kasir) */}
+          {!isSuperAdmin && (
+            order.status === "completed" ? null : order.status !== "cancelled" ? (
+              <button
+                type="button"
+                onClick={() => onCancelOrder(order)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition cursor-pointer"
+                title="Batalkan Pesanan"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onDeleteOrder(order.id)}
+                className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
+                title="Hapus Pesanan"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )
           )}
         </div>
       ),
     },
   ];
+
+  // Metrik Ringkasan Khusus Super Admin
+  const totalOrdersCount = orders.length;
+  const inProgressCount = orders.filter(
+    (o) =>
+      o.status === "process" ||
+      o.status === "pending" ||
+      o.status === "washing" ||
+      o.status === "drying_ironing"
+  ).length;
+  const readyCount = orders.filter((o) => o.status === "ready").length;
+  const completedCount = orders.filter((o) => o.status === "completed").length;
 
   return (
     <div className="space-y-4">
@@ -307,6 +412,76 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           </button>
         )}
       </div>
+
+      {/* 4 Metric Cards Ringkasan Jaringan untuk Super Admin */}
+      {isSuperAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          {/* Total Pesanan - Hero Spotlight Light Blue */}
+          <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
+            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
+                Total Pesanan
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {totalOrdersCount}
+            </div>
+            <p className="text-[11px] text-sky-700 font-medium mt-1">Seluruh pesanan jaringan</p>
+          </div>
+
+          {/* Dalam Proses - Sunset Amber */}
+          <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                Dalam Proses
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {inProgressCount}
+            </div>
+            <p className="text-[11px] text-amber-700/90 font-medium mt-1">Sedang diproses laundry</p>
+          </div>
+
+          {/* Siap Diambil - Teal */}
+          <div className="rounded-2xl border border-teal-200/90 bg-gradient-to-br from-teal-50/90 via-cyan-50/40 to-white p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800">
+                Siap Diambil
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-teal-500 text-white flex items-center justify-center shadow-xs">
+                <CheckCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {readyCount}
+            </div>
+            <p className="text-[11px] text-teal-700/90 font-medium mt-1">Menunggu penyerahan</p>
+          </div>
+
+          {/* Pesanan Selesai - Mint Emerald */}
+          <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                Pesanan Selesai
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {completedCount}
+            </div>
+            <p className="text-[11px] text-emerald-700/90 font-medium mt-1">Tuntas & terverifikasi</p>
+          </div>
+        </div>
+      )}
 
       {/* Reusable Data Table */}
       <ShadcnDataTable
@@ -343,9 +518,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             >
               <option value="all">Semua Status</option>
               <option value="overdue">Menginap</option>
-              <option value="pending">Antrian</option>
-              <option value="washing">Sedang Dicuci</option>
-              <option value="drying_ironing">Setrika / Lipat</option>
+              <option value="process">Diproses</option>
               <option value="ready">Siap Diambil</option>
               <option value="completed">Selesai</option>
               <option value="cancelled">Dibatalkan</option>

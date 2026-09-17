@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, UserPlus, ShieldCheck } from "lucide-react";
 import { Role, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -35,8 +36,6 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [tenantId, setTenantId] = useState(tenants[0]?.id || "");
   const [submitting, setSubmitting] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
@@ -67,8 +66,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 animate-in fade-in zoom-in-95 duration-100">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-zinc-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center">
@@ -213,6 +212,6 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

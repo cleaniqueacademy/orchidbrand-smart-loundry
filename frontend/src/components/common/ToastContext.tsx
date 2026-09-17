@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from "lucide-react";
 
 export type ToastType = "success" | "error" | "warning" | "info";
@@ -145,46 +146,53 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         aria-live="assertive"
         className="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none no-print"
       >
-        {toasts.map((t) => {
-          const cfg = toastConfig[t.type];
-          const Icon = cfg.icon;
+        <AnimatePresence mode="popLayout">
+          {toasts.map((t) => {
+            const cfg = toastConfig[t.type];
+            const Icon = cfg.icon;
 
-          return (
-            <div
-              key={t.id}
-              role="alert"
-              className={`pointer-events-auto rounded-xl border p-3.5 shadow-xl transition-all duration-200 transform translate-y-0 opacity-100 flex items-start gap-3 backdrop-blur-md relative overflow-hidden ${cfg.containerClass}`}
-            >
-              {/* Icon */}
-              <div className={`p-1.5 rounded-lg shrink-0 ${cfg.iconClass}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0 pr-4">
-                <p className={`text-xs font-bold leading-snug tracking-tight ${cfg.titleClass}`}>
-                  {t.title}
-                </p>
-                {t.description && (
-                  <p className="text-[11px] text-zinc-600 mt-0.5 leading-relaxed break-words">
-                    {t.description}
-                  </p>
-                )}
-              </div>
-
-              {/* Dismiss Button */}
-              <button
-                type="button"
-                onClick={() => removeToast(t.id)}
-                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-md hover:bg-zinc-100 transition absolute top-2.5 right-2.5"
-                title="Tutup Notifikasi"
-                aria-label="Tutup"
+            return (
+              <motion.div
+                key={t.id}
+                layout
+                initial={{ opacity: 0, y: -16, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                role="alert"
+                className={`pointer-events-auto rounded-xl border p-3.5 shadow-xl flex items-start gap-3 backdrop-blur-md relative overflow-hidden ${cfg.containerClass}`}
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          );
-        })}
+                {/* Icon */}
+                <div className={`p-1.5 rounded-lg shrink-0 ${cfg.iconClass}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className={`text-xs font-bold leading-snug tracking-tight ${cfg.titleClass}`}>
+                    {t.title}
+                  </p>
+                  {t.description && (
+                    <p className="text-[11px] text-zinc-600 mt-0.5 leading-relaxed break-words">
+                      {t.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Dismiss Button */}
+                <button
+                  type="button"
+                  onClick={() => removeToast(t.id)}
+                  className="text-zinc-400 hover:text-zinc-700 p-1 rounded-md hover:bg-zinc-100 transition absolute top-2.5 right-2.5 cursor-pointer"
+                  title="Tutup Notifikasi"
+                  aria-label="Tutup"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

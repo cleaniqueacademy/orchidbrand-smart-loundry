@@ -13,6 +13,7 @@ import {
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { CashflowStats, Order, TabType, Tenant, Role } from "../../../types";
 import { useConfirm } from "../../common/ConfirmContext";
+import { formatCurrency } from "../../../utils/formatUtils";
 
 interface TenantOverviewTabProps {
   stats: CashflowStats;
@@ -71,37 +72,37 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Welcome Banner — blue gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 rounded-xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        {/* Decorative blobs */}
-        <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-24 h-24 bg-sky-400/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-semibold text-sky-200 backdrop-blur-xs mb-1.5 border border-white/10">
-            <Store className="w-3 h-3 text-sky-300" />
-            <span>Operasional Cabang</span>
+      {/* Clean Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+              {activeTenant.outletName}
+            </h1>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+              <Store className="w-3 h-3 text-sky-600 shrink-0" />
+              <span>Cabang</span>
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-            {activeTenant.outletName}
-          </h2>
-          <p className="text-blue-200 text-xs mt-1">
-            {activeTenant.address} · Pemantauan cucian kasir, rak penyimpanan, dan buku kas outlet
+          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
+            {activeTenant.address}
           </p>
         </div>
 
-        <div className="relative z-10 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={onOpenOrderModal}
-            className="bg-white hover:bg-blue-50 text-blue-900 font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> Order Baru
+            <Plus className="w-3.5 h-3.5" />
+            <span>Order Baru</span>
           </button>
           <button
             onClick={onOpenExpenseModal}
-            className="bg-white/15 hover:bg-white/25 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition border border-white/20 backdrop-blur-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <DollarSign className="w-3.5 h-3.5" /> Catat Biaya
+            <DollarSign className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Catat Biaya</span>
           </button>
         </div>
       </div>
@@ -109,76 +110,69 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Pemasukan */}
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
               Pemasukan
             </span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-              <TrendingUp className="w-3.5 h-3.5" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight font-mono">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
             Rp {stats.totalIncome.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">
-            Belum tertagih:{" "}
-            <span className="text-amber-700 font-medium">
-              Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
-            </span>
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1">
+            Belum tertagih: Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
           </p>
         </div>
 
         {/* Pengeluaran */}
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
               Pengeluaran
             </span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
-              <TrendingDown className="w-3.5 h-3.5" />
+            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+              <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight font-mono">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
             Rp {stats.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Operasional cabang ini</p>
+          <p className="text-[11px] text-rose-700/90 font-medium mt-1">Operasional cabang ini</p>
         </div>
 
         {/* Laba Bersih */}
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div className="rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
               Laba Bersih
             </span>
-            <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center border border-zinc-200">
-              <DollarSign className="w-3.5 h-3.5" />
+            <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+              <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div
-            className={`mt-2 text-xl sm:text-2xl font-bold tracking-tight font-mono ${
-              stats.netProfit >= 0 ? "text-emerald-700" : "text-rose-700"
-            }`}
-          >
-            Rp {stats.netProfit.toLocaleString("id-ID")}
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+            {formatCurrency(stats.netProfit)}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Pemasukan − Biaya</p>
+          <p className="text-[11px] text-sky-700 font-medium mt-1">Pemasukan − Pengeluaran</p>
         </div>
 
         {/* Cucian Aktif */}
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs">
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
               Dalam Proses
             </span>
-            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-              <Waves className="w-3.5 h-3.5" />
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Waves className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-            {stats.activeOrdersCount} Order
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+            {stats.activeOrdersCount} <span className="text-xs font-semibold text-amber-700">Order</span>
           </div>
-          <p className="text-[11px] text-emerald-700 font-medium mt-1">
+          <p className="text-[11px] text-amber-700/90 font-medium mt-1">
             {stats.readyOrdersCount} pesanan siap diambil
           </p>
         </div>

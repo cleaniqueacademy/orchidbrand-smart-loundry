@@ -17,6 +17,7 @@ import {
   calculateExtendedDate,
 } from "../../utils/subscriptionUtils";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface ExtendSubscriptionModalProps {
   isOpen: boolean;
@@ -98,12 +99,11 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
     e.preventDefault();
     if (!user) return;
 
-    setSubmitting(true);
     try {
+      setSubmitting(true);
       if (mode === "date") {
         if (!customDate) {
-          toast.warning("Pilih Tanggal", "Silakan tentukan tanggal batas masa aktif.");
-          setSubmitting(false);
+          toast.warning("Tanggal Belum Dipilih", "Pilih tanggal batas aktif terlebih dahulu.");
           return;
         }
         await onExtend(user.id, {
@@ -111,10 +111,9 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
           activate: activateAccount,
         });
       } else {
-        const days = mode === "custom" ? Number(customDays) : selectedDays;
-        if (!days || days <= 0) {
-          toast.warning("Jumlah Hari Tidak Valid", "Masukkan jumlah hari perpanjangan minimal 1 hari.");
-          setSubmitting(false);
+        const days = mode === "custom" ? parseInt(customDays, 10) : selectedDays;
+        if (isNaN(days) || days <= 0) {
+          toast.warning("Durasi Tidak Valid", "Masukkan jumlah hari perpanjangan yang valid.");
           return;
         }
         await onExtend(user.id, {
@@ -132,8 +131,8 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-zinc-200 overflow-hidden relative animate-in zoom-in-95 duration-150">
+    <ModalWrapper isOpen={isOpen && !!user} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white rounded-3xl w-full shadow-2xl border border-zinc-200 overflow-hidden relative">
         {/* Modal Header */}
         <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -381,6 +380,6 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

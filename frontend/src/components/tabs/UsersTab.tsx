@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Plus, User, ShieldCheck, Mail, Store, Trash2, Calendar, Clock, Sparkles } from "lucide-react";
+import { Plus, User, ShieldCheck, Mail, Store, Trash2, Calendar, Clock, Sparkles, KeyRound } from "lucide-react";
 import { User as UserType, Role, Tenant } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { useToast } from "../common/ToastContext";
 import { ExtendSubscriptionModal } from "../modals/ExtendSubscriptionModal";
+import { ResetPasswordModal } from "../modals/ResetPasswordModal";
 import { checkUserActiveStatus } from "../../utils/subscriptionUtils";
 
 interface UsersTabProps {
@@ -17,6 +18,7 @@ interface UsersTabProps {
     userId: string,
     payload: { days?: number; newDate?: string; activate: boolean }
   ) => Promise<void>;
+  onResetPassword?: (userId: string, newPassword: string) => Promise<boolean>;
 }
 
 const roleBadgeConfig: Record<Role, { label: string; className: string }> = {
@@ -42,12 +44,14 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   onToggleStatus,
   onUpdateSubscription,
   onExtendSubscription,
+  onResetPassword,
 }) => {
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [userToExtend, setUserToExtend] = useState<UserType | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<UserType | null>(null);
 
   const filteredUsers = users.filter((u) => {
     const matchSearch =
@@ -93,6 +97,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     {
       id: "role",
       header: "Peran",
+      className: "whitespace-nowrap min-w-[125px]",
       cell: (u) => {
         const config = roleBadgeConfig[u.role] || {
           label: u.role,
@@ -100,10 +105,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
         };
         return (
           <span
-            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${config.className}`}
+            className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 select-none ${config.className}`}
           >
-            {u.role === "superadmin" && <ShieldCheck className="w-3 h-3" />}
-            <span>{config.label}</span>
+            {u.role === "superadmin" && <ShieldCheck className="w-3 h-3 shrink-0" />}
+            <span className="whitespace-nowrap">{config.label}</span>
           </span>
         );
       },
@@ -111,14 +116,15 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     {
       id: "tenant",
       header: "Cabang",
+      className: "whitespace-nowrap min-w-[140px]",
       cell: (u) => {
         if (u.role === "superadmin") {
-          return <span className="text-zinc-400 text-xs font-medium">Pusat</span>;
+          return <span className="text-zinc-400 text-xs font-medium whitespace-nowrap">Pusat</span>;
         }
         return (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-800">
-            <Store className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="font-medium">{u.tenantName || "Cabang Melati"}</span>
+          <div className="flex items-center gap-1.5 text-xs text-zinc-800 whitespace-nowrap">
+            <Store className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span className="font-medium truncate">{u.tenantName || "Cabang Melati"}</span>
           </div>
         );
       },
@@ -126,6 +132,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     {
       id: "status",
       header: "Status",
+      className: "whitespace-nowrap min-w-[110px]",
       cell: (u) => {
         const isActive = (u.status || "active") === "active";
         return (
@@ -138,7 +145,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
               onToggleStatus(u.id, u.status || "active");
             }}
             disabled={u.role === "superadmin"}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition border shadow-xs ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition border shadow-xs whitespace-nowrap shrink-0 select-none ${
               isActive
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80"
                 : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/80"
@@ -150,11 +157,11 @@ export const UsersTab: React.FC<UsersTabProps> = ({
             }
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                 isActive ? "bg-emerald-600 animate-pulse" : "bg-rose-600"
               }`}
             />
-            <span>{isActive ? "Aktif" : "Nonaktif"}</span>
+            <span className="whitespace-nowrap">{isActive ? "Aktif" : "Nonaktif"}</span>
           </button>
         );
       },
@@ -162,10 +169,11 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     {
       id: "subscription",
       header: "Masa Aktif",
+      className: "whitespace-nowrap min-w-[220px]",
       cell: (u) => {
         if (u.role === "superadmin") {
           return (
-            <span className="inline-flex items-center text-[11px] font-semibold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-mono">
+            <span className="inline-flex items-center text-[11px] font-semibold text-blue-900 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full font-mono whitespace-nowrap shrink-0 select-none">
               Permanen
             </span>
           );
@@ -174,9 +182,9 @@ export const UsersTab: React.FC<UsersTabProps> = ({
         const statusInfo = checkUserActiveStatus(u);
 
         return (
-          <div className="flex items-center justify-between gap-2 min-w-[200px]">
-            <div>
-              <div className="font-mono text-xs font-bold text-zinc-900">
+          <div className="flex items-center justify-between gap-3 min-w-[220px]">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="font-mono text-xs font-bold text-zinc-900">
                 {u.subscriptionUntil
                   ? new Intl.DateTimeFormat("id-ID", {
                       day: "numeric",
@@ -184,25 +192,23 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                       year: "numeric",
                     }).format(new Date(`${u.subscriptionUntil}T23:59:59`))
                   : "Belum Diatur"}
-              </div>
-              <div className="mt-0.5">
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 select-none ${statusInfo.statusBadge.className}`}
+              >
                 <span
-                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${statusInfo.statusBadge.className}`}
-                >
-                  <span
-                    className={`w-1 h-1 rounded-full ${statusInfo.statusBadge.dotColor}`}
-                  />
-                  <span>{statusInfo.statusBadge.label}</span>
-                </span>
-              </div>
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.statusBadge.dotColor}`}
+                />
+                <span className="whitespace-nowrap">{statusInfo.statusBadge.label}</span>
+              </span>
             </div>
 
             <button
               onClick={() => setUserToExtend(u)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 active:bg-blue-200 border border-blue-200 transition shadow-2xs shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 active:bg-blue-200 border border-blue-200 transition shadow-2xs shrink-0 cursor-pointer whitespace-nowrap"
               title="Perpanjang Masa Aktif"
             >
-              <Calendar className="w-3 h-3 text-blue-600" />
+              <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
               <span>Perpanjang</span>
             </button>
           </div>
@@ -213,7 +219,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       id: "created",
       header: "Terdaftar",
       cell: (u) => (
-        <div className="text-zinc-500 text-xs">
+        <div className="text-zinc-500 text-xs whitespace-nowrap">
           {new Date(u.createdAt).toLocaleDateString("id-ID", {
             day: "numeric",
             month: "short",
@@ -227,20 +233,33 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       header: "Aksi",
       align: "right",
       cell: (u) => (
-        <button
-          onClick={() => {
-            if (u.role === "superadmin") {
-              toast.warning("Aksi Ditolak", "Akun Super Admin utama tidak dapat dihapus.");
-              return;
-            }
-            onDeleteUser(u.id);
-          }}
-          disabled={u.role === "superadmin"}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Hapus Pengguna"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            onClick={() => setUserToResetPassword(u)}
+            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-500 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition cursor-pointer"
+            title={`Reset Password ${u.name}`}
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+          </button>
+          <button
+            disabled={u.role === "superadmin"}
+            onClick={() => {
+              if (u.role === "superadmin") {
+                toast.warning("Aksi Ditolak", "Akun Super Admin utama tidak dapat dihapus.");
+                return;
+              }
+              onDeleteUser(u.id);
+            }}
+            className={`p-1.5 rounded-lg border transition ${
+              u.role === "superadmin"
+                ? "text-zinc-300 border-zinc-100 bg-zinc-50/50 cursor-not-allowed"
+                : "text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border-zinc-200 cursor-pointer"
+            }`}
+            title="Hapus Pengguna"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       ),
     },
   ];
@@ -258,60 +277,63 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
         <button
           onClick={onOpenUserModal}
-          className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-xs transition cursor-pointer"
+          className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-xs transition cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" /> Tambah Pengguna
         </button>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+        {/* Total Pengguna - Highlighted Light Blue */}
+        <div className="bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 border border-sky-300 p-4 sm:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
             Total Pengguna
           </span>
-          <div className="text-xl font-bold text-zinc-900 mt-1">{users.length} Akun</div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Semua pengguna terdaftar</p>
+          <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {users.length} <span className="text-xs font-semibold text-sky-700">Akun</span>
+          </div>
+          <p className="text-[11px] text-sky-700 font-medium mt-1">Semua pengguna terdaftar</p>
         </div>
 
-        <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white border border-emerald-200/90 p-4 sm:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
             Pengguna Aktif
           </span>
-          <div className="text-xl font-bold text-emerald-700 mt-1">
+          <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
             {
               users.filter(
                 (u) => u.role === "superadmin" || checkUserActiveStatus(u).isActive
               ).length
             }{" "}
-            Aktif
+            <span className="text-xs font-semibold text-emerald-700">Aktif</span>
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Dapat login & beroperasi</p>
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1">Dapat login & beroperasi</p>
         </div>
 
-        <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600">
+        <div className="bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white border border-rose-200/90 p-4 sm:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-800">
             Tidak Aktif
           </span>
-          <div className="text-xl font-bold text-rose-600 mt-1">
+          <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
             {
               users.filter(
                 (u) => u.role !== "superadmin" && !checkUserActiveStatus(u).isActive
               ).length
             }{" "}
-            Terkunci
+            <span className="text-xs font-semibold text-rose-700">Terkunci</span>
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Kedaluwarsa atau dinonaktifkan</p>
+          <p className="text-[11px] text-rose-700/90 font-medium mt-1">Kedaluwarsa atau dinonaktifkan</p>
         </div>
 
-        <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="bg-gradient-to-br from-violet-50/90 via-indigo-50/40 to-white border border-violet-200/90 p-4 sm:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-violet-800">
             Administrator
           </span>
-          <div className="text-xl font-bold text-zinc-900 mt-1">
-            {users.filter((u) => u.role === "superadmin").length} Akun
+          <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {users.filter((u) => u.role === "superadmin").length} <span className="text-xs font-semibold text-violet-700">Akun</span>
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Akses kendali pusat</p>
+          <p className="text-[11px] text-violet-700/90 font-medium mt-1">Akses kendali pusat</p>
         </div>
       </div>
 
@@ -367,6 +389,19 @@ export const UsersTab: React.FC<UsersTabProps> = ({
           } else if (payload.newDate) {
             onUpdateSubscription(userId, payload.newDate);
           }
+        }}
+      />
+
+      {/* Modal Reset Password */}
+      <ResetPasswordModal
+        isOpen={!!userToResetPassword}
+        user={userToResetPassword}
+        onClose={() => setUserToResetPassword(null)}
+        onResetPassword={async (userId, newPassword) => {
+          if (onResetPassword) {
+            return await onResetPassword(userId, newPassword);
+          }
+          return false;
         }}
       />
     </div>

@@ -51,6 +51,17 @@ app.get("/api/tenants", async (c) => {
     const allUsers = await db.select().from(users);
     const allOrders = await db.select().from(orders);
 
+    const DEFAULT_TENANT_SERVICES = [
+      { id: "srv-1", name: "Cuci Komplit Reguler", unit: "kg", price: 8000 },
+      { id: "srv-2", name: "Cuci Setrika Express", unit: "kg", price: 12000 },
+      { id: "srv-3", name: "Setrika Saja", unit: "kg", price: 6000 },
+      { id: "srv-4", name: "Bedcover King", unit: "pcs", price: 35000 },
+      { id: "srv-5", name: "Bedcover Single", unit: "pcs", price: 25000 },
+      { id: "srv-6", name: "Cuci Sepatu", unit: "pasang", price: 25000 },
+      { id: "srv-7", name: "Cuci Karpet", unit: "meter", price: 15000 },
+      { id: "srv-8", name: "Cuci Selimut", unit: "pcs", price: 20000 },
+    ];
+
     const enriched = allTenants.map((tenant) => {
       const owner = allUsers.find((u) => u.id === tenant.userId);
       const tenantOrders = allOrders.filter((o) => o.tenantId === tenant.id);
@@ -58,8 +69,21 @@ app.get("/api/tenants", async (c) => {
         .filter((o) => o.paymentStatus === "paid")
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
+      let parsedServices = DEFAULT_TENANT_SERVICES;
+      if (tenant.services) {
+        try {
+          const parsed = typeof tenant.services === "string" ? JSON.parse(tenant.services) : tenant.services;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            parsedServices = parsed;
+          }
+        } catch {
+          parsedServices = DEFAULT_TENANT_SERVICES;
+        }
+      }
+
       return {
         ...tenant,
+        services: parsedServices,
         owner: owner
           ? { id: owner.id, name: owner.name, email: owner.email, role: owner.role }
           : null,
@@ -77,7 +101,7 @@ app.get("/api/tenants", async (c) => {
 app.post("/api/tenants", async (c) => {
   try {
     const body = await c.req.json();
-    const { ownerName, ownerEmail, password, outletName, phone, address } = body;
+    const { ownerName, ownerEmail, password, outletName, phone, address, services } = body;
 
     const newUserId = `user-${Date.now()}`;
     await db.insert(users).values({
@@ -95,6 +119,7 @@ app.post("/api/tenants", async (c) => {
       outletName,
       phone,
       address,
+      services: services ? (typeof services === "string" ? services : JSON.stringify(services)) : null,
     });
 
     return c.json({
@@ -111,7 +136,7 @@ app.put("/api/tenants/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { outletName, phone, address, status, subscriptionUntil } = body;
+    const { outletName, phone, address, status, subscriptionUntil, services, ownerName } = body;
 
     const updateData: any = {};
     if (outletName !== undefined) updateData.outletName = outletName;
@@ -119,8 +144,18 @@ app.put("/api/tenants/:id", async (c) => {
     if (address !== undefined) updateData.address = address;
     if (status !== undefined) updateData.status = status;
     if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
+    if (services !== undefined) {
+      updateData.services = typeof services === "string" ? services : JSON.stringify(services);
+    }
 
     await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+
+    if (ownerName && typeof ownerName === "string" && ownerName.trim()) {
+      const tenantRow = (await db.select().from(tenants).where(eq(tenants.id, id)))[0];
+      if (tenantRow && tenantRow.userId) {
+        await db.update(users).set({ name: ownerName.trim() }).where(eq(users.id, tenantRow.userId));
+      }
+    }
 
     return c.json({ success: true, message: "Data tenant berhasil diperbarui" });
   } catch (error: any) {
@@ -462,6 +497,40 @@ app.delete("/api/users/:id", async (c) => {
   }
 });
 
+// Reset Password Pengguna (Khusus Admin atau Pemilik)
+app.post("/api/users/:id/reset-password", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { newPassword } = body;
+
+    if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 4) {
+      return c.json(
+        { success: false, message: "Kata sandi baru minimal harus 4 karakter." },
+        400
+      );
+    }
+
+    const foundUsers = await db.select().from(users).where(eq(users.id, id));
+    const targetUser = foundUsers[0];
+    if (!targetUser) {
+      return c.json({ success: false, message: "Pengguna tidak ditemukan." }, 404);
+    }
+
+    await db
+      .update(users)
+      .set({ passwordHash: newPassword.trim() })
+      .where(eq(users.id, id));
+
+    return c.json({
+      success: true,
+      message: `Kata sandi untuk ${targetUser.name} (${targetUser.email}) berhasil direset.`,
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
 // 3. Customers
 app.get("/api/customers", async (c) => {
   try {
@@ -628,7 +697,7 @@ app.post("/api/orders", async (c) => {
       pricePerUnit: finalPricePerUnit,
       totalAmount: finalTotalAmount,
       items: itemsJson,
-      status: body.status || "pending",
+      status: body.status || "process",
       paymentStatus: body.paymentStatus || "unpaid",
       paymentMethod: body.paymentMethod || "cash",
       notes: body.notes || "",
@@ -662,11 +731,19 @@ app.patch("/api/orders/:id/status", async (c) => {
       return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
     }
 
+    if (existing.status === "completed") {
+      return c.json(
+        { success: false, message: "Pesanan sudah selesai dan status tidak dapat diubah lagi" },
+        400
+      );
+    }
+
     const completedAt = status === "completed" || status === "ready" ? new Date().toISOString() : null;
+    const paymentStatus = status === "completed" ? "paid" : existing.paymentStatus;
 
     await db
       .update(orders)
-      .set({ status, completedAt })
+      .set({ status, completedAt, paymentStatus })
       .where(eq(orders.id, id));
 
     // Get customer info for WA notification
@@ -738,6 +815,15 @@ app.patch("/api/orders/:id/payment", async (c) => {
     const id = c.req.param("id");
     const { paymentStatus, paymentMethod } = await c.req.json();
 
+    const existingResults = await db.select().from(orders).where(eq(orders.id, id));
+    const existing = existingResults[0];
+    if (existing && existing.status === "completed") {
+      return c.json(
+        { success: false, message: "Pesanan sudah selesai dan pembayaran tidak dapat diubah lagi" },
+        400
+      );
+    }
+
     await db
       .update(orders)
       .set({ paymentStatus, paymentMethod: paymentMethod || "cash" })
@@ -756,8 +842,16 @@ app.put("/api/orders/:id", async (c) => {
     const body = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
-    if (!existingResults[0]) {
+    const existing = existingResults[0];
+    if (!existing) {
       return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+    }
+
+    if (existing.status === "completed") {
+      return c.json(
+        { success: false, message: "Pesanan sudah selesai dan tidak dapat diubah lagi" },
+        400
+      );
     }
 
     const updateData: any = {};
@@ -768,15 +862,43 @@ app.put("/api/orders/:id", async (c) => {
     if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit);
     if (body.totalAmount !== undefined) updateData.totalAmount = Number(body.totalAmount);
     if (body.items !== undefined) {
-      updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
+      try {
+        const itemsArr = Array.isArray(body.items) ? body.items : typeof body.items === "string" ? JSON.parse(body.items) : [];
+        updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
+        if (itemsArr.length > 0) {
+          if (body.serviceType === undefined) {
+            updateData.serviceType = itemsArr.map((it: any) => it.serviceType).join(", ");
+          }
+          if (body.totalAmount === undefined) {
+            updateData.totalAmount = itemsArr.reduce(
+              (sum: number, it: any) =>
+                sum + (Number(it.subtotal) || Number(it.weightOrQty) * Number(it.pricePerUnit)),
+              0
+            );
+          }
+          if (body.weightOrQty === undefined) {
+            updateData.weightOrQty = itemsArr.reduce(
+              (sum: number, it: any) => sum + (Number(it.weightOrQty) || 0),
+              0
+            );
+          }
+        }
+      } catch {
+        updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
+      }
     }
     if (body.status !== undefined) {
       updateData.status = body.status;
       if (body.status === "completed" || body.status === "ready") {
         updateData.completedAt = new Date().toISOString();
       }
+      if (body.status === "completed") {
+        updateData.paymentStatus = "paid";
+      }
     }
-    if (body.paymentStatus !== undefined) updateData.paymentStatus = body.paymentStatus;
+    if (body.paymentStatus !== undefined && updateData.status !== "completed") {
+      updateData.paymentStatus = body.paymentStatus;
+    }
     if (body.paymentMethod !== undefined) updateData.paymentMethod = body.paymentMethod;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.rackNumber !== undefined) updateData.rackNumber = body.rackNumber ? String(body.rackNumber).trim() : null;
@@ -800,7 +922,7 @@ app.delete("/api/orders/:id", async (c) => {
   }
 });
 
-// 5. Expenses (Uang Keluar)
+// 5. Expenses & Income (Buku Arus Kas)
 app.get("/api/expenses", async (c) => {
   try {
     const tenantId = c.req.query("tenantId");
@@ -823,19 +945,25 @@ app.post("/api/expenses", async (c) => {
   try {
     const body = await c.req.json();
     const tenantId = body.tenantId || "tenant-01";
+    const type = body.type === "income" ? "income" : "expense";
 
     const newExpense = {
       id: `exp-${Date.now()}`,
       tenantId,
-      category: body.category,
-      amount: Number(body.amount),
-      notes: body.notes,
+      type,
+      category: body.category || (type === "income" ? "Penjualan Retail" : "Lain-lain"),
+      amount: Number(body.amount) || 0,
+      notes: body.notes || "",
       expenseDate: body.expenseDate || new Date().toISOString().slice(0, 10),
       createdAt: new Date().toISOString(),
     };
 
     await db.insert(expenses).values(newExpense);
-    return c.json({ success: true, message: "Pengeluaran berhasil dicatat", data: newExpense });
+    return c.json({
+      success: true,
+      message: type === "income" ? "Pemasukan berhasil dicatat" : "Pengeluaran berhasil dicatat",
+      data: newExpense,
+    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -845,7 +973,7 @@ app.delete("/api/expenses/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await db.delete(expenses).where(eq(expenses.id, id));
-    return c.json({ success: true, message: "Pengeluaran berhasil dihapus" });
+    return c.json({ success: true, message: "Catatan transaksi berhasil dihapus" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -866,19 +994,31 @@ app.get("/api/stats/cashflow", async (c) => {
         ? await db.select().from(expenses).where(eq(expenses.tenantId, tenantId))
         : await db.select().from(expenses);
 
-    const totalIncome = orderList
-      .filter((o) => o.paymentStatus === "paid" && o.status !== "cancelled")
+    // Pemasukan dari order yang sudah lunas/selesai
+    const orderIncome = orderList
+      .filter((o) => (o.paymentStatus === "paid" || o.status === "completed") && o.status !== "cancelled")
       .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    // Pemasukan manual dari tabel expenses (type === 'income')
+    const manualIncome = expList
+      .filter((e) => (e as any).type === "income")
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const totalIncome = orderIncome + manualIncome;
 
     const pendingPaymentAmount = orderList
-      .filter((o) => o.paymentStatus === "unpaid" && o.status !== "cancelled")
+      .filter((o) => o.paymentStatus === "unpaid" && o.status !== "completed" && o.status !== "cancelled")
       .reduce((sum, o) => sum + o.totalAmount, 0);
 
-    const totalExpense = expList.reduce((sum, e) => sum + e.amount, 0);
+    // Pengeluaran operasional (type === 'expense' atau default)
+    const totalExpense = expList
+      .filter((e) => (e as any).type !== "income")
+      .reduce((sum, e) => sum + e.amount, 0);
+
     const netProfit = totalIncome - totalExpense;
 
     const activeOrdersCount = orderList.filter((o) =>
-      ["pending", "washing", "drying_ironing", "ready"].includes(o.status)
+      ["process", "diproses", "pending", "washing", "drying_ironing", "ready"].includes(o.status)
     ).length;
 
     const readyOrdersCount = orderList.filter((o) => o.status === "ready").length;
@@ -889,6 +1029,8 @@ app.get("/api/stats/cashflow", async (c) => {
       success: true,
       data: {
         totalIncome,
+        orderIncome,
+        manualIncome,
         pendingPaymentAmount,
         totalExpense,
         netProfit,

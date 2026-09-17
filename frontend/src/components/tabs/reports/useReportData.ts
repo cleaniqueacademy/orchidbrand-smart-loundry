@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import * as XLSX from "xlsx";
 import { Order, Expense, Tenant } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 
@@ -41,6 +42,7 @@ interface UseReportDataProps {
   expenses: Expense[];
   tenants: Tenant[];
   currentTenantId: string;
+  currentUserRole?: string;
 }
 
 export function useReportData({
@@ -48,8 +50,14 @@ export function useReportData({
   expenses,
   tenants,
   currentTenantId,
+  currentUserRole,
 }: UseReportDataProps) {
   const toast = useToast();
+
+  // Tenant Selection Filter (Dukungan Audit Super Admin)
+  const [selectedTenantId, setSelectedTenantId] = useState<string>(
+    currentTenantId === "all" ? "all" : currentTenantId
+  );
 
   // Filters: Rentang Waktu (Date Range)
   const [startDate, setStartDate] = useState(
@@ -63,14 +71,39 @@ export function useReportData({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Active Tenant Info
-  const activeTenant: Tenant = tenants.find((t) => t.id === currentTenantId) ||
-    tenants[0] || {
-      id: "tenant-01",
-      outletName: "Orchid Laundry - Cabang Melati",
-      phone: "081234567890",
-      address: "Jl. Melati Raya No. 45, Jakarta",
-    };
+  // Active Tenant Info (Dukungan Konsolidasi Seluruh Cabang)
+  const activeTenant: Tenant = useMemo(() => {
+    if (selectedTenantId === "all" || currentTenantId === "all") {
+      if (selectedTenantId !== "all") {
+        const found = tenants.find((t) => t.id === selectedTenantId);
+        if (found) return found;
+      }
+      return {
+        id: "all",
+        outletName: "Konsolidasi Seluruh Cabang",
+        phone: "0812-3456-7890",
+        address: "Jaringan Multi-Cabang Orchid Brand",
+        status: "active",
+        totalOrders: orders.length,
+        totalOmset: orders
+          .filter((o) => o.paymentStatus === "paid")
+          .reduce((sum, o) => sum + o.totalAmount, 0),
+      };
+    }
+    return (
+      tenants.find((t) => t.id === selectedTenantId) ||
+      tenants.find((t) => t.id === currentTenantId) ||
+      tenants[0] || {
+        id: "tenant-01",
+        outletName: "Orchid Laundry - Cabang Melati",
+        phone: "081234567890",
+        address: "Jl. Melati Raya No. 45, Jakarta",
+        status: "active",
+        totalOrders: 0,
+        totalOmset: 0,
+      }
+    );
+  }, [selectedTenantId, currentTenantId, tenants, orders]);
 
   // Date range filter helper
   const dateRange = useMemo(() => {
@@ -100,9 +133,10 @@ export function useReportData({
     return { start, end, label };
   }, [startDate, endDate]);
 
-  // Filtered Orders
+  // Filtered Orders (disaring berdasarkan cabang jika dipilih)
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
+      const matchTenant = selectedTenantId === "all" || o.tenantId === selectedTenantId;
       const orderDate = new Date(o.createdAt);
       const matchDate = orderDate >= dateRange.start && orderDate <= dateRange.end;
       const matchPayment = paymentFilter === "all" || o.paymentStatus === paymentFilter;
@@ -111,17 +145,18 @@ export function useReportData({
         o.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (o.customer?.name && o.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (o.customer?.phone && o.customer.phone.includes(searchQuery));
-      return matchDate && matchPayment && matchSearch;
+      return matchTenant && matchDate && matchPayment && matchSearch;
     });
-  }, [orders, dateRange, paymentFilter, searchQuery]);
+  }, [orders, selectedTenantId, dateRange, paymentFilter, searchQuery]);
 
-  // Filtered Expenses
+  // Filtered Expenses (disaring berdasarkan cabang jika dipilih)
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
+      const matchTenant = selectedTenantId === "all" || e.tenantId === selectedTenantId;
       const expDate = new Date(e.expenseDate + "T12:00:00");
-      return expDate >= dateRange.start && expDate <= dateRange.end;
+      return matchTenant && expDate >= dateRange.start && expDate <= dateRange.end;
     });
-  }, [expenses, dateRange]);
+  }, [expenses, selectedTenantId, dateRange]);
 
   // Key Financial Metrics
   const metrics: ReportMetrics = useMemo(() => {
@@ -173,14 +208,15 @@ export function useReportData({
       map[o.serviceType].total += o.totalAmount;
       map[o.serviceType].qty += o.weightOrQty;
     });
+    const totalSalesAllServices = Object.values(map).reduce((sum, item) => sum + item.total, 0);
     return Object.entries(map)
       .map(([name, val]) => ({
         name,
         ...val,
-        pct: metrics.totalRevenue > 0 ? Math.round((val.total / metrics.totalRevenue) * 100) : 0,
+        pct: totalSalesAllServices > 0 ? Math.round((val.total / totalSalesAllServices) * 100) : 0,
       }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredOrders, metrics.totalRevenue]);
+  }, [filteredOrders]);
 
   // Breakdown by Expense Category
   const expenseBreakdown: ExpenseBreakdownItem[] = useMemo(() => {
@@ -218,8 +254,224 @@ export function useReportData({
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
   const paginatedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
 
-  // 1. Export CSV Function
+  // 1. Export Excel (.xlsx) Function with Multi-Sheet & Professional Styling
+  const downloadExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const isMultiTenant = activeTenant.id === "all";
+
+      // SHEET 1: Ringkasan Eksekutif & Profil Outlet
+      const summaryAoa: any[][] = [
+        ["ORCHID BRAND - SMART LAUNDRY MANAGEMENT SYSTEM"],
+        [isMultiTenant ? "LAPORAN KEUANGAN KONSOLIDASI SELURUH CABANG" : `LAPORAN KEUANGAN & OPERASIONAL - ${activeTenant.outletName.toUpperCase()}`],
+        [],
+        ["PROFIL OUTLET / CABANG", ""],
+        ["Nama Outlet / Cabang", activeTenant.outletName],
+        ["ID Cabang", activeTenant.id],
+        ["Pemilik / Penanggung Jawab", activeTenant.owner?.name || "Budi Santoso"],
+        ["Alamat", activeTenant.address],
+        ["Nomor Telepon", activeTenant.phone],
+        ["Periode Laporan", dateRange.label],
+        ["Tanggal Unduh Dokumen", new Date().toLocaleString("id-ID")],
+        [],
+        ["REKAPITULASI KEUANGAN & LABA RUGI", "", ""],
+        ["Indikator Keuangan", "Nilai (Rp / Satuan)", "Keterangan"],
+        ["Total Pemasukan (Omset Lunas)", metrics.totalRevenue, `${metrics.paidCount} transaksi lunas`],
+        ["Piutang Pelanggan (Belum Lunas)", metrics.pendingRevenue, `${metrics.unpaidCount} pesanan belum lunas`],
+        ["Total Beban Pengeluaran", metrics.totalExpense, `${filteredExpenses.length} catatan beban operasional`],
+        ["Laba Bersih (Net Profit)", metrics.netProfit, `Margin Keuntungan ${metrics.profitMargin}%`],
+        ["Total Volume Cucian Kiloan", `${metrics.totalKg.toFixed(1)} Kg`, "Total berat"],
+        ["Total Volume Cucian Satuan", `${metrics.totalPcs} Pcs`, "Total satuan"],
+        ["Total Transaksi Pesanan", metrics.totalOrders, "Pesanan"],
+        [],
+        ["KONTRIBUSI PENDAPATAN PER LAYANAN", "", "", "", ""],
+        ["Jenis Layanan", "Jumlah Pesanan", "Total Volume", "Total Omset (Rp)", "Kontribusi (%)"],
+        ...serviceBreakdown.map((s) => [
+          s.name,
+          s.count,
+          `${s.qty} ${s.unit}`,
+          s.total,
+          `${s.pct}%`,
+        ]),
+        [],
+        ["RINCIAN BEBAN PENGELUARAN OPERASIONAL", "", ""],
+        ["Kategori Beban", "Total Biaya (Rp)", "Kontribusi Beban (%)"],
+        ...expenseBreakdown.map((e) => [
+          e.category,
+          e.amount,
+          `${e.pct}%`,
+        ]),
+      ];
+
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryAoa);
+      wsSummary["!cols"] = [
+        { wch: 36 },
+        { wch: 28 },
+        { wch: 32 },
+        { wch: 20 },
+        { wch: 16 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Eksekutif");
+
+      // SHEET 2: Buku Besar Transaksi Rinci (All Filtered Orders)
+      const ledgerHeaders = [
+        "No",
+        "No. Nota",
+        "Tanggal",
+        ...(isMultiTenant ? ["Cabang / Outlet"] : []),
+        "Nama Pelanggan",
+        "No. WhatsApp",
+        "Jenis Layanan",
+        "Qty / Berat",
+        "Satuan",
+        "Status Pesanan",
+        "Status Pembayaran",
+        "Metode Bayar",
+        "Total Biaya (Rp)",
+      ];
+
+      const ledgerRows = filteredOrders.map((ord, idx) => {
+        const tenantName =
+          tenants.find((t) => t.id === ord.tenantId)?.outletName ||
+          ord.tenantId ||
+          activeTenant.outletName;
+        const statusLabel =
+          ord.status === "completed"
+            ? "Selesai"
+            : ord.status === "ready"
+            ? "Siap Diambil"
+            : ord.status === "cancelled"
+            ? "Dibatalkan"
+            : "Diproses";
+        const paymentLabel = ord.paymentStatus === "paid" ? "Lunas" : "Belum Lunas";
+        return [
+          idx + 1,
+          ord.invoiceNo,
+          new Date(ord.createdAt).toLocaleDateString("id-ID"),
+          ...(isMultiTenant ? [tenantName] : []),
+          ord.customer?.name || "Pelanggan Langsung",
+          ord.customer?.phone || "-",
+          ord.serviceType,
+          ord.weightOrQty,
+          ord.unit,
+          statusLabel,
+          paymentLabel,
+          ord.paymentMethod || "Tunai",
+          ord.totalAmount,
+        ];
+      });
+
+      const wsLedger = XLSX.utils.aoa_to_sheet([
+        [`BUKU BESAR TRANSAKSI - ${activeTenant.outletName.toUpperCase()}`],
+        [`Periode Laporan: ${dateRange.label} | Total: ${filteredOrders.length} Transaksi`],
+        [],
+        ledgerHeaders,
+        ...ledgerRows,
+        [],
+        [
+          "TOTAL",
+          "",
+          "",
+          ...(isMultiTenant ? [""] : []),
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "TOTAL NILAI TRANSAKSI",
+          filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+        ],
+      ]);
+
+      wsLedger["!cols"] = [
+        { wch: 6 },
+        { wch: 18 },
+        { wch: 14 },
+        ...(isMultiTenant ? [{ wch: 28 }] : []),
+        { wch: 24 },
+        { wch: 16 },
+        { wch: 20 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 16 },
+        { wch: 20 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsLedger, "Buku Besar Transaksi");
+
+      // SHEET 3: Beban Pengeluaran Operasional
+      const expenseHeaders = [
+        "No",
+        "Tanggal",
+        ...(isMultiTenant ? ["Cabang"] : []),
+        "Kategori Beban",
+        "Keterangan",
+        "Jumlah Biaya (Rp)",
+      ];
+      const expenseRows = filteredExpenses.map((exp, idx) => {
+        const tenantName =
+          tenants.find((t) => t.id === exp.tenantId)?.outletName ||
+          exp.tenantId ||
+          activeTenant.outletName;
+        return [
+          idx + 1,
+          new Date(exp.expenseDate).toLocaleDateString("id-ID"),
+          ...(isMultiTenant ? [tenantName] : []),
+          exp.category,
+          exp.notes || "-",
+          exp.amount,
+        ];
+      });
+
+      const wsExpense = XLSX.utils.aoa_to_sheet([
+        [`RINCIAN BEBAN PENGELUARAN OPERASIONAL - ${activeTenant.outletName.toUpperCase()}`],
+        [`Periode Laporan: ${dateRange.label}`],
+        [],
+        expenseHeaders,
+        ...expenseRows,
+        [],
+        [
+          "TOTAL",
+          "",
+          ...(isMultiTenant ? [""] : []),
+          "",
+          "TOTAL BEBAN PENGELUARAN",
+          metrics.totalExpense,
+        ],
+      ]);
+
+      wsExpense["!cols"] = [
+        { wch: 6 },
+        { wch: 14 },
+        ...(isMultiTenant ? [{ wch: 28 }] : []),
+        { wch: 22 },
+        { wch: 36 },
+        { wch: 20 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsExpense, "Beban Operasional");
+
+      const outletSlug = activeTenant.outletName.replace(/[^a-zA-Z0-9]/g, "_");
+      const dateSlug = new Date().toISOString().slice(0, 10);
+      const filename = `Laporan_Keuangan_${outletSlug}_${dateSlug}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+
+      toast.success(
+        "Laporan Excel (.xlsx) Berhasil Diunduh",
+        `File ${filename} memuat 3 lembar kerja lengkap untuk ${activeTenant.outletName}.`
+      );
+    } catch (err: any) {
+      console.error("Excel download error:", err);
+      toast.error("Gagal Download Excel", err.message || "Terjadi kesalahan saat memproses file Excel");
+    }
+  };
+
+  // 2. Export CSV Function
   const downloadCSV = () => {
+    const isMultiTenant = activeTenant.id === "all";
     const outletName = activeTenant.outletName.replace(/[^a-zA-Z0-9]/g, "_");
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `Laporan_Keuangan_${outletName}_${dateStr}.csv`;
@@ -228,7 +480,9 @@ export function useReportData({
 
     // Metadata Header
     csvContent += `LAPORAN KEUANGAN & OPERASIONAL LAUNDRY\n`;
-    csvContent += `Outlet,${activeTenant.outletName}\n`;
+    csvContent += `Outlet / Cabang,${activeTenant.outletName}\n`;
+    csvContent += `ID Cabang,${activeTenant.id}\n`;
+    csvContent += `Pemilik,${activeTenant.owner?.name || "Budi Santoso"}\n`;
     csvContent += `Alamat,"${activeTenant.address}"\n`;
     csvContent += `Telepon,${activeTenant.phone}\n`;
     csvContent += `Periode Laporan,"${dateRange.label}"\n`;
@@ -263,12 +517,15 @@ export function useReportData({
 
     // Buku Besar Transaksi Rinci
     csvContent += `BUKU BESAR TRANSAKSI\n`;
-    csvContent += `No Nota,Tanggal,Pelanggan,No WA,Layanan,Berat / Qty,Status Cucian,Pembayaran,Metode Bayar,Total Biaya\n`;
+    csvContent += `No Nota,Tanggal,${isMultiTenant ? "Cabang," : ""}Pelanggan,No WA,Layanan,Berat / Qty,Status Cucian,Pembayaran,Metode Bayar,Total Biaya\n`;
     filteredOrders.forEach((o) => {
       const custName = o.customer?.name || "Pelanggan Langsung";
       const custPhone = o.customer?.phone || "-";
       const tgl = new Date(o.createdAt).toLocaleDateString("id-ID");
-      csvContent += `"${o.invoiceNo}","${tgl}","${custName}","${custPhone}","${o.serviceType}","${o.weightOrQty} ${o.unit}","${o.status}","${o.paymentStatus === "paid" ? "Lunas" : "Belum Lunas"}","${o.paymentMethod || "cash"}",Rp ${o.totalAmount}\n`;
+      const tenantCol = isMultiTenant
+        ? `"${tenants.find((t) => t.id === o.tenantId)?.outletName || o.tenantId}",`
+        : "";
+      csvContent += `"${o.invoiceNo}","${tgl}",${tenantCol}"${custName}","${custPhone}","${o.serviceType}","${o.weightOrQty} ${o.unit}","${o.status}","${o.paymentStatus === "paid" ? "Lunas" : "Belum Lunas"}","${o.paymentMethod || "Tunai"}",Rp ${o.totalAmount}\n`;
     });
 
     // Trigger Download
@@ -286,7 +543,7 @@ export function useReportData({
     );
   };
 
-  // 2. Trigger Print PDF Dialog
+  // 3. Trigger Print PDF Dialog
   const handlePrintPDF = () => {
     toast.info("Mempersiapkan Dokumen Cetak", "Membuka dialog pencetakan browser...");
     window.print();
@@ -294,6 +551,8 @@ export function useReportData({
 
   return {
     activeTenant,
+    selectedTenantId,
+    setSelectedTenantId,
     startDate,
     setStartDate,
     endDate,
@@ -315,6 +574,7 @@ export function useReportData({
     paymentMethodBreakdown,
     totalPages,
     paginatedOrders,
+    downloadExcel,
     downloadCSV,
     handlePrintPDF,
   };

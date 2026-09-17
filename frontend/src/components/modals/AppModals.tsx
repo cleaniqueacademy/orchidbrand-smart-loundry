@@ -24,6 +24,7 @@ interface AppModalsProps {
   setSelectedReceiptOrder: (order: Order | null) => void;
   showExpenseModal: boolean;
   setShowExpenseModal: (show: boolean) => void;
+  expenseModalType?: "income" | "expense";
   showCustomerModal: boolean;
   setShowCustomerModal: (show: boolean) => void;
   showEditCustomerModal: boolean;
@@ -68,6 +69,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
   setSelectedReceiptOrder,
   showExpenseModal,
   setShowExpenseModal,
+  expenseModalType = "expense",
   showCustomerModal,
   setShowCustomerModal,
   showEditCustomerModal,
@@ -107,6 +109,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
       <CreateExpenseModal
         isOpen={showExpenseModal}
         onClose={() => setShowExpenseModal(false)}
+        defaultType={expenseModalType}
         onSubmit={onCreateExpense}
       />
 

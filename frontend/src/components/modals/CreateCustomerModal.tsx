@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Users } from "lucide-react";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface CreateCustomerModalProps {
   isOpen: boolean;
@@ -24,8 +25,6 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +52,8 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white rounded-3xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sky-100 text-blue-950 flex items-center justify-center border border-sky-200">
@@ -150,6 +149,6 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

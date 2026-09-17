@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, ShoppingBag, UserPlus, Users } from "lucide-react";
 import { Customer } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -146,8 +147,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const totalAmount = weightOrQty * pricePerUnit;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-slate-200 my-auto">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white rounded-3xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 my-auto">
         {/* Header Modal */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -437,6 +438,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

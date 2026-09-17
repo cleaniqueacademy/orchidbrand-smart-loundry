@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { TabType, Role, Tenant, User } from "../../types";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
@@ -112,17 +113,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <nav className="space-y-0.5">
       {items.map((item) => {
         const Icon = item.icon;
-        const isActive = activeTab === item.id;
+        const isActive =
+          activeTab === item.id ||
+          (item.id === "orders" && (activeTab === "create-order" || activeTab === "edit-order"));
         return (
-          <button
+          <motion.button
             key={item.id}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               setActiveTab(item.id);
               onClose();
             }}
-            className={`w-full group flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition cursor-pointer ${
+            className={`w-full group flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
               isActive
-                ? "bg-zinc-900 text-white font-semibold shadow-xs"
+                ? isSuperAdmin
+                  ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold shadow-xs"
+                  : "bg-zinc-900 text-white font-semibold shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium"
             }`}
           >
@@ -138,13 +144,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {item.count !== undefined && (
               <span
                 className={`text-[10px] font-semibold min-w-[18px] h-[18px] px-1.5 rounded-full flex items-center justify-center ${
-                  isActive ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"
+                  isActive ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
                 }`}
               >
                 {item.count}
               </span>
             )}
-          </button>
+          </motion.button>
         );
       })}
     </nav>
@@ -153,12 +159,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Mobile Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs z-40 lg:hidden"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Container */}
       <aside
@@ -168,7 +180,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Top Header */}
         <div className="h-16 px-4 flex items-center gap-3 border-b border-zinc-100 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+          <div
+            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs ${
+              isSuperAdmin
+                ? "bg-gradient-to-br from-blue-700 via-blue-800 to-sky-600 text-white"
+                : "bg-zinc-900 text-white"
+            }`}
+          >
             {isSuperAdmin ? <Building2 className="w-4 h-4" /> : <Store className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
@@ -216,7 +234,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
               Integrasi
             </div>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="button"
               id="sidebar-btn-whatsapp-settings"
               onClick={() => {
@@ -225,14 +244,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClose();
                 }
               }}
-              className="w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-zinc-100 hover:border-emerald-200 transition shadow-2xs cursor-pointer"
+              className="w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-zinc-100 hover:border-emerald-200 transition-colors shadow-2xs cursor-pointer"
               title="Pengaturan WhatsApp"
             >
               <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
                 <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
               </div>
               <span className="truncate">Pengaturan WhatsApp</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -261,35 +280,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {/* User Profile Popover */}
-          {isUserMenuOpen && (
-            <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-zinc-200 rounded-xl shadow-xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="p-2 rounded-lg bg-zinc-50 border border-zinc-100 mb-2">
-                <div className="text-xs font-bold text-zinc-900 truncate">
-                  {currentUser?.name || (isSuperAdmin ? "Admin Pusat" : "Budi Santoso")}
+          <AnimatePresence>
+            {isUserMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-zinc-200 rounded-xl shadow-xl p-2.5 z-50"
+              >
+                <div className="p-2 rounded-lg bg-zinc-50 border border-zinc-100 mb-2">
+                  <div className="text-xs font-bold text-zinc-900 truncate">
+                    {currentUser?.name || (isSuperAdmin ? "Admin Pusat" : "Budi Santoso")}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">
+                    {currentUser?.email || (isSuperAdmin ? "admin@orchidbrand.com" : "budi@laundrymelati.com")}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
+                    <span className="font-semibold text-blue-950">
+                      {isSuperAdmin ? "Super Admin" : "Tenant Owner"}
+                    </span>
+                    <span>·</span>
+                    <span className="text-emerald-700 font-medium">Aktif</span>
+                  </div>
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  {currentUser?.email || (isSuperAdmin ? "admin@orchidbrand.com" : "budi@laundrymelati.com")}
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
-                  <span className="font-semibold text-blue-950">
-                    {isSuperAdmin ? "Super Admin" : "Tenant Owner"}
-                  </span>
-                  <span>·</span>
-                  <span className="text-emerald-700 font-medium">Aktif</span>
-                </div>
-              </div>
 
-              {onLogout && (
-                <button
-                  onClick={() => { setIsUserMenuOpen(false); onLogout(); }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Keluar Akun</span>
-                </button>
-              )}
-            </div>
-          )}
+                {onLogout && (
+                  <button
+                    onClick={() => { setIsUserMenuOpen(false); onLogout(); }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Keluar Akun</span>
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </aside>
     </>

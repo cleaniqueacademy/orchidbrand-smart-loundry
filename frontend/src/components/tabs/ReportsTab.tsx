@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Order, Expense, Tenant, Customer } from "../../types";
+import { Order, Expense, Tenant, Customer, Role } from "../../types";
 import { useReportData } from "./reports/useReportData";
 import { OfficialReportDocument } from "./reports/OfficialReportDocument";
 import { ReportFilters } from "./reports/ReportFilters";
@@ -14,6 +14,7 @@ interface ReportsTabProps {
   tenants: Tenant[];
   currentTenantId: string;
   customers: Customer[];
+  currentUserRole?: Role;
 }
 
 export const ReportsTab: React.FC<ReportsTabProps> = ({
@@ -21,11 +22,15 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
   expenses,
   tenants,
   currentTenantId,
+  currentUserRole = "staff",
 }) => {
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const isSuperAdmin = currentUserRole === "superadmin";
 
   const {
     activeTenant,
+    selectedTenantId,
+    setSelectedTenantId,
     startDate,
     setStartDate,
     endDate,
@@ -47,6 +52,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     paymentMethodBreakdown,
     totalPages,
     paginatedOrders,
+    downloadExcel,
     downloadCSV,
     handlePrintPDF,
   } = useReportData({
@@ -54,6 +60,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     expenses,
     tenants,
     currentTenantId,
+    currentUserRole,
   });
 
   return (
@@ -124,8 +131,9 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
       <div className="no-print space-y-6">
         {/* Top Header, Filters & Action Controls */}
         <ReportFilters
-          activeTenantOutletName={activeTenant.outletName}
+          activeTenant={activeTenant}
           onOpenPrintPreview={() => setShowPrintModal(true)}
+          onDownloadExcel={downloadExcel}
           onDownloadCSV={downloadCSV}
           onPrintPDF={handlePrintPDF}
           startDate={startDate}
@@ -134,6 +142,10 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
           setEndDate={setEndDate}
           paymentFilter={paymentFilter}
           setPaymentFilter={setPaymentFilter}
+          tenants={tenants}
+          selectedTenantId={selectedTenantId}
+          onSelectTenant={setSelectedTenantId}
+          isSuperAdmin={isSuperAdmin}
         />
 
         {/* Executive Financial Metrics (5 Cards) */}
@@ -168,6 +180,8 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
             setPageSize(newSize);
             setPage(1);
           }}
+          isMultiTenant={activeTenant.id === "all" || isSuperAdmin}
+          tenants={tenants}
         />
       </div>
 
@@ -176,6 +190,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         onPrint={handlePrintPDF}
+        onDownloadExcel={downloadExcel}
       >
         <OfficialReportDocument
           activeTenant={activeTenant}
@@ -183,6 +198,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
           metrics={metrics}
           serviceBreakdown={serviceBreakdown}
           filteredOrders={filteredOrders}
+          tenants={tenants}
         />
       </PrintPreviewModal>
 
@@ -194,6 +210,7 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
           metrics={metrics}
           serviceBreakdown={serviceBreakdown}
           filteredOrders={filteredOrders}
+          tenants={tenants}
         />
       </div>
     </div>

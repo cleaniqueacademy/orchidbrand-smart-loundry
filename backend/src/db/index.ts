@@ -47,6 +47,7 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS wa_mode TEXT NOT NULL DEFAULT 'manual';`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS services TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (
@@ -83,6 +84,7 @@ export async function initPostgresTables() {
     `;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rack_number TEXT;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items TEXT;`;
+    await client`UPDATE orders SET status = 'process' WHERE status IN ('pending', 'washing', 'drying_ironing');`;
 
     await client`
       CREATE TABLE IF NOT EXISTS expenses (
@@ -95,6 +97,7 @@ export async function initPostgresTables() {
         created_at TEXT NOT NULL
       );
     `;
+    await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'expense';`;
 
     console.log("✅ PostgreSQL tables verified/initialized successfully");
   } catch (err: any) {

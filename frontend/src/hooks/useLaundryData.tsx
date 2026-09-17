@@ -8,6 +8,7 @@ import {
   Tenant,
   User,
   Role,
+  LaundryService,
 } from "../types";
 import { useToast } from "../components/common/ToastContext";
 import { useConfirm } from "../components/common/ConfirmContext";
@@ -106,11 +107,13 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     const targetOrder = orders.find((o) => o.id === orderId);
     const statusLabels: Record<string, string> = {
-      pending: "Antrian",
-      washing: "Sedang Dicuci",
-      drying_ironing: "Setrika / Lipat",
+      process: "Diproses",
       ready: "Siap Diambil",
       completed: "Selesai",
+      cancelled: "Dibatalkan",
+      pending: "Diproses",
+      washing: "Diproses",
+      drying_ironing: "Diproses",
     };
     const label = statusLabels[newStatus] || newStatus;
 
@@ -321,8 +324,9 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     }
   };
 
-  // Create Expense
+  // Create Expense / Income
   const handleCreateExpense = async (expenseData: {
+    type?: "income" | "expense";
     category: string;
     amount: number;
     notes: string;
@@ -340,36 +344,38 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       const data = await res.json();
       if (data.success) {
         fetchData();
+        const isIncome = expenseData.type === "income";
         toast.success(
-          "Pengeluaran Berhasil Dicatat",
-          `${expenseData.category}: Rp ${expenseData.amount.toLocaleString("id-ID")} (${expenseData.notes})`
+          isIncome ? "Pemasukan Berhasil Dicatat" : "Pengeluaran Berhasil Dicatat",
+          `${expenseData.category}: Rp ${expenseData.amount.toLocaleString("id-ID")}`
         );
       } else {
-        toast.error("Gagal Mencatat Biaya", data.message || "Terjadi kesalahan pada server");
+        toast.error("Gagal Mencatat Kas", data.message || "Terjadi kesalahan pada server");
       }
     } catch (err: any) {
       toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
     }
   };
 
-  // Delete Expense with Confirmation Modal
+  // Delete Expense / Income with Confirmation Modal
   const handleDeleteExpense = async (id: string) => {
     const exp = expenses.find((e) => e.id === id);
+    const isIncome = exp?.type === "income";
     const confirmed = await confirm({
-      title: "Hapus Catatan Pengeluaran?",
+      title: isIncome ? "Hapus Catatan Pemasukan?" : "Hapus Catatan Pengeluaran?",
       description: exp ? (
         <span>
-          Apakah Anda yakin ingin menghapus catatan biaya <strong>{exp.category}</strong> (
-          <em>"{exp.notes}"</em>) sebesar{" "}
-          <strong className="text-rose-600 font-mono">
+          Apakah Anda yakin ingin menghapus catatan {isIncome ? "pemasukan" : "pengeluaran"}{" "}
+          <strong>{exp.category}</strong> (<em>"{exp.notes}"</em>) sebesar{" "}
+          <strong className={isIncome ? "text-emerald-600 font-mono" : "text-rose-600 font-mono"}>
             Rp {exp.amount.toLocaleString("id-ID")}
           </strong>
           ? Tindakan ini tidak dapat dibatalkan.
         </span>
       ) : (
-        "Apakah Anda yakin ingin menghapus catatan pengeluaran ini? Tindakan ini tidak dapat dibatalkan."
+        "Apakah Anda yakin ingin menghapus catatan transaksi ini? Tindakan ini tidak dapat dibatalkan."
       ),
-      confirmText: "Hapus Pengeluaran",
+      confirmText: isIncome ? "Hapus Pemasukan" : "Hapus Pengeluaran",
       cancelText: "Batal",
       variant: "danger",
     });
@@ -380,9 +386,9 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       const res = await fetch(`${API_BASE}/expenses/${id}`, { method: "DELETE" });
       if (res.ok) {
         fetchData();
-        toast.success("Catatan Pengeluaran Dihapus", "Catatan biaya berhasil dihapus dari buku kas.");
+        toast.success("Catatan Dihapus", "Catatan transaksi berhasil dihapus dari buku kas.");
       } else {
-        toast.error("Gagal Menghapus Biaya", "Server mengembalikan respons gagal.");
+        toast.error("Gagal Menghapus", "Server mengembalikan respons gagal.");
       }
     } catch (err: any) {
       console.error("Delete expense error:", err);
@@ -616,6 +622,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     outletName?: string;
     phone?: string;
     address?: string;
+    services?: LaundryService[];
   }) => {
     try {
       const res = await fetch(`${API_BASE}/tenants/${id}`, {
@@ -714,6 +721,66 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     }
   };
 
+  // Update User Profile (Nama / Password)
+  const handleUpdateUser = async (
+    id: string,
+    userData: { name?: string; email?: string; password?: string }
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        // Update local session if updating own profile
+        const stored = localStorage.getItem("orchid_user");
+        if (stored) {
+          try {
+            const userObj = JSON.parse(stored);
+            if (userObj.id === id) {
+              const updatedObj = { ...userObj, ...userData };
+              localStorage.setItem("orchid_user", JSON.stringify(updatedObj));
+              window.dispatchEvent(new Event("storage"));
+            }
+          } catch {}
+        }
+        return true;
+      } else {
+        toast.error("Gagal Memperbarui Profil", data.message || "Terjadi kesalahan pada server");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      return false;
+    }
+  };
+
+  // Reset User Password
+  const handleResetPassword = async (userId: string, newPassword: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await fetchData();
+        toast.success("Password Berhasil Direset", data.message || "Kata sandi pengguna berhasil diperbarui.");
+        return true;
+      } else {
+        toast.error("Gagal Reset Password", data.message || "Terjadi kesalahan server");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      return false;
+    }
+  };
+
   return {
     loading,
     stats,
@@ -741,5 +808,8 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     handleUpdateTenant,
     handleCreateUser,
     handleDeleteUser,
+    handleUpdateUser,
+    handleResetPassword,
   };
 }
+

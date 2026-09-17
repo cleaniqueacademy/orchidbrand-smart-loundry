@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { AlertTriangle, Trash2, LogOut, CheckCircle2, HelpCircle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type ConfirmVariant = "danger" | "warning" | "info";
 
@@ -93,64 +94,77 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
       {children}
 
       {/* Confirmation Modal Backdrop & Dialog */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150 no-print"
-          onClick={() => handleClose(false)}
-        >
-          <div
-            className="bg-white w-full max-w-md rounded-2xl p-6 sm:p-7 shadow-2xl border border-zinc-200 relative animate-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            {/* Close Cross */}
-            <button
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 overflow-y-auto no-print">
+            <motion.div
+              key="confirm-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
               onClick={() => handleClose(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition"
-              aria-label="Batal"
+            />
+            <motion.div
+              key="confirm-dialog"
+              initial={{ opacity: 0, scale: 0.94, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ type: "spring", stiffness: 450, damping: 30 }}
+              className="bg-white w-full max-w-md rounded-2xl p-6 sm:p-7 shadow-2xl border border-zinc-200 relative z-10 my-auto"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
             >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Header: Icon & Title */}
-            <div className="flex items-start gap-3.5">
-              <div
-                className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${cfg.iconContainerClass}`}
+              {/* Close Cross */}
+              <button
+                onClick={() => handleClose(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer"
+                aria-label="Batal"
               >
-                <IconComponent className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 pr-4">
-                <h3 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight leading-snug">
-                  {options.title}
-                </h3>
-                <div className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
-                  {options.description}
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Header: Icon & Title */}
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${cfg.iconContainerClass}`}
+                >
+                  <IconComponent className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 pr-4">
+                  <h3 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight leading-snug">
+                    {options.title}
+                  </h3>
+                  <div className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
+                    {options.description}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="mt-6 flex items-center justify-end gap-2.5 pt-4 border-t border-zinc-100">
-              <button
-                type="button"
-                onClick={() => handleClose(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-100 border border-zinc-200 transition shadow-2xs"
-              >
-                {options.cancelText || "Batal"}
-              </button>
-              <button
-                type="button"
-                autoFocus
-                onClick={() => handleClose(true)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${cfg.confirmButtonClass}`}
-              >
-                {options.confirmText || "Konfirmasi"}
-              </button>
-            </div>
+              {/* Action Buttons */}
+              <div className="mt-6 flex items-center justify-end gap-2.5 pt-4 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => handleClose(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-100 border border-zinc-200 transition shadow-2xs cursor-pointer"
+                >
+                  {options.cancelText || "Batal"}
+                </button>
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => handleClose(true)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${cfg.confirmButtonClass}`}
+                >
+                  {options.confirmText || "Konfirmasi"}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </ConfirmContext.Provider>
   );
 };

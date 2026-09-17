@@ -18,6 +18,7 @@ import WhatsAppIcon from "../common/WhatsAppIcon";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 import { useConfirm } from "../common/ConfirmContext";
 import { Tenant } from "../../types";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface WhatsAppSettingsModalProps {
   isOpen: boolean;
@@ -55,8 +56,6 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
     "Halo! Ini adalah pesan uji coba dari sistem Orchid Smart Laundry Gateway. 🧺✨"
   );
 
-  if (!isOpen) return null;
-
   const currentTenant = tenants.find((t) => t.id === currentTenantId) || tenants[0];
 
   const handleDisconnectConfirm = async () => {
@@ -84,11 +83,8 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
   };
 
   return (
-    <div
-      id="whatsapp-settings-modal"
-      className="fixed inset-0 bg-zinc-950/70 backdrop-blur-xs z-[9999] flex items-center justify-center p-4 overflow-y-auto no-print"
-    >
-      <div className="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200 animate-in fade-in zoom-in-95 duration-150">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl" zIndex="z-[9999]">
+      <div className="bg-white rounded-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200">
 
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-zinc-100 flex items-center justify-between bg-gradient-to-r from-emerald-950 via-zinc-900 to-zinc-900 text-white rounded-t-2xl">
@@ -479,6 +475,6 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

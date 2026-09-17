@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Edit3, Calculator, ShoppingBag } from "lucide-react";
 import { Order, Customer, OrderStatus, PaymentStatus } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface EditOrderModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
   const [pricePerUnit, setPricePerUnit] = useState(8000);
   const [totalAmount, setTotalAmount] = useState(8000);
   const [isManualTotal, setIsManualTotal] = useState(false);
-  const [status, setStatus] = useState<OrderStatus>("pending");
+  const [status, setStatus] = useState<OrderStatus>("process");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("unpaid");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
@@ -50,33 +51,32 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
 
   useEffect(() => {
     if (order) {
-      setCustomerId(order.customerId || (order.customer?.id || ""));
-      setServiceType(order.serviceType || "Cuci Komplit (Kg)");
-      setWeightOrQty(order.weightOrQty || 1);
-      setUnit(order.unit || "kg");
-      setPricePerUnit(order.pricePerUnit || 8000);
-      setTotalAmount(order.totalAmount || 8000);
-      setIsManualTotal(false);
-      setStatus(order.status || "pending");
-      setPaymentStatus(order.paymentStatus || "unpaid");
+      setCustomerId(order.customerId || "");
+      setServiceType(order.serviceType);
+      setWeightOrQty(order.weightOrQty);
+      setUnit(order.unit);
+      setPricePerUnit(order.pricePerUnit);
+      setTotalAmount(order.totalAmount);
+      setIsManualTotal(order.totalAmount !== order.weightOrQty * order.pricePerUnit);
+      setStatus(order.status);
+      setPaymentStatus(order.paymentStatus);
       setPaymentMethod(order.paymentMethod || "cash");
       setNotes(order.notes || "");
       setRackNumber(order.rackNumber || "");
     }
   }, [order]);
 
-  // Recalculate total when qty or price changes, unless manually overridden
-  const handleQtyChange = (qty: number) => {
-    setWeightOrQty(qty);
+  const handleWeightChange = (newWeight: number) => {
+    setWeightOrQty(newWeight);
     if (!isManualTotal) {
-      setTotalAmount(Math.round(qty * pricePerUnit));
+      setTotalAmount(Math.round(newWeight * pricePerUnit));
     }
   };
 
-  const handlePriceChange = (price: number) => {
-    setPricePerUnit(price);
+  const handlePriceChange = (newPrice: number) => {
+    setPricePerUnit(newPrice);
     if (!isManualTotal) {
-      setTotalAmount(Math.round(weightOrQty * price));
+      setTotalAmount(Math.round(weightOrQty * newPrice));
     }
   };
 
@@ -97,16 +97,15 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
     }
   };
 
-  if (!isOpen || !order) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!order) return;
     if (weightOrQty <= 0) {
-      toast.warning("Input Tidak Valid", "Berat atau kuantitas harus lebih dari 0!");
+      toast.warning("Berat / Jumlah Tidak Valid", "Berat/jumlah harus lebih dari 0!");
       return;
     }
-    if (pricePerUnit < 0 || totalAmount < 0) {
-      toast.warning("Input Tidak Valid", "Harga tidak boleh bernilai negatif!");
+    if (pricePerUnit <= 0) {
+      toast.warning("Tarif Tidak Valid", "Tarif per unit harus lebih dari 0!");
       return;
     }
 
@@ -132,8 +131,9 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-slate-200 my-auto">
+    <ModalWrapper isOpen={isOpen && !!order} onClose={onClose} maxWidth="max-w-lg">
+      {order && (
+        <div className="bg-white rounded-3xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 my-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -215,7 +215,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 min="0.1"
                 required
                 value={weightOrQty}
-                onChange={(e) => handleQtyChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 0)}
                 className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-bold text-slate-900"
               />
             </div>
@@ -304,12 +304,10 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 onChange={(e) => setStatus(e.target.value as OrderStatus)}
                 className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-semibold text-slate-800"
               >
-                <option value="pending">Antrian (Pending)</option>
-                <option value="washing">Sedang Dicuci</option>
-                <option value="drying_ironing">Setrika / Lipat</option>
+                <option value="process">Diproses</option>
                 <option value="ready">Siap Diambil</option>
                 <option value="completed">Selesai</option>
-                <option value="cancelled">Dibatalkan (Cancelled)</option>
+                <option value="cancelled">Dibatalkan</option>
               </select>
             </div>
 
@@ -404,6 +402,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+      )}
+    </ModalWrapper>
   );
 };

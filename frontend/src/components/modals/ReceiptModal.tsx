@@ -5,6 +5,7 @@ import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -52,7 +53,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   }, [order?.invoiceNo]);
 
-  if (!isOpen || !order) return null;
+  if (!order) return null;
 
   const orderDate = new Date(order.createdAt);
   const formattedDate = orderDate.toLocaleDateString("id-ID", {
@@ -209,8 +210,8 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
       `}</style>
 
       {/* Screen Modal Overlay */}
-      <div className="fixed inset-0 bg-zinc-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
-        <div className="bg-zinc-900 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-150 my-auto text-white">
+      <ModalWrapper isOpen={isOpen && !!order} onClose={onClose} maxWidth="max-w-lg">
+        <div className="bg-zinc-900 rounded-2xl w-full p-4 sm:p-6 shadow-2xl border border-zinc-800 my-auto text-white">
           {/* Header Actions */}
           <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
             <div className="flex items-center gap-2">
@@ -504,7 +505,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
             </div>
           </div>
         </div>
-      </div>
+      </ModalWrapper>
     </>
   );
 };

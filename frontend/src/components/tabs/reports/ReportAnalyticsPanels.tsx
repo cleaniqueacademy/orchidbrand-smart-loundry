@@ -49,7 +49,7 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
                     <span className="text-zinc-500">
                       {s.count} order ({s.qty} {s.unit})
                     </span>
-                    <span className="font-bold text-zinc-900 font-mono">
+                    <span className="font-bold text-zinc-900 whitespace-nowrap">
                       Rp {s.total.toLocaleString("id-ID")}
                     </span>
                     <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.2 rounded">
@@ -76,7 +76,7 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
         <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <h3 className="font-bold text-zinc-900 text-sm">Beban Pengeluaran</h3>
-            <span className="text-xs font-mono font-bold text-rose-700">
+            <span className="text-xs font-bold text-rose-700 whitespace-nowrap">
               Rp {totalExpense.toLocaleString("id-ID")}
             </span>
           </div>
@@ -93,7 +93,7 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
                     <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
                     <span className="text-zinc-700">{e.category}</span>
                   </div>
-                  <div className="flex items-center gap-2 font-mono">
+                  <div className="flex items-center gap-2 whitespace-nowrap">
                     <span className="font-semibold text-zinc-900">
                       Rp {e.amount.toLocaleString("id-ID")}
                     </span>

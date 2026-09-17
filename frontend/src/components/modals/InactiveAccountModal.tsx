@@ -18,6 +18,7 @@ import {
   DEFAULT_ADMIN_PHONE,
 } from "../../utils/subscriptionUtils";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface InactiveAccountModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const [checking, setChecking] = useState(false);
   const [checkedNotice, setCheckedNotice] = useState<string | null>(null);
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
 
   const statusInfo = checkUserActiveStatus(user as User);
   const waUrl = getAdminWhatsAppUrl(user, DEFAULT_ADMIN_PHONE);
@@ -64,7 +65,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
         );
       }
     } catch {
-      setCheckedNotice("Gagal memverifikasi status ke server. Periksa koneksi backend Anda.");
+      setCheckedNotice("Gagal menyinkronkan status akun. Silakan coba sesaat lagi.");
     } finally {
       setChecking(false);
     }
@@ -74,8 +75,12 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const isInactiveStatus = statusInfo.isInactiveStatus;
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-zinc-200 overflow-hidden relative animate-in zoom-in-95 duration-200">
+    <ModalWrapper
+      isOpen={isOpen && !!user}
+      onClose={isDismissable && onClose ? onClose : () => {}}
+      maxWidth="max-w-lg"
+    >
+      <div className="bg-white rounded-3xl w-full shadow-2xl border border-zinc-200 overflow-hidden relative">
         {/* Top Header Accent Banner */}
         <div className="h-3 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-600 w-full" />
 
@@ -230,6 +235,6 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
           Orchid Brand Smart Laundry • Layanan Berlangganan Kasir Multi-Cabang
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

@@ -1,6 +1,6 @@
 import React from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { Order } from "../../../types";
+import { Search, ChevronLeft, ChevronRight, Store } from "lucide-react";
+import { Order, Tenant } from "../../../types";
 
 interface ReportLedgerTableProps {
   searchQuery: string;
@@ -12,6 +12,8 @@ interface ReportLedgerTableProps {
   totalPages: number;
   onPageChange: (newPage: number) => void;
   onPageSizeChange: (newSize: number) => void;
+  isMultiTenant?: boolean;
+  tenants?: Tenant[];
 }
 
 export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
@@ -24,6 +26,8 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
   totalPages,
   onPageChange,
   onPageSizeChange,
+  isMultiTenant = false,
+  tenants = [],
 }) => {
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
@@ -51,11 +55,14 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
       {/* Table */}
       <div className="border border-zinc-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[650px]">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="bg-zinc-50 border-b border-zinc-200 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
               <tr>
                 <th className="py-2.5 px-3.5 whitespace-nowrap">No. Nota</th>
                 <th className="py-2.5 px-3.5 whitespace-nowrap">Tanggal</th>
+                {isMultiTenant && (
+                  <th className="py-2.5 px-3.5 whitespace-nowrap">Cabang</th>
+                )}
                 <th className="py-2.5 px-3.5 whitespace-nowrap">Pelanggan</th>
                 <th className="py-2.5 px-3.5 whitespace-nowrap">Layanan</th>
                 <th className="py-2.5 px-3.5 whitespace-nowrap">Status</th>
@@ -66,54 +73,79 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
             <tbody className="divide-y divide-zinc-100">
               {paginatedOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-zinc-400 text-xs">
+                  <td
+                    colSpan={isMultiTenant ? 8 : 7}
+                    className="py-10 text-center text-zinc-400 text-xs"
+                  >
                     Tidak ada transaksi yang cocok dengan filter
                   </td>
                 </tr>
               ) : (
-                paginatedOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-zinc-50/70 transition-colors">
-                    <td className="py-2.5 px-3.5 font-mono font-semibold text-zinc-900 whitespace-nowrap">
-                      {ord.invoiceNo}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-zinc-500 whitespace-nowrap">
-                      {new Date(ord.createdAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </td>
-                    <td className="py-2.5 px-3.5 font-medium text-zinc-900 whitespace-nowrap">
-                      {ord.customer?.name || "Pelanggan Langsung"}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-zinc-600 whitespace-nowrap">
-                      {ord.serviceType}{" "}
-                      <span className="text-zinc-400 font-mono">
-                        ({ord.weightOrQty} {ord.unit})
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 whitespace-nowrap">
-                      <span className="text-[10px] font-semibold bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-full border border-zinc-200">
-                        {ord.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 whitespace-nowrap">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                          ord.paymentStatus === "paid"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
-                      >
-                        {ord.paymentStatus === "paid"
-                          ? `Lunas (${ord.paymentMethod || "cash"})`
-                          : "Belum Lunas"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 text-right font-bold text-zinc-900 whitespace-nowrap font-mono">
-                      Rp {ord.totalAmount.toLocaleString("id-ID")}
-                    </td>
-                  </tr>
-                ))
+                paginatedOrders.map((ord) => {
+                  const tenantObj = tenants.find((t) => t.id === ord.tenantId);
+                  const tenantName = tenantObj?.outletName || ord.tenantId || "Cabang";
+                  const statusLabel =
+                    ord.status === "completed"
+                      ? "Selesai"
+                      : ord.status === "ready"
+                      ? "Siap Diambil"
+                      : ord.status === "cancelled"
+                      ? "Dibatalkan"
+                      : "Diproses";
+                  const isPaid = ord.paymentStatus === "paid";
+
+                  return (
+                    <tr key={ord.id} className="hover:bg-zinc-50/70 transition-colors">
+                      <td className="py-2.5 px-3.5 font-mono font-semibold text-zinc-900 whitespace-nowrap">
+                        {ord.invoiceNo}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-zinc-500 whitespace-nowrap">
+                        {new Date(ord.createdAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </td>
+                      {isMultiTenant && (
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
+                            <Store className="w-2.5 h-2.5 text-blue-700" />
+                            {tenantName}
+                          </span>
+                        </td>
+                      )}
+                      <td className="py-2.5 px-3.5 font-medium text-zinc-900 whitespace-nowrap">
+                        {ord.customer?.name || "Pelanggan Langsung"}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-zinc-600 whitespace-nowrap">
+                        {ord.serviceType}{" "}
+                        <span className="text-zinc-400 font-mono">
+                          ({ord.weightOrQty} {ord.unit})
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        <span className="text-[10px] font-semibold bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-full border border-zinc-200 whitespace-nowrap shrink-0 select-none inline-block">
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 select-none inline-block ${
+                            isPaid
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          {isPaid
+                            ? `Lunas (${ord.paymentMethod || "Tunai"})`
+                            : "Belum Lunas"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3.5 text-right font-bold text-zinc-900 whitespace-nowrap font-mono">
+                        Rp {ord.totalAmount.toLocaleString("id-ID")}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -131,44 +163,45 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
               <span className="font-semibold text-zinc-800">
                 {Math.min(page * pageSize, totalOrdersCount)}
               </span>{" "}
-              dari <span className="font-semibold text-zinc-800">{totalOrdersCount}</span> transaksi
+              dari <span className="font-semibold text-zinc-800">{totalOrdersCount}</span> data
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] text-zinc-400">Baris:</span>
+              {/* Page size select */}
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span>Tampilkan:</span>
                 <select
                   value={pageSize}
                   onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                  className="text-[11px] bg-white border border-zinc-200 rounded px-1.5 py-0.5 font-medium outline-none cursor-pointer"
+                  className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs outline-none cursor-pointer"
                 >
-                  <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
                 </select>
               </div>
 
+              {/* Prev/Next buttons */}
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => onPageChange(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="p-1 rounded hover:bg-zinc-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
-                  title="Halaman Sebelumnya"
+                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-
-                <span className="text-[11px] font-medium text-zinc-700 px-1.5">
+                <span className="px-2 text-[11px] font-semibold text-zinc-700">
                   {page} / {totalPages}
                 </span>
-
                 <button
+                  type="button"
                   onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                  disabled={page >= totalPages}
-                  className="p-1 rounded hover:bg-zinc-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
-                  title="Halaman Berikutnya"
+                  disabled={page === totalPages}
+                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

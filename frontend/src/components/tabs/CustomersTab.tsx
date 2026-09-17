@@ -29,13 +29,14 @@ interface CustomersTabProps {
   onDeleteCustomer: (id: string) => void;
 }
 
-const statusBadgeStyles: Record<OrderStatus, string> = {
-  pending: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  washing: "bg-sky-50 text-sky-800 border-sky-200",
-  drying_ironing: "bg-blue-50 text-blue-800 border-blue-200",
+const statusBadgeStyles: Record<string, string> = {
+  process: "bg-amber-50 text-amber-800 border-amber-200",
   ready: "bg-emerald-50 text-emerald-800 border-emerald-200",
   completed: "bg-blue-900 text-white border-blue-900",
   cancelled: "bg-rose-50 text-rose-700 border-rose-200",
+  pending: "bg-amber-50 text-amber-800 border-amber-200",
+  washing: "bg-amber-50 text-amber-800 border-amber-200",
+  drying_ironing: "bg-amber-50 text-amber-800 border-amber-200",
 };
 
 export const CustomersTab: React.FC<CustomersTabProps> = ({
@@ -80,8 +81,12 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       return matchSearch && matchTenant;
     });
 
-    const totalOrdersCount = orders.length;
-    const totalNetworkLtv = orders
+    const filteredOrdersForTenant = tenantFilter === "all"
+      ? orders
+      : orders.filter((o) => o.tenantId === tenantFilter);
+
+    const dynamicOrdersCount = filteredOrdersForTenant.length;
+    const dynamicNetworkLtv = filteredOrdersForTenant
       .filter((o) => o.paymentStatus === "paid")
       .reduce((sum, o) => sum + o.totalAmount, 0);
 
@@ -128,9 +133,9 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         cell: (cust) => {
           const outlet = tenants.find((t) => t.id === cust.tenantId);
           return (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
-              <Store className="w-3 h-3 text-blue-700" />
-              <span className="truncate max-w-[130px]">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md whitespace-nowrap">
+              <Store className="w-3 h-3 text-blue-700 shrink-0" />
+              <span>
                 {outlet?.outletName || "Cabang Melati"}
               </span>
             </span>
@@ -143,7 +148,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         cell: (cust) => {
           const count = orders.filter((o) => o.customerId === cust.id).length;
           return (
-            <span className="inline-flex items-center text-[10px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center text-[10px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 rounded-full whitespace-nowrap">
               {count}x pesanan
             </span>
           );
@@ -157,7 +162,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             .filter((o) => o.customerId === cust.id && o.paymentStatus === "paid")
             .reduce((sum, o) => sum + o.totalAmount, 0);
           return (
-            <span className="font-bold text-zinc-900 text-xs font-mono">
+            <span className="font-bold text-zinc-900 text-xs whitespace-nowrap">
               Rp {spent.toLocaleString("id-ID")}
             </span>
           );
@@ -220,57 +225,57 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Pelanggan</h2>
             <p className="text-xs text-zinc-500 mt-0.5">Database pelanggan seluruh cabang.</p>
           </div>
-
-          <button
-            onClick={onOpenCustomerModal}
-            className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" /> Tambah Pelanggan
-          </button>
         </div>
 
-        {/* 3 Metric Cards Ringkasan */}
+        {/* 3 Metric Cards Ringkasan dengan Palet Warna Berani & Hero Light Blue Spotlight */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+          {/* Total Pelanggan - Hero Spotlight Light Blue */}
+          <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
+            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
                 Total Pelanggan
               </span>
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-100">
-                <Users className="w-3.5 h-3.5" />
+              <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+                <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
-              {customers.length}
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {filteredAdminCustomers.length}
             </div>
+            <p className="text-[11px] text-sky-700 font-medium mt-1">Basis data pelanggan aktif</p>
           </div>
 
-          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+          {/* Total Pesanan - Royal Indigo */}
+          <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
                 Total Pesanan
               </span>
-              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-                <ShoppingBag className="w-3.5 h-3.5" />
+              <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+                <ShoppingBag className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
-              {totalOrdersCount}
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {dynamicOrdersCount}
             </div>
+            <p className="text-[11px] text-indigo-700/90 font-medium mt-1">Akumulasi riwayat transaksi</p>
           </div>
 
-          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+          {/* Total Belanja - Mint Emerald */}
+          <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
                 Total Belanja
               </span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-                <TrendingUp className="w-3.5 h-3.5" />
+              <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight font-mono">
-              Rp {totalNetworkLtv.toLocaleString("id-ID")}
+            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              Rp {dynamicNetworkLtv.toLocaleString("id-ID")}
             </div>
+            <p className="text-[11px] text-emerald-700/90 font-medium mt-1">Akumulasi transaksi lunas</p>
           </div>
         </div>
 

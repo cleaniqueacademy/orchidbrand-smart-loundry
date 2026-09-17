@@ -10,7 +10,14 @@ export interface CashflowStats {
   cancelledOrdersCount?: number;
 }
 
-export type OrderStatus = "pending" | "washing" | "drying_ironing" | "ready" | "completed" | "cancelled";
+export type OrderStatus =
+  | "process"
+  | "ready"
+  | "completed"
+  | "cancelled"
+  | "pending"
+  | "washing"
+  | "drying_ironing";
 export type PaymentStatus = "paid" | "unpaid";
 
 export interface OrderItem {
@@ -57,6 +64,7 @@ export interface Customer {
 export interface Expense {
   id: string;
   tenantId?: string;
+  type?: "income" | "expense";
   category: string;
   amount: number;
   notes: string;
@@ -64,13 +72,22 @@ export interface Expense {
   createdAt?: string;
 }
 
+export interface LaundryService {
+  id: string;
+  name: string;
+  unit: string;
+  price: number;
+}
+
 export interface Tenant {
   id: string;
+  userId?: string;
   outletName: string;
   phone: string;
   address: string;
   status: "active" | "inactive";
   subscriptionUntil?: string | null;
+  services?: LaundryService[];
   owner?: { id: string; name: string; email: string; role: string } | null;
   totalOrders: number;
   totalOmset: number;
@@ -92,4 +109,4 @@ export interface User {
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
 
-export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users" | "settings";
+export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users" | "settings" | "create-order" | "edit-order";
