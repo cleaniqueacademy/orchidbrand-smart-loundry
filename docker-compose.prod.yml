@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orchid_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-orchid_laundry}
+    volumes:
+      - orchid_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-orchid_laundry}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orchid_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: orchid_backend
+    restart: always
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/${POSTGRES_DB:-orchid_laundry}
+      - JWT_SECRET=${JWT_SECRET:-orchid_brand_super_secret_jwt_key_2026}
+    volumes:
+      # Sesi WhatsApp Baileys wajib persisten agar tidak minta scan QR ulang saat restart
+      - orchid_wa_sessions:/app/auth_info_baileys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orchid_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: orchid_frontend
+    restart: always
+    ports:
+      # Port aplikasi web di VPS (default port 80 HTTP atau port custom misalnya 8080)
+      - "${APP_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - orchid_net
+
+volumes:
+  orchid_postgres_data:
+    driver: local
+  orchid_wa_sessions:
+    driver: local
+
+networks:
+  orchid_net:
+    driver: bridge
