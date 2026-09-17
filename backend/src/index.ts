@@ -5,6 +5,8 @@ import { db, initPostgresTables } from "./db/index";
 import { users, tenants, customers, orders, expenses } from "./db/schema";
 import { eq, desc } from "drizzle-orm";
 import { seedInitialData } from "./db/seed";
+import whatsappRoutes from "./routes/whatsapp";
+import { sendWhatsAppMessage, autoRestoreSavedSessions } from "./services/whatsapp";
 
 const app = new Hono();
 
@@ -19,10 +21,16 @@ app.use(
   })
 );
 
-// Auto-initialize PostgreSQL tables and seed data on startup
+// Auto-initialize PostgreSQL tables and seed data on startup, then auto-restore active Baileys sessions
 initPostgresTables()
-  .then(() => seedInitialData())
+  .then(async () => {
+    await seedInitialData();
+    await autoRestoreSavedSessions();
+  })
   .catch(console.error);
+
+// WhatsApp Gateway Routes
+app.route("/api/whatsapp", whatsappRoutes);
 
 // 1. Health check
 app.get("/api/health", (c) => {
@@ -396,8 +404,17 @@ app.get("/api/orders", async (c) => {
 
     const enriched = orderList.map((ord) => {
       const cust = custList.find((c) => c.id === ord.customerId);
+      let parsedItems = null;
+      if (ord.items) {
+        try {
+          parsedItems = typeof ord.items === "string" ? JSON.parse(ord.items) : ord.items;
+        } catch {
+          parsedItems = null;
+        }
+      }
       return {
         ...ord,
+        items: parsedItems,
         customer: cust ? { id: cust.id, name: cust.name, phone: cust.phone } : null,
       };
     });
@@ -438,16 +455,40 @@ app.post("/api/orders", async (c) => {
     const count = (await db.select().from(orders)).length + 1;
     const invoiceNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${String(count).padStart(3, "0")}`;
 
+    let finalServiceType = body.serviceType || "Cuci Komplit (Kg)";
+    let finalWeightOrQty = Number(body.weightOrQty) || 0;
+    let finalUnit = body.unit || "kg";
+    let finalPricePerUnit = Number(body.pricePerUnit) || 0;
+    let finalTotalAmount = Number(body.totalAmount) || 0;
+    let itemsJson: string | null = null;
+
+    if (body.items && Array.isArray(body.items) && body.items.length > 0) {
+      itemsJson = JSON.stringify(body.items);
+      finalServiceType = body.items.map((it: any) => it.serviceType).join(", ");
+      finalTotalAmount = body.items.reduce(
+        (sum: number, it: any) =>
+          sum + (Number(it.subtotal) || Number(it.weightOrQty) * Number(it.pricePerUnit)),
+        0
+      );
+      finalWeightOrQty = body.items.reduce(
+        (sum: number, it: any) => sum + (Number(it.weightOrQty) || 0),
+        0
+      );
+      finalUnit = body.items[0]?.unit || "kg";
+      finalPricePerUnit = body.items[0]?.pricePerUnit || 0;
+    }
+
     const newOrder = {
       id: `ord-${Date.now()}`,
       tenantId,
       customerId,
       invoiceNo,
-      serviceType: body.serviceType,
-      weightOrQty: Number(body.weightOrQty),
-      unit: body.unit || "kg",
-      pricePerUnit: Number(body.pricePerUnit),
-      totalAmount: Number(body.totalAmount),
+      serviceType: finalServiceType,
+      weightOrQty: finalWeightOrQty,
+      unit: finalUnit,
+      pricePerUnit: finalPricePerUnit,
+      totalAmount: finalTotalAmount,
+      items: itemsJson,
       status: body.status || "pending",
       paymentStatus: body.paymentStatus || "unpaid",
       paymentMethod: body.paymentMethod || "cash",
@@ -457,7 +498,14 @@ app.post("/api/orders", async (c) => {
     };
 
     await db.insert(orders).values(newOrder);
-    return c.json({ success: true, message: "Order berhasil dibuat", data: newOrder });
+    return c.json({
+      success: true,
+      message: "Order berhasil dibuat",
+      data: {
+        ...newOrder,
+        items: body.items || null,
+      },
+    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -495,13 +543,44 @@ app.patch("/api/orders/:id/status", async (c) => {
       const paymentNote = existing.paymentStatus === "paid" ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${existing.totalAmount.toLocaleString("id-ID")})`;
       const rackText = existing.rackNumber ? `\n📍 *Lokasi Rak/Keranjang:* ${existing.rackNumber}` : "";
 
-      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n🧺 *Layanan:* ${existing.serviceType} (${existing.weightOrQty} ${existing.unit})\n💰 *Status Bayar:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+      let parsedOrderItems = null;
+      if (existing.items) {
+        try {
+          parsedOrderItems = typeof existing.items === "string" ? JSON.parse(existing.items) : existing.items;
+        } catch {}
+      }
+
+      let itemsFormattedText = `🧺 *Layanan:* ${existing.serviceType} (${existing.weightOrQty} ${existing.unit})`;
+      if (parsedOrderItems && Array.isArray(parsedOrderItems) && parsedOrderItems.length > 0) {
+        itemsFormattedText =
+          `🧺 *Rincian Cucian:*\n` +
+          parsedOrderItems
+            .map(
+              (it: any) =>
+                `• ${it.serviceType}: ${it.weightOrQty} ${it.unit} @ Rp ${(it.pricePerUnit || 0).toLocaleString("id-ID")} = Rp ${(it.subtotal || (Number(it.weightOrQty) * Number(it.pricePerUnit))).toLocaleString("id-ID")}`
+            )
+            .join("\n");
+      }
+
+      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
       waData = {
         phone: cleanPhone,
         message: messageText,
         waUrl: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`,
       };
+
+      // Auto-send via Baileys if tenant waMode is 'baileys' and order is ready/completed
+      if ((status === "ready" || status === "completed") && tenant?.waMode === "baileys") {
+        try {
+          const sendRes = await sendWhatsAppMessage(existing.tenantId, cust.phone, messageText);
+          if (sendRes.success) {
+            (waData as any).autoSent = true;
+          }
+        } catch (waErr) {
+          console.error("[Baileys WA] Auto-send notice:", waErr);
+        }
+      }
     }
 
     return c.json({
@@ -549,6 +628,9 @@ app.put("/api/orders/:id", async (c) => {
     if (body.unit !== undefined) updateData.unit = body.unit;
     if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit);
     if (body.totalAmount !== undefined) updateData.totalAmount = Number(body.totalAmount);
+    if (body.items !== undefined) {
+      updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
+    }
     if (body.status !== undefined) {
       updateData.status = body.status;
       if (body.status === "completed" || body.status === "ready") {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   CashflowStats,
   Order,
+  OrderItem,
   Customer,
   Expense,
   Tenant,
@@ -128,9 +129,16 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
             ? `Pesanan ${targetOrder.invoiceNo} kini di tahap: ${label}`
             : `Status berhasil diubah ke ${label}`
         );
-        if (data.waData?.waUrl && (newStatus === "ready" || newStatus === "completed")) {
-          toast.info("Notifikasi WhatsApp", "Membuka WhatsApp untuk mengirim pesan ke pelanggan...");
-          window.open(data.waData.waUrl, "_blank");
+        if (data.waData && (newStatus === "ready" || newStatus === "completed")) {
+          if (data.waData.autoSent) {
+            toast.success(
+              "WA Terkirim Otomatis!",
+              `Notifikasi berhasil dikirim via Baileys ke nomor ${data.waData.phone || "pelanggan"}.`
+            );
+          } else if (data.waData.waUrl) {
+            toast.info("Notifikasi WhatsApp", "Membuka WhatsApp untuk mengirim pesan ke pelanggan...");
+            window.open(data.waData.waUrl, "_blank");
+          }
         }
       } else {
         toast.error("Gagal Memperbarui Status", data.message || "Terjadi kesalahan pada server");
@@ -185,12 +193,19 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     weightOrQty: number;
     unit: string;
     pricePerUnit: number;
+    totalAmount?: number;
+    items?: OrderItem[];
     paymentStatus: string;
     paymentMethod: string;
     notes?: string;
     rackNumber?: string;
   }) => {
-    const totalAmount = orderData.weightOrQty * orderData.pricePerUnit;
+    const totalAmount =
+      orderData.totalAmount !== undefined
+        ? orderData.totalAmount
+        : orderData.items && orderData.items.length > 0
+        ? orderData.items.reduce((sum, it) => sum + it.subtotal, 0)
+        : orderData.weightOrQty * orderData.pricePerUnit;
     try {
       const res = await fetch(`${API_BASE}/orders`, {
         method: "POST",

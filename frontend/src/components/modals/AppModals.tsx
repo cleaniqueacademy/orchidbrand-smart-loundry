@@ -8,6 +8,7 @@ import { CreateTenantModal } from "./CreateTenantModal";
 import { CreateUserModal } from "./CreateUserModal";
 import { ReceiptModal } from "./ReceiptModal";
 import { EditOrderModal } from "./EditOrderModal";
+import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 
 interface AppModalsProps {
   // Modal visibility states
@@ -39,6 +40,10 @@ interface AppModalsProps {
   customers: Customer[];
   tenants: Tenant[];
   tenantId: string;
+
+  // WhatsApp integration
+  waData?: WAStatusData;
+  onSendBaileys?: (phone: string, text: string) => Promise<{ success: boolean; error?: string }>;
 
   // Submission handlers
   onCreateOrder: (data: any) => Promise<void>;
@@ -77,6 +82,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
   customers,
   tenants,
   tenantId,
+  waData,
+  onSendBaileys,
   onCreateOrder,
   onUpdateOrder,
   onCreateExpense,
@@ -140,6 +147,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
         }}
         order={selectedReceiptOrder}
         tenant={currentTenant}
+        waData={waData}
+        onSendBaileys={onSendBaileys}
       />
 
       <EditOrderModal

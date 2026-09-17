@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Printer, Copy, Check, QrCode as QrIcon, FileText } from "lucide-react";
+import { X, Printer, Copy, Check, QrCode as QrIcon, FileText, RefreshCw, ExternalLink } from "lucide-react";
 import QRCode from "qrcode";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 
 interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
   tenant?: Tenant | null;
+  waData?: WAStatusData;
+  onSendBaileys?: (phone: string, text: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -17,6 +20,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose,
   order,
   tenant,
+  waData,
+  onSendBaileys,
 }) => {
   const toast = useToast();
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("58mm");
@@ -65,6 +70,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handleCopyText = () => {
+    const itemsSection =
+      order.items && order.items.length > 0
+        ? order.items
+            .map(
+              (it, idx) =>
+                `${idx + 1}. ${it.serviceType}\n   ${it.weightOrQty} ${it.unit} @ Rp ${it.pricePerUnit.toLocaleString("id-ID")} = Rp ${it.subtotal.toLocaleString("id-ID")}`
+            )
+            .join("\n")
+        : `Layanan : ${order.serviceType}\nJumlah  : ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
+
     const text = `🧾 *NOTA LAUNDRY - ${activeTenant.outletName.toUpperCase()}*
 📍 ${activeTenant.address}
 📞 ${activeTenant.phone}
@@ -73,8 +88,8 @@ No. Nota: ${order.invoiceNo}
 Tanggal : ${formattedDate} ${formattedTime}
 Pelanggan: ${order.customer?.name || "Pelanggan Umum"} (${order.customer?.phone || "-"})
 ----------------------------------------
-Layanan : ${order.serviceType}
-Jumlah  : ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}
+${itemsSection}
+----------------------------------------
 TOTAL   : Rp ${order.totalAmount.toLocaleString("id-ID")}
 Status  : ${order.paymentStatus === "paid" ? `LUNAS (${order.paymentMethod || "Tunai"})` : "BELUM LUNAS"}
 ----------------------------------------
@@ -87,22 +102,70 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
     });
   };
 
-  const handleSendWhatsApp = () => {
-    if (!order.customer?.phone) {
-      toast.warning("Nomor WA Tidak Ditemukan", "Pelanggan ini tidak memiliki nomor telepon terdaftar.");
-      return;
-    }
-    const cleanPhone = order.customer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+  const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
+
+  const getReceiptText = () => {
     const paymentNote =
       order.paymentStatus === "paid"
         ? `✅ LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
         : `⚠️ BELUM LUNAS (Rp ${order.totalAmount.toLocaleString("id-ID")})`;
     const rackText = order.rackNumber ? `\n📍 *Lokasi Rak/Keranjang:* ${order.rackNumber}` : "";
 
-    const text = `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n🧺 *Layanan:* ${order.serviceType}\n⚖️ *Jumlah:* ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    const itemsSummary =
+      order.items && order.items.length > 0
+        ? `🧺 *Rincian Layanan:*\n` +
+          order.items
+            .map(
+              (it, idx) =>
+                `  ${idx + 1}. ${it.serviceType} (${it.weightOrQty} ${it.unit} @ Rp ${it.pricePerUnit.toLocaleString("id-ID")}) = *Rp ${it.subtotal.toLocaleString("id-ID")}*`
+            )
+            .join("\n")
+        : `🧺 *Layanan:* ${order.serviceType}\n⚖️ *Jumlah:* ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
+    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+  };
+
+  const handleSendViaBaileys = async () => {
+    if (!order.customer?.phone) {
+      toast.warning("Nomor WA Tidak Ditemukan", "Pelanggan ini tidak memiliki nomor telepon terdaftar.");
+      return;
+    }
+    if (!onSendBaileys) {
+      handleSendWhatsAppManual();
+      return;
+    }
+
+    try {
+      setIsSendingViaBaileys(true);
+      const text = getReceiptText();
+      const res = await onSendBaileys(order.customer.phone, text);
+      if (res.success) {
+        toast.success(
+          "Nota Terkirim via Baileys!",
+          `Berhasil dikirim ke WhatsApp ${order.customer.name || "pelanggan"} (${order.customer.phone}).`
+        );
+      } else {
+        toast.error("Gagal Mengirim via Baileys", res.error || "Membuka opsi manual wa.me...");
+        handleSendWhatsAppManual();
+      }
+    } catch (err: any) {
+      toast.error("Gagal Mengirim", err.message || "Beralih ke manual wa.me");
+      handleSendWhatsAppManual();
+    } finally {
+      setIsSendingViaBaileys(false);
+    }
+  };
+
+  const handleSendWhatsAppManual = () => {
+    if (!order.customer?.phone) {
+      toast.warning("Nomor WA Tidak Ditemukan", "Pelanggan ini tidak memiliki nomor telepon terdaftar.");
+      return;
+    }
+    const cleanPhone = order.customer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+    const text = getReceiptText();
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, "_blank");
   };
+
 
   return (
     <>
@@ -258,16 +321,42 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
               <div className="border-b border-dashed border-zinc-400 my-2" />
 
               {/* Rincian Layanan Table */}
-              <div className="text-[11px]">
-                <div className="font-bold text-zinc-900">{order.serviceType}</div>
-                <div className="flex justify-between items-center text-[10px] text-zinc-600 mt-0.5">
-                  <span>
-                    {order.weightOrQty} {order.unit} × Rp {order.pricePerUnit.toLocaleString("id-ID")}
-                  </span>
-                  <span className="font-bold text-zinc-900 text-[11px]">
-                    Rp {order.totalAmount.toLocaleString("id-ID")}
-                  </span>
-                </div>
+              <div className="text-[11px] space-y-1.5">
+                {order.items && order.items.length > 0 ? (
+                  order.items.map((it, idx) => (
+                    <div
+                      key={idx}
+                      className="border-b border-dashed border-zinc-200 pb-1.5 last:border-0 last:pb-0"
+                    >
+                      <div className="font-bold text-zinc-900">{it.serviceType}</div>
+                      <div className="flex justify-between items-center text-[10px] text-zinc-600 mt-0.5">
+                        <span>
+                          {it.weightOrQty} {it.unit} × Rp {it.pricePerUnit.toLocaleString("id-ID")}
+                        </span>
+                        <span className="font-bold text-zinc-900 text-[11px]">
+                          Rp {it.subtotal.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      {it.notes && (
+                        <div className="text-[9px] text-zinc-500 italic mt-0.5">
+                          Ket: {it.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div>
+                    <div className="font-bold text-zinc-900">{order.serviceType}</div>
+                    <div className="flex justify-between items-center text-[10px] text-zinc-600 mt-0.5">
+                      <span>
+                        {order.weightOrQty} {order.unit} × Rp {order.pricePerUnit.toLocaleString("id-ID")}
+                      </span>
+                      <span className="font-bold text-zinc-900 text-[11px]">
+                        Rp {order.totalAmount.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 {order.notes && (
                   <div className="text-[9.5px] text-zinc-500 italic mt-1 bg-zinc-50 p-1 rounded border border-zinc-200">
                     Catatan: {order.notes}
@@ -353,15 +442,47 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={handleSendWhatsApp}
-                className="w-1/2 sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition"
-                title="Kirim Nota Digital ke WhatsApp Pelanggan"
-              >
-                <WhatsAppIcon className="w-3.5 h-3.5" />
-                <span>Kirim WA</span>
-              </button>
+              {waData?.waMode === "baileys" && waData.status === "connected" ? (
+                <div className="flex items-center gap-1 w-1/2 sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleSendViaBaileys}
+                    disabled={isSendingViaBaileys}
+                    className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-50 cursor-pointer"
+                    title="Kirim Nota langsung via WhatsApp Baileys Gateway"
+                  >
+                    {isSendingViaBaileys ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Mengirim...</span>
+                      </>
+                    ) : (
+                      <>
+                        <WhatsAppIcon className="w-3.5 h-3.5" />
+                        <span>Kirim WA (Baileys)</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendWhatsAppManual}
+                    className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs transition cursor-pointer"
+                    title="Buka manual via wa.me"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSendWhatsAppManual}
+                  className="w-1/2 sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer"
+                  title="Kirim Nota via WhatsApp (Manual wa.me)"
+                >
+                  <WhatsAppIcon className="w-3.5 h-3.5" />
+                  <span>Kirim WA (Manual)</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">

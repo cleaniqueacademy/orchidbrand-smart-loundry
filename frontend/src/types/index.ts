@@ -13,6 +13,16 @@ export interface CashflowStats {
 export type OrderStatus = "pending" | "washing" | "drying_ironing" | "ready" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "unpaid";
 
+export interface OrderItem {
+  id: string;
+  serviceType: string;
+  weightOrQty: number;
+  unit: string;
+  pricePerUnit: number;
+  subtotal: number;
+  notes?: string;
+}
+
 export interface Order {
   id: string;
   tenantId: string;
@@ -23,6 +33,7 @@ export interface Order {
   unit: string;
   pricePerUnit: number;
   totalAmount: number;
+  items?: OrderItem[];
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: string;

@@ -11,8 +11,10 @@ import { UsersTab } from "./components/tabs/UsersTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
 import { LoginPage } from "./components/auth/LoginPage";
 import { AppModals } from "./components/modals/AppModals";
+import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
+import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
 import { getWaLink } from "./utils/waLink";
 
 export default function App() {
@@ -58,6 +60,11 @@ export default function App() {
     handleCreateUser,
     handleDeleteUser,
   } = useLaundryData({ tenantId, currentUser });
+
+  // WhatsApp Gateway Composable (always target a valid tenant ID)
+  const effectiveTenantId = tenantId === "all" ? (tenants[0]?.id || "tenant-01") : tenantId;
+  const waGateway = useWhatsAppGateway(effectiveTenantId);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   // Modal UI States
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -116,6 +123,8 @@ export default function App() {
           }
         }}
         onOpenTenantModal={() => setShowTenantModal(true)}
+        onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
+        waData={waGateway.waData}
         onLogout={handleLogout}
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}
@@ -131,6 +140,8 @@ export default function App() {
           onRefresh={fetchData}
           onLogout={handleLogout}
           loading={loading}
+          waData={waGateway.waData}
+          onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
         />
 
         {/* Dynamic Tab Body */}
@@ -256,7 +267,9 @@ export default function App() {
         preselectedCustomerId={preselectedCustomerId}
         customers={customers}
         tenants={tenants}
-        tenantId={tenantId}
+        tenantId={effectiveTenantId}
+        waData={waGateway.waData}
+        onSendBaileys={waGateway.sendDirectMessage}
         onCreateOrder={handleCreateOrder}
         onUpdateOrder={handleUpdateOrder}
         onCreateExpense={handleCreateExpense}
@@ -264,6 +277,22 @@ export default function App() {
         onUpdateCustomer={handleUpdateCustomer}
         onCreateTenant={handleCreateTenant}
         onCreateUser={handleCreateUser}
+      />
+
+      {/* WhatsApp Gateway Settings Modal */}
+      <WhatsAppSettingsModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        waData={waGateway.waData}
+        loading={waGateway.loading}
+        isSendingTest={waGateway.isSendingTest}
+        onConnect={waGateway.connectWA}
+        onDisconnect={waGateway.disconnectWA}
+        onUpdateMode={waGateway.updateMode}
+        onSendTest={waGateway.sendTestMessage}
+        tenants={tenants}
+        currentTenantId={effectiveTenantId}
+        onSelectTenant={(id) => handleSelectTenant(id, tenants)}
       />
     </div>
   );

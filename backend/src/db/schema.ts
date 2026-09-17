@@ -19,6 +19,7 @@ export const tenants = pgTable("tenants", {
   address: text("address").notNull(),
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
   subscriptionUntil: text("subscription_until"),
+  waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -47,6 +48,7 @@ export const orders = pgTable("orders", {
   paymentMethod: text("payment_method").default("cash"), // 'cash' | 'transfer' | 'qris'
   notes: text("notes"),
   rackNumber: text("rack_number"),
+  items: text("items"), // JSON stringified array of OrderItem: [{ id, serviceType, weightOrQty, unit, pricePerUnit, subtotal, notes }]
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   completedAt: text("completed_at"),
 });

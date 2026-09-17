@@ -16,6 +16,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { TabType, Role, Tenant, User } from "../../types";
+import WhatsAppIcon from "../common/WhatsAppIcon";
+import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 
 interface SidebarProps {
   activeTab: TabType;
@@ -29,10 +31,13 @@ interface SidebarProps {
   currentUser?: User | null;
   onToggleRole: (newRole: Role) => void;
   onOpenTenantModal: () => void;
+  onOpenWhatsAppModal?: () => void;
+  waData?: WAStatusData;
   onLogout?: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
+
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
@@ -46,6 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   onToggleRole,
   onOpenTenantModal,
+  onOpenWhatsAppModal,
+  waData,
   onLogout,
   isOpen,
   onClose,
@@ -351,6 +358,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 );
               })}
             </nav>
+          </div>
+
+          {/* WhatsApp Integration & Settings Section */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5 flex items-center justify-between">
+              <span>Notifikasi & Integrasi</span>
+            </div>
+            <button
+              type="button"
+              id="sidebar-btn-whatsapp-settings"
+              onClick={() => {
+                if (onOpenWhatsAppModal) {
+                  onOpenWhatsAppModal();
+                  onClose();
+                }
+              }}
+              className="w-full group flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-zinc-100 hover:border-emerald-200 transition shadow-2xs"
+              title="Atur koneksi WhatsApp: Otomatis via Baileys atau Manual via wa.me"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <span className="truncate">Pengaturan WhatsApp</span>
+              </div>
+
+              <span
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                  waData?.waMode === "baileys"
+                    ? waData.status === "connected"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      : "bg-amber-100 text-amber-800 border-amber-200 animate-pulse"
+                    : "bg-blue-50 text-blue-800 border-blue-200"
+                }`}
+              >
+                {waData?.waMode === "baileys"
+                  ? waData.status === "connected"
+                    ? "Baileys Aktif"
+                    : "Scan QR"
+                  : "Manual wa.me"}
+              </span>
+            </button>
           </div>
 
           {/* Super Admin Section */}

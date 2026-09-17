@@ -1,6 +1,8 @@
 import React from "react";
 import { Menu, RefreshCw, ShieldCheck, Store, ChevronRight, Calendar } from "lucide-react";
 import { TabType, Role, User } from "../../types";
+import WhatsAppIcon from "../common/WhatsAppIcon";
+import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 
 interface HeaderProps {
   activeTab: TabType;
@@ -10,6 +12,8 @@ interface HeaderProps {
   onRefresh: () => void;
   onLogout?: () => void;
   loading: boolean;
+  waData?: WAStatusData;
+  onOpenWhatsAppModal?: () => void;
 }
 
 const tabBreadcrumbs: Record<TabType, string> = {
@@ -30,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onLogout,
   loading,
+  waData,
+  onOpenWhatsAppModal,
 }) => {
   const currentTabName = tabBreadcrumbs[activeTab] || "Dashboard";
   const todayFormatted = new Intl.DateTimeFormat("id-ID", {
@@ -82,6 +88,40 @@ export const Header: React.FC<HeaderProps> = ({
               <Store className="w-3.5 h-3.5 text-blue-600" />
               <span>Owner Cabang</span>
             </span>
+          )}
+
+          {/* WhatsApp Gateway Status Button */}
+          {onOpenWhatsAppModal && (
+            <button
+              type="button"
+              id="header-btn-whatsapp-settings"
+              onClick={onOpenWhatsAppModal}
+              className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${
+                waData?.waMode === "baileys"
+                  ? waData.status === "connected"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                  : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+              }`}
+              title="Klik untuk membuka Pengaturan WhatsApp Gateway"
+            >
+              <WhatsAppIcon
+                className={`w-3.5 h-3.5 ${
+                  waData?.waMode === "baileys"
+                    ? waData.status === "connected"
+                      ? "text-emerald-600"
+                      : "text-amber-600 animate-pulse"
+                    : "text-zinc-500"
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {waData?.waMode === "baileys"
+                  ? waData.status === "connected"
+                    ? "WA Baileys: Terhubung"
+                    : "WA Baileys: Scan QR"
+                  : "WA: Manual (wa.me)"}
+              </span>
+            </button>
           )}
 
           {/* Refresh Button */}

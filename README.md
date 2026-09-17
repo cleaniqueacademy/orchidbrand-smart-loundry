@@ -62,7 +62,9 @@ Dirancang untuk skala cloud multi-tenant (1 User = 1 Outlet Laundry), pencatatan
   - **Pengingat Cucian Menginap (>3 Hari):** Template ramah mengingatkan tetangga untuk segera mengambil pakaian.
   - **Selesai Diambil:** Ucapan terima kasih dan doa kepuasan pelanggan.
   - **Dibatalkan:** Informasi resmi pembatalan pesanan.
-- Kompatibel dengan direct link `wa.me` kasir dan siap dihubungkan ke WhatsApp Gateway API (Fonnte/Wablas).
+- **2 Pilihan Mode Pengiriman WhatsApp**:
+  - **Otomatis via Baileys Gateway**: Scan QR WhatsApp outlet langsung di aplikasi. Server secara otomatis mengirim notifikasi saat status berubah menjadi Siap Diambil dan pengiriman nota digital 1-klik tanpa membuka tab browser.
+  - **Manual Saja via wa.me**: Tanpa scan server, kasir cukup klik tombol WhatsApp untuk membuka WhatsApp Web/Desktop dengan format pesan siap kirim.
 
 ### 5. Pencatatan Keuangan, Arus Kas & Laporan Resmi
 - **Uang Masuk (Income)**:

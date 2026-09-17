@@ -46,6 +46,7 @@ export async function initPostgresTables() {
     `;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS wa_mode TEXT NOT NULL DEFAULT 'manual';`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (
@@ -75,11 +76,13 @@ export async function initPostgresTables() {
         payment_method TEXT DEFAULT 'cash',
         notes TEXT,
         rack_number TEXT,
+        items TEXT,
         created_at TEXT NOT NULL,
         completed_at TEXT
       );
     `;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rack_number TEXT;`;
+    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS expenses (
