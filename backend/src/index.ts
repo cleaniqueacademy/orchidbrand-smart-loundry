@@ -4,7 +4,6 @@ import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
 import { users, tenants, customers, orders, expenses } from "./db/schema";
 import { eq, desc } from "drizzle-orm";
-import { seedInitialData } from "./db/seed";
 import whatsappRoutes from "./routes/whatsapp";
 import { sendWhatsAppMessage, autoRestoreSavedSessions } from "./services/whatsapp";
 
@@ -21,10 +20,9 @@ app.use(
   })
 );
 
-// Auto-initialize PostgreSQL tables and seed data on startup, then auto-restore active Baileys sessions
+// Auto-initialize PostgreSQL tables on startup, then auto-restore active Baileys sessions
 initPostgresTables()
   .then(async () => {
-    await seedInitialData();
     await autoRestoreSavedSessions();
   })
   .catch(console.error);
@@ -198,13 +196,10 @@ app.post("/api/auth/login", async (c) => {
     if (!foundUser) {
       return c.json({ success: false, message: "Email atau kata sandi tidak ditemukan." }, 401);
     }
-    const isPasswordValid =
-      foundUser.passwordHash === password ||
-      (foundUser.role === "superadmin" && (password === "admin123" || password === "superadmin123")) ||
-      (foundUser.email === "budi@laundrymelati.com" && password === "budi123");
+    const isPasswordValid = foundUser.passwordHash === password;
 
     if (!isPasswordValid) {
-      return c.json({ success: false, message: "Kata sandi salah. Gunakan password yang sesuai atau akun demo." }, 401);
+      return c.json({ success: false, message: "Kata sandi yang Anda masukkan salah." }, 401);
     }
 
     const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
