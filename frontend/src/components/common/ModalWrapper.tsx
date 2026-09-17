@@ -16,7 +16,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   children,
   maxWidth = "max-w-md",
   className = "",
-  zIndex = "z-50",
+  zIndex = "z-[100]",
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

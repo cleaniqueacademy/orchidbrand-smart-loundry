@@ -26,6 +26,37 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Desktop Draggable Sidebar States
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("orchid_sidebar_width");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 68 && parsed <= 420) {
+          return parsed;
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return 256;
+  });
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+  );
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState<boolean>(false);
+
+  const isSidebarCollapsed = isDesktop && sidebarWidth <= 110;
+  const effectiveSidebarWidth = isSidebarCollapsed ? 68 : sidebarWidth;
+
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener("resize", checkDesktop);
+    return () => window.removeEventListener("resize", checkDesktop);
+  }, []);
+
   // Authentication & Tenant Session Composable
   const {
     currentUser,
@@ -174,10 +205,24 @@ export default function App() {
         onLogout={handleLogout}
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}
+        sidebarWidth={sidebarWidth}
+        setSidebarWidth={setSidebarWidth}
+        isDragging={isDraggingSidebar}
+        setIsDragging={setIsDraggingSidebar}
+        isDesktop={isDesktop}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
+      <div
+        style={{
+          paddingLeft: isDesktop ? `${effectiveSidebarWidth}px` : undefined,
+        }}
+        className={`flex-1 flex flex-col min-w-0 ${
+          isDraggingSidebar
+            ? "transition-none"
+            : "transition-[padding] duration-200 ease-out"
+        }`}
+      >
         <Header
           activeTab={activeTab}
           currentUserRole={currentUserRole}

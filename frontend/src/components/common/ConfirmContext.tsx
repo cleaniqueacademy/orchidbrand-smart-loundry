@@ -96,7 +96,7 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
       {/* Confirmation Modal Backdrop & Dialog */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 overflow-y-auto no-print">
             <motion.div
               key="confirm-backdrop"
               initial={{ opacity: 0 }}

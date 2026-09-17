@@ -83,7 +83,7 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
   };
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl" zIndex="z-[9999]">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl" zIndex="z-[100]">
       <div className="bg-white rounded-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200">
 
         {/* Header */}

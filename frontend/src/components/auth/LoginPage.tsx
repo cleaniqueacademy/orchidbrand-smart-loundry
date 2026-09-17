@@ -28,9 +28,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [inactiveAccountUser, setInactiveAccountUser] = useState<any | null>(null);
 
-  const handleLogin = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+  const executeLogin = async (loginEmail: string, loginPass: string) => {
+    if (!loginEmail.trim() || !loginPass.trim()) {
       setErrorMessage("Silakan isi email dan kata sandi Anda.");
       return;
     }
@@ -43,7 +42,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPass }),
       });
 
       const data = await res.json();
@@ -67,17 +66,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       setSuccessMessage("Login berhasil! Mengalihkan ke dashboard...");
       setTimeout(() => {
         onLoginSuccess(data.user);
-      }, 600);
+      }, 350);
     } catch {
       setErrorMessage("Terjadi kesalahan koneksi ke server. Pastikan backend aktif.");
       setLoading(false);
     }
   };
 
+  const handleLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    executeLogin(email, password);
+  };
+
   const handleQuickFill = (demoEmail: string, demoPass: string) => {
     setEmail(demoEmail);
     setPassword(demoPass);
     setErrorMessage("");
+    executeLogin(demoEmail, demoPass);
   };
 
   return (
