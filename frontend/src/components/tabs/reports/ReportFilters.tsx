@@ -36,14 +36,11 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
       {/* Top Header & Export Action Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-            <span>Laporan Keuangan & Operasional</span>
-            <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-full border border-zinc-200">
-              {activeTenantOutletName}
-            </span>
+          <h2 className="text-xl font-bold text-zinc-900 tracking-tight">
+            Laporan Keuangan
           </h2>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Rekapitulasi laba rugi, omset penjualan, beban operasional, dan buku besar transaksi
+            Rekapitulasi laba rugi, omset penjualan, dan beban operasional
           </p>
         </div>
 
@@ -55,7 +52,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             title="Pratinjau lembar cetak dokumen resmi"
           >
             <Eye className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Pratinjau Lembar Cetak</span>
+            <span>Pratinjau Cetak</span>
           </button>
 
           <button
@@ -73,7 +70,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             title="Cetak atau simpan sebagai dokumen PDF"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Cetak / Download PDF</span>
+            <span>Cetak PDF</span>
           </button>
         </div>
       </div>

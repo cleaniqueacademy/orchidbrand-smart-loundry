@@ -103,14 +103,12 @@ export function useAuthSession() {
     }, 400);
   };
 
-  const handleSelectTenant = (id: string, tenants: Tenant[]) => {
-    setTenantId(id);
-    if (id === "all") {
-      toast.info("Mode Agregat Pusat", "Menampilkan data gabungan dari seluruh cabang outlet.");
-    } else {
-      const t = tenants.find((item) => item.id === id);
-      toast.info("Inspeksi Cabang", `Sekarang memantau: ${t?.outletName || id}`);
+  const handleSelectTenant = (id: string, _tenants: Tenant[]) => {
+    if (currentUserRole === "superadmin") {
+      setTenantId("all");
+      return;
     }
+    setTenantId(id);
   };
 
   const refreshUserSession = async (): Promise<boolean> => {

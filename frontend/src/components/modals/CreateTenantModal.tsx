@@ -70,10 +70,10 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-base sm:text-lg text-slate-950">
-                Daftarkan Tenant & User Baru
+                Tambah Cabang
               </h3>
               <p className="text-xs text-slate-500">
-                1 User Pemilik terhubung ke 1 Tenant Outlet Laundry
+                Daftarkan cabang dan akun pemilik baru.
               </p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Nama Outlet / Cabang <span className="text-sky-600">*</span>
+              Nama Cabang <span className="text-sky-600">*</span>
             </label>
             <input
               type="text"
@@ -102,7 +102,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Nomor Telepon Outlet <span className="text-sky-600">*</span>
+              Nomor Telepon <span className="text-sky-600">*</span>
             </label>
             <input
               type="tel"
@@ -115,7 +115,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1">Alamat Outlet</label>
+            <label className="block text-xs font-bold text-slate-800 mb-1">Alamat Cabang</label>
             <input
               type="text"
               required
@@ -128,7 +128,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
           <div className="pt-2 border-t border-slate-100">
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Nama Pemilik (User Owner) <span className="text-sky-600">*</span>
+              Nama Pemilik <span className="text-sky-600">*</span>
             </label>
             <input
               type="text"
@@ -142,7 +142,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Email Login Pemilik <span className="text-sky-600">*</span>
+              Email Pemilik <span className="text-sky-600">*</span>
             </label>
             <input
               type="email"
@@ -156,7 +156,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Password Sementara
+              Kata Sandi
             </label>
             <input
               type="password"

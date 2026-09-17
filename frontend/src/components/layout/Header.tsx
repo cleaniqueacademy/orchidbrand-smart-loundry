@@ -17,13 +17,14 @@ interface HeaderProps {
 }
 
 const tabBreadcrumbs: Record<TabType, string> = {
-  overview: "Ringkasan Operasional",
-  orders: "Pesanan Laundry",
-  cashflow: "Buku Arus Kas",
-  customers: "Manajemen Pelanggan",
-  reports: "Laporan & Pembukuan",
-  tenants: "Semua Cabang (Tenants)",
-  users: "Manajemen Pengguna",
+  overview: "Dashboard",
+  orders: "Pesanan",
+  cashflow: "Arus Kas",
+  customers: "Pelanggan",
+  reports: "Laporan",
+  tenants: "Cabang",
+  users: "Pengguna",
+  settings: "Pengaturan",
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -46,13 +47,13 @@ export const Header: React.FC<HeaderProps> = ({
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-blue-100 px-4 sm:px-8 py-2.5 no-print">
+    <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-8 py-2.5 no-print">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Mobile Menu & Breadcrumb */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenMobileMenu}
-            className="p-1.5 -ml-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-blue-50 lg:hidden transition"
+            className="p-1.5 -ml-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 lg:hidden transition"
             aria-label="Buka Menu"
           >
             <Menu className="w-5 h-5" />
@@ -60,10 +61,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-zinc-500">
-            <span className="text-zinc-400 font-medium hidden sm:inline">Orchid Laundry</span>
-            <ChevronRight className="w-3.5 h-3.5 text-zinc-300 hidden sm:inline" />
-            {/* tab aktif - background biru muda, teks hitam */}
-            <span className="font-semibold text-zinc-900 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+            <span className="text-zinc-400 font-normal hidden sm:inline">Orchid Laundry</span>
+            <span className="text-zinc-300 hidden sm:inline">/</span>
+            <span className="font-semibold text-zinc-900">
               {currentTabName}
             </span>
           </nav>
@@ -72,20 +72,20 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Info & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Today's Date */}
-          <div className="hidden md:flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-            <Calendar className="w-3 h-3 text-blue-400" />
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
+            <Calendar className="w-3.5 h-3.5 text-zinc-400" />
             <span>{todayFormatted}</span>
           </div>
 
-          {/* Role Badge — biru tua untuk super admin, biru muda untuk owner */}
+          {/* Role Badge */}
           {currentUserRole === "superadmin" ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-900 text-white px-2.5 py-1 rounded-lg border border-blue-800 shadow-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200/80 px-2.5 py-1 rounded-md">
+              <ShieldCheck className="w-3.5 h-3.5 text-zinc-500" />
               <span>Super Admin</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg">
-              <Store className="w-3.5 h-3.5 text-blue-600" />
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200/80 px-2.5 py-1 rounded-md">
+              <Store className="w-3.5 h-3.5 text-zinc-500" />
               <span>Owner Cabang</span>
             </span>
           )}
@@ -115,11 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               />
               <span className="hidden sm:inline">
-                {waData?.waMode === "baileys"
-                  ? waData.status === "connected"
-                    ? "WA Baileys: Terhubung"
-                    : "WA Baileys: Scan QR"
-                  : "WA: Manual (wa.me)"}
+                {waData?.status === "connected" ? "WhatsApp Terhubung" : "WhatsApp"}
               </span>
             </button>
           )}

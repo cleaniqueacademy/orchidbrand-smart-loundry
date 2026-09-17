@@ -36,15 +36,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   getWaLink,
   setActiveTab,
 }) => {
-  // If user is Super Admin in Central HQ Mode ("all"), show the SaaS Master Platform Dashboard
-  if (currentUserRole === "superadmin" && tenantId === "all") {
+  // If user is Super Admin, always show the Master Platform Dashboard
+  if (currentUserRole === "superadmin") {
     return (
       <AdminOverviewTab
         stats={stats}
         orders={orders}
         tenants={tenants}
         users={users}
-        onSelectTenant={onSelectTenant}
         onOpenTenantModal={onOpenTenantModal}
         onOpenUserModal={onOpenUserModal}
         setActiveTab={setActiveTab}
@@ -52,7 +51,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     );
   }
 
-  // Otherwise, show the Branch Operational POS Dashboard (with inspection mode if superadmin inspecting a branch)
+  // Otherwise, show the Branch Operational POS Dashboard for Tenant Owner & Staff
   return (
     <TenantOverviewTab
       stats={stats}
@@ -60,7 +59,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       tenants={tenants}
       tenantId={tenantId}
       currentUserRole={currentUserRole}
-      onBackToHq={() => onSelectTenant("all")}
       onOpenOrderModal={onOpenOrderModal}
       onOpenExpenseModal={onOpenExpenseModal}
       onUpdateStatus={onUpdateStatus}

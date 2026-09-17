@@ -74,7 +74,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   const columns: ColumnDef<UserType>[] = [
     {
       id: "name",
-      header: "Nama Pengguna",
+      header: "Pengguna",
       cell: (u) => (
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-xs text-zinc-700 shrink-0">
@@ -92,7 +92,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     },
     {
       id: "role",
-      header: "Hak Akses / Peran",
+      header: "Peran",
       cell: (u) => {
         const config = roleBadgeConfig[u.role] || {
           label: u.role,
@@ -110,38 +110,22 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     },
     {
       id: "tenant",
-      header: "Penugasan Cabang",
+      header: "Cabang",
       cell: (u) => {
         if (u.role === "superadmin") {
-          return (
-            <span className="text-zinc-400 text-xs italic">
-              — (Kantor Pusat / Tanpa Tenant)
-            </span>
-          );
-        }
-        if (u.role === "tenant_owner") {
-          return (
-            <div className="flex items-center gap-1.5 text-xs text-zinc-900 font-semibold">
-              <Store className="w-3.5 h-3.5 text-blue-600" />
-              <span>{u.tenantName || "Cabang Melati"}</span>
-              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded font-normal">
-                Pemilik
-              </span>
-            </div>
-          );
+          return <span className="text-zinc-400 text-xs font-medium">Pusat</span>;
         }
         return (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-700">
+          <div className="flex items-center gap-1.5 text-xs text-zinc-800">
             <Store className="w-3.5 h-3.5 text-zinc-400" />
-            <span>{u.tenantName || "Cabang Melati"}</span>
-            <span className="text-[10px] text-zinc-400 font-normal">Staff</span>
+            <span className="font-medium">{u.tenantName || "Cabang Melati"}</span>
           </div>
         );
       },
     },
     {
       id: "status",
-      header: "Status Akun",
+      header: "Status",
       cell: (u) => {
         const isActive = (u.status || "active") === "active";
         return (
@@ -162,7 +146,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
             title={
               u.role === "superadmin"
                 ? "Super Admin selalu aktif"
-                : "Klik untuk toggle status Aktif / Nonaktif"
+                : "Klik untuk toggle status"
             }
           >
             <span
@@ -177,12 +161,12 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     },
     {
       id: "subscription",
-      header: "Masa Aktif & Lisensi",
+      header: "Masa Aktif",
       cell: (u) => {
         if (u.role === "superadmin") {
           return (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-mono">
-              Permanen (HQ)
+            <span className="inline-flex items-center text-[11px] font-semibold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-mono">
+              Permanen
             </span>
           );
         }
@@ -216,7 +200,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
             <button
               onClick={() => setUserToExtend(u)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 active:bg-blue-200 border border-blue-200 transition shadow-2xs shrink-0 cursor-pointer"
-              title="Perpanjang Masa Aktif Akun (+X Hari)"
+              title="Perpanjang Masa Aktif"
             >
               <Calendar className="w-3 h-3 text-blue-600" />
               <span>Perpanjang</span>
@@ -266,26 +250,18 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Manajemen Pengguna</h2>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Pengguna</h2>
           <p className="text-xs text-zinc-500">
-            Kelola akun login Super Admin, status aktif/nonaktif, dan masa berlaku langganan offline
+            Kelola akun pengguna dan masa aktif.
           </p>
         </div>
 
         <button
           onClick={onOpenUserModal}
-          className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition"
+          className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-xs transition cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" /> Tambah Pengguna
         </button>
-      </div>
-
-      {/* Notice Callout on Offline Subscription & Status */}
-      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-xs text-zinc-600 flex items-start gap-2.5">
-        <ShieldCheck className="w-4 h-4 text-zinc-800 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold text-zinc-900">Model Langganan Offline:</span> Status <strong>Aktif / Nonaktif</strong> dan <strong>Masa Langganan</strong> ditentukan langsung oleh Super Admin. Pengguna yang berstatus <em>Nonaktif</em> atau melewati batas tanggal langganan akan <strong>diblokir dari login</strong> ke sistem.
-        </div>
       </div>
 
       {/* Metric Cards */}
@@ -300,7 +276,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-            Masa Aktif Valid
+            Pengguna Aktif
           </span>
           <div className="text-xl font-bold text-emerald-700 mt-1">
             {
@@ -315,7 +291,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600">
-            Kedaluwarsa / Nonaktif
+            Tidak Aktif
           </span>
           <div className="text-xl font-bold text-rose-600 mt-1">
             {
@@ -325,23 +301,23 @@ export const UsersTab: React.FC<UsersTabProps> = ({
             }{" "}
             Terkunci
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Masa aktif habis / diblokir</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Kedaluwarsa atau dinonaktifkan</p>
         </div>
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-            Super Admin
+            Administrator
           </span>
           <div className="text-xl font-bold text-zinc-900 mt-1">
-            {users.filter((u) => u.role === "superadmin").length} Admin Pusat
+            {users.filter((u) => u.role === "superadmin").length} Akun
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Akses kendali permanen</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Akses kendali pusat</p>
         </div>
       </div>
 
       {/* Users Table */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-zinc-900 text-sm">Daftar Akun Pengguna</h3>
+        <h3 className="font-semibold text-zinc-900 text-sm">Daftar Pengguna</h3>
         <ShadcnDataTable
           data={filteredUsers}
           columns={columns}
@@ -359,7 +335,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                 <option value="all">Semua Peran</option>
                 <option value="superadmin">Super Admin</option>
                 <option value="tenant_owner">Tenant Owner</option>
-                <option value="staff">Staff / Kasir</option>
+                <option value="staff">Kasir</option>
               </select>
 
               <select
@@ -368,10 +344,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                 className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
               >
                 <option value="all">Semua Status</option>
-                <option value="active">🟢 Masa Aktif Valid</option>
-                <option value="expiring_soon">🟡 Segera Habis (≤7 Hari)</option>
-                <option value="expired">🔴 Kedaluwarsa (Expired)</option>
-                <option value="inactive">⚫ Status Nonaktif</option>
+                <option value="active">Aktif</option>
+                <option value="expiring_soon">Segera Habis</option>
+                <option value="expired">Kedaluwarsa</option>
+                <option value="inactive">Nonaktif</option>
               </select>
             </div>
           }

@@ -611,6 +611,36 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     }
   };
 
+  // Update Tenant Profile
+  const handleUpdateTenant = async (id: string, tenantData: {
+    outletName?: string;
+    phone?: string;
+    address?: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/tenants/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tenantData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success(
+          "Pengaturan Disimpan",
+          "Informasi cabang berhasil diperbarui."
+        );
+        return true;
+      } else {
+        toast.error("Gagal Menyimpan", data.message || "Terjadi kesalahan pada server");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      return false;
+    }
+  };
+
   // Create User
   const handleCreateUser = async (userData: {
     name: string;
@@ -708,6 +738,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     handleUpdateUserSubscription,
     handleExtendUserSubscription,
     handleCreateTenant,
+    handleUpdateTenant,
     handleCreateUser,
     handleDeleteUser,
   };

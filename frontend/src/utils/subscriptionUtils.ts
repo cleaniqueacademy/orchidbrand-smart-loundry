@@ -41,9 +41,9 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
       isExpired: false,
       isInactiveStatus: false,
       daysRemaining: 99999,
-      formattedExpiry: "Permanen (Pusat)",
+      formattedExpiry: "Permanen",
       statusBadge: {
-        label: "Permanen (HQ)",
+        label: "Permanen",
         className: "bg-blue-900 text-white border-blue-900",
         dotColor: "bg-sky-400",
         description: "Akses Super Admin selalu aktif tanpa batasan waktu",
@@ -91,9 +91,8 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
       description: "Akun dinonaktifkan oleh Administrator",
     };
   } else if (isExpired) {
-    const overdueDays = Math.abs(daysRemaining);
     badge = {
-      label: overdueDays === 0 ? "Kedaluwarsa Hari Ini" : `Kedaluwarsa (-${overdueDays} Hari)`,
+      label: "Kedaluwarsa",
       className: "bg-rose-50 text-rose-700 border-rose-300 animate-pulse",
       dotColor: "bg-rose-600",
       description: `Masa aktif telah berakhir pada ${formattedExpiry}`,
@@ -107,7 +106,7 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
     };
   } else {
     badge = {
-      label: `Aktif (${daysRemaining} Hari)`,
+      label: "Aktif",
       className: "bg-emerald-50 text-emerald-800 border-emerald-200",
       dotColor: "bg-emerald-500",
       description: `Aktif ${daysRemaining} hari ke depan hingga ${formattedExpiry}`,

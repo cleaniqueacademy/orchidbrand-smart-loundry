@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ArrowRight,
   Plus,
-  Building2,
   ShieldCheck,
   Store,
 } from "lucide-react";
@@ -21,7 +20,6 @@ interface TenantOverviewTabProps {
   tenants: Tenant[];
   tenantId: string;
   currentUserRole: Role;
-  onBackToHq?: () => void;
   onOpenOrderModal: () => void;
   onOpenExpenseModal: () => void;
   onUpdateStatus: (orderId: string, status: string) => void;
@@ -35,7 +33,6 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
   tenants,
   tenantId,
   currentUserRole,
-  onBackToHq,
   onOpenOrderModal,
   onOpenExpenseModal,
   onUpdateStatus,
@@ -52,8 +49,6 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
       phone: "081234567890",
       address: "Jl. Melati Raya No. 45, Jakarta",
     };
-
-  const isInspecting = currentUserRole === "superadmin" && tenantId !== "all";
 
   const handleCompleteOrder = async (order: Order) => {
     const confirmed = await confirm({
@@ -76,33 +71,6 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Inspection Mode Alert Banner for Super Admin */}
-      {isInspecting && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
-              <Building2 className="w-4 h-4 text-amber-800" />
-            </div>
-            <div>
-              <div className="text-xs font-bold">
-                Mode Inspeksi Cabang: <span className="underline">{activeTenant.outletName}</span>
-              </div>
-              <div className="text-[11px] text-amber-700 mt-0.5">
-                Anda sedang meninjau dashboard operasional outlet ini dengan hak akses Super Admin.
-              </div>
-            </div>
-          </div>
-          {onBackToHq && (
-            <button
-              onClick={onBackToHq}
-              className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white font-semibold text-xs transition shadow-xs cursor-pointer flex items-center gap-1.5"
-            >
-              <span>← Kembali ke Dashboard Pusat (HQ)</span>
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Welcome Banner — blue gradient */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 rounded-xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         {/* Decorative blobs */}
@@ -112,7 +80,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         <div className="relative z-10">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-semibold text-sky-200 backdrop-blur-xs mb-1.5 border border-white/10">
             <Store className="w-3 h-3 text-sky-300" />
-            <span>Dashboard Operasional Cabang</span>
+            <span>Operasional Cabang</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
             {activeTenant.outletName}
@@ -222,7 +190,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         <div className="lg:col-span-2 bg-white rounded-xl border border-zinc-200 p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between mb-3.5">
             <div>
-              <h3 className="font-bold text-zinc-900 text-sm">Cucian Siap Diambil</h3>
+              <h3 className="font-bold text-zinc-900 text-sm">Siap Diambil</h3>
               <p className="text-xs text-zinc-400">Hubungi pelanggan melalui WhatsApp</p>
             </div>
             <button
@@ -330,7 +298,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
             onClick={() => setActiveTab("cashflow")}
             className="mt-4 w-full py-2 rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 font-medium text-xs flex items-center justify-center gap-1.5 transition border border-zinc-200 cursor-pointer"
           >
-            Lihat Buku Kas Lengkap <ArrowRight className="w-3.5 h-3.5" />
+            Buku Kas <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

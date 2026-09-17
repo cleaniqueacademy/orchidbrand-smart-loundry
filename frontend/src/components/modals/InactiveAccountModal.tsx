@@ -98,7 +98,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
 
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-              {isInactiveStatus ? "Status Akun Nonaktif" : "Masa Aktif Berakhir (Expired)"}
+              {isInactiveStatus ? "Akun Nonaktif" : "Masa Aktif Berakhir"}
             </span>
 
             <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
@@ -134,7 +134,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
             <div className="flex items-center justify-between py-1 border-b border-zinc-200/60 text-xs">
               <div className="flex items-center gap-1.5 text-zinc-600">
                 <Store className="w-3.5 h-3.5 text-blue-600" />
-                <span>Outlet / Cabang:</span>
+                <span>Cabang:</span>
               </div>
               <span className="font-semibold text-zinc-900">
                 {user.tenantName || "Orchid Laundry"}
@@ -144,7 +144,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
             <div className="flex items-center justify-between py-1 text-xs">
               <div className="flex items-center gap-1.5 text-zinc-600">
                 <Calendar className="w-3.5 h-3.5 text-rose-500" />
-                <span>Batas Masa Aktif:</span>
+                <span>Masa Aktif:</span>
               </div>
               <div className="text-right">
                 <span className="font-mono font-bold text-rose-700">
@@ -178,10 +178,10 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
             >
               <div className="flex items-center gap-2 text-sm">
                 <MessageCircle className="w-5 h-5 fill-white/20 text-white group-hover:scale-110 transition-transform" />
-                <span>Hubungi Admin via WhatsApp</span>
+                <span>Hubungi Admin</span>
               </div>
               <span className="text-[11px] font-normal text-emerald-100 mt-0.5">
-                Kirim permohonan perpanjangan masa aktif otomatis
+                Kirim permohonan perpanjangan masa aktif
               </span>
             </a>
 
@@ -195,7 +195,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${checking ? "animate-spin text-blue-600" : ""}`} />
                 <span>
-                  {checking ? "Memeriksa Status ke Server..." : "Periksa Status Terbaru (Cek Real-time)"}
+                  {checking ? "Memeriksa Status..." : "Periksa Status"}
                 </span>
               </button>
             )}
@@ -208,7 +208,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                 className="w-full py-2 px-3 text-xs text-zinc-500 hover:text-zinc-800 flex items-center justify-center gap-1.5 transition cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Keluar / Ganti Akun Lain</span>
+                <span>Keluar Akun</span>
               </button>
             )}
 

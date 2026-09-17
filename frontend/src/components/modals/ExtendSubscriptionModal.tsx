@@ -31,10 +31,10 @@ interface ExtendSubscriptionModalProps {
 const PRESET_DAYS = [
   { days: 7, label: "+7 Hari", desc: "1 Minggu" },
   { days: 14, label: "+14 Hari", desc: "2 Minggu" },
-  { days: 30, label: "+30 Hari", desc: "1 Bulan (Rekomendasi)", popular: true },
-  { days: 90, label: "+90 Hari", desc: "3 Bulan / 1 Qtr" },
-  { days: 180, label: "+180 Hari", desc: "6 Bulan / Sem." },
-  { days: 365, label: "+365 Hari", desc: "1 Tahun Penuh" },
+  { days: 30, label: "+30 Hari", desc: "1 Bulan", popular: true },
+  { days: 90, label: "+90 Hari", desc: "3 Bulan" },
+  { days: 180, label: "+180 Hari", desc: "6 Bulan" },
+  { days: 365, label: "+365 Hari", desc: "1 Tahun" },
 ];
 
 export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = ({
@@ -142,7 +142,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
             </div>
             <div>
               <h3 className="font-bold text-zinc-900 text-base">
-                Perpanjang Masa Aktif Akun
+                Perpanjang Akun
               </h3>
               <p className="text-xs text-zinc-500">
                 Kelola durasi lisensi & operasional kasir pengguna
@@ -198,7 +198,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
           {/* Mode Selector Tabs */}
           <div>
             <label className="block text-xs font-bold text-zinc-700 mb-2">
-              Pilih Durasi Perpanjangan (Berapa Hari)
+              Durasi Perpanjangan
             </label>
             <div className="grid grid-cols-3 gap-1 bg-zinc-100 p-1 rounded-xl text-xs font-semibold text-zinc-600">
               <button
@@ -221,7 +221,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
                     : "hover:text-zinc-900"
                 }`}
               >
-                Input X Hari
+                Kustom Hari
               </button>
               <button
                 type="button"
@@ -277,7 +277,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
           {mode === "custom" && (
             <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200">
               <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                Masukkan Jumlah Hari Perpanjangan:
+                Jumlah Hari:
               </label>
               <div className="relative">
                 <input
@@ -304,7 +304,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
           {mode === "date" && (
             <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200">
               <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                Pilih Tanggal Batas Masa Aktif Baru:
+                Tanggal Batas:
               </label>
               <input
                 type="date"
@@ -375,7 +375,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
               disabled={submitting}
               className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-900/20 transition disabled:opacity-50 cursor-pointer"
             >
-              <span>{submitting ? "Memperpanjang..." : "Simpan & Perpanjang Sekarang"}</span>
+              <span>{submitting ? "Memperpanjang..." : "Simpan Perpanjangan"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

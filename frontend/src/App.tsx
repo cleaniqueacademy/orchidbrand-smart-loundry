@@ -9,6 +9,7 @@ import { CustomersTab } from "./components/tabs/CustomersTab";
 import { TenantsTab } from "./components/tabs/TenantsTab";
 import { UsersTab } from "./components/tabs/UsersTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
+import { SettingsTab } from "./components/tabs/SettingsTab";
 import { LoginPage } from "./components/auth/LoginPage";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
@@ -68,6 +69,7 @@ export default function App() {
     handleUpdateUserSubscription,
     handleExtendUserSubscription,
     handleCreateTenant,
+    handleUpdateTenant,
     handleCreateUser,
     handleDeleteUser,
   } = useLaundryData({ tenantId, currentUser });
@@ -247,8 +249,6 @@ export default function App() {
             <TenantsTab
               tenants={tenants}
               onOpenTenantModal={() => setShowTenantModal(true)}
-              onSelectTenant={(id) => handleSelectTenant(id, tenants)}
-              currentTenantId={tenantId}
             />
           )}
 
@@ -271,6 +271,15 @@ export default function App() {
               tenants={tenants}
               currentTenantId={tenantId}
               customers={customers}
+            />
+          )}
+
+          {activeTab === "settings" && (
+            <SettingsTab
+              tenant={tenants.find((t) => t.id === tenantId) || tenants[0]}
+              currentUser={currentUser}
+              onUpdateTenant={handleUpdateTenant}
+              onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
             />
           )}
         </main>

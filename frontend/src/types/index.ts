@@ -92,4 +92,4 @@ export interface User {
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
 
-export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users";
+export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users" | "settings";

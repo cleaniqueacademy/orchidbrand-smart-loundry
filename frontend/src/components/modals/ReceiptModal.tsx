@@ -141,15 +141,15 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
       const res = await onSendBaileys(order.customer.phone, text);
       if (res.success) {
         toast.success(
-          "Nota Terkirim via Baileys!",
+          "Nota Terkirim!",
           `Berhasil dikirim ke WhatsApp ${order.customer.name || "pelanggan"} (${order.customer.phone}).`
         );
       } else {
-        toast.error("Gagal Mengirim via Baileys", res.error || "Membuka opsi manual wa.me...");
+        toast.error("Gagal Mengirim", res.error || "Membuka opsi WhatsApp...");
         handleSendWhatsAppManual();
       }
     } catch (err: any) {
-      toast.error("Gagal Mengirim", err.message || "Beralih ke manual wa.me");
+      toast.error("Gagal Mengirim", err.message || "Beralih ke WhatsApp");
       handleSendWhatsAppManual();
     } finally {
       setIsSendingViaBaileys(false);
@@ -219,10 +219,10 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
               </div>
               <div>
                 <h3 className="font-bold text-sm sm:text-base text-zinc-100">
-                  Cetak Struk Nota Thermal
+                  Cetak Struk
                 </h3>
                 <p className="text-[11px] text-zinc-400">
-                  Pratinjau struk kasir ukuran Bluetooth / USB Printer
+                  Pratinjau cetak struk kasir
                 </p>
               </div>
             </div>
@@ -237,7 +237,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
 
           {/* Paper Width Selector */}
           <div className="flex items-center justify-between bg-zinc-800/80 p-2 rounded-xl mb-4 text-xs">
-            <span className="text-zinc-400 font-medium pl-1">Ukuran Kertas Thermal:</span>
+            <span className="text-zinc-400 font-medium pl-1">Ukuran Kertas:</span>
             <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-lg border border-zinc-700/60">
               <button
                 type="button"
@@ -248,7 +248,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                58mm (Saku/Mini)
+                58mm
               </button>
               <button
                 type="button"
@@ -259,7 +259,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                80mm (Desktop POS)
+                80mm
               </button>
             </div>
           </div>
@@ -378,7 +378,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                   <span className="text-[10px] font-semibold text-zinc-600">STATUS PEMBAYARAN:</span>
                   {order.paymentStatus === "paid" ? (
                     <span className="font-black px-1.5 py-0.5 bg-zinc-900 text-white text-[10px] rounded">
-                      LUNAS ({order.paymentMethod?.toUpperCase() || "CASH"})
+                      LUNAS
                     </span>
                   ) : (
                     <span className="font-black px-1.5 py-0.5 border border-zinc-900 text-zinc-900 text-[10px] rounded">
@@ -449,7 +449,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     onClick={handleSendViaBaileys}
                     disabled={isSendingViaBaileys}
                     className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition disabled:opacity-50 cursor-pointer"
-                    title="Kirim Nota langsung via WhatsApp Baileys Gateway"
+                    title="Kirim Nota via WhatsApp"
                   >
                     {isSendingViaBaileys ? (
                       <>
@@ -459,7 +459,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     ) : (
                       <>
                         <WhatsAppIcon className="w-3.5 h-3.5" />
-                        <span>Kirim WA (Baileys)</span>
+                        <span>Kirim Otomatis</span>
                       </>
                     )}
                   </button>
@@ -467,7 +467,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     type="button"
                     onClick={handleSendWhatsAppManual}
                     className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs transition cursor-pointer"
-                    title="Buka manual via wa.me"
+                    title="Buka WhatsApp"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
@@ -477,10 +477,10 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                   type="button"
                   onClick={handleSendWhatsAppManual}
                   className="w-1/2 sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer"
-                  title="Kirim Nota via WhatsApp (Manual wa.me)"
+                  title="Kirim Nota via WhatsApp"
                 >
                   <WhatsAppIcon className="w-3.5 h-3.5" />
-                  <span>Kirim WA (Manual)</span>
+                  <span>Kirim WhatsApp</span>
                 </button>
               )}
             </div>

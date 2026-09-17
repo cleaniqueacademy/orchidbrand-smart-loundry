@@ -44,7 +44,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
     return matchSearch && matchCategory && matchDate && matchTenant;
   });
 
-  // Table Columns
+  // Table Columns (max 2 kata per header)
   const columns: ColumnDef<Expense>[] = [
     {
       id: "date",
@@ -57,7 +57,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
       ? [
           {
             id: "outlet",
-            header: "Cabang / Outlet",
+            header: "Cabang",
             cell: (exp: Expense) => {
               const outlet = tenants.find((t) => t.id === exp.tenantId);
               return (
@@ -74,7 +74,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
       : []),
     {
       id: "category",
-      header: "Kategori Biaya",
+      header: "Kategori",
       cell: (exp) => (
         <span className="inline-flex items-center text-[10px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 rounded-md">
           {exp.category}
@@ -83,14 +83,14 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
     },
     {
       id: "notes",
-      header: "Keterangan / Keperluan",
+      header: "Keterangan",
       cell: (exp) => <span className="text-zinc-700 text-xs">{exp.notes}</span>,
     },
     {
       id: "amount",
       header: "Nominal",
       cell: (exp) => (
-        <span className="font-bold text-zinc-900 text-xs">
+        <span className="font-bold text-zinc-900 text-xs font-mono">
           Rp {exp.amount.toLocaleString("id-ID")}
         </span>
       ),
@@ -120,45 +120,37 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {isSuperAdmin ? (
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
-                Data Arus Kas & Biaya Jaringan
-              </h2>
-              <span className="text-[10px] font-bold bg-blue-900 text-white px-2 py-0.5 rounded-full font-mono">
-                AUDIT PUSAT
-              </span>
-            </div>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Arus Kas</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Audit pengeluaran operasional dan ringkasan arus kas konsolidasian seluruh cabang
+              Ringkasan pemasukan dan pengeluaran seluruh cabang.
             </p>
           </div>
         ) : (
           <div>
-            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Buku Arus Kas & Biaya</h2>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Buku Kas</h2>
             <p className="text-xs text-zinc-500">
-              Pencatatan pengeluaran operasional dan ringkasan laba bersih toko
+              Pencatatan pengeluaran operasional dan laba bersih.
             </p>
           </div>
         )}
 
-        {/* Tombol Catat Pengeluaran hanya untuk Kasir / Tenant Owner */}
         {!isSuperAdmin && (
           <button
             onClick={onOpenExpenseModal}
             className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> Catat Pengeluaran
+            <Plus className="w-3.5 h-3.5" /> Catat Biaya
           </button>
         )}
       </div>
 
-      {/* 3 Metric Cards (Shadcn style) */}
+      {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Pemasukan */}
         <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              {isSuperAdmin ? "Pemasukan Konsolidasi" : "Pemasukan (Lunas)"}
+              Pemasukan
             </span>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -176,7 +168,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
         <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              {isSuperAdmin ? "Total Pengeluaran Jaringan" : "Total Pengeluaran"}
+              Pengeluaran
             </span>
             <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
               <TrendingDown className="w-3.5 h-3.5" />
@@ -185,16 +177,14 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
           <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2 tracking-tight font-mono">
             Rp {stats.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">
-            {isSuperAdmin ? "Biaya operasional seluruh cabang" : "Biaya operasional outlet"}
-          </p>
+          <p className="text-[11px] text-zinc-400 mt-1">Total beban operasional</p>
         </div>
 
         {/* Laba Bersih */}
         <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              {isSuperAdmin ? "Laba Bersih Konsolidasi" : "Laba Bersih"}
+              Laba Bersih
             </span>
             <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center border border-zinc-200">
               <DollarSign className="w-3.5 h-3.5" />
@@ -207,20 +197,18 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
           >
             Rp {stats.netProfit.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Pemasukan − Pengeluaran</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Pemasukan dikurangi pengeluaran</p>
         </div>
       </div>
 
       {/* Expenses Table using ShadcnDataTable */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-zinc-900 text-sm">
-          {isSuperAdmin ? "Riwayat Biaya Operasional Seluruh Cabang" : "Riwayat Catatan Biaya"}
-        </h3>
+        <h3 className="font-semibold text-zinc-900 text-sm">Riwayat Biaya</h3>
         <ShadcnDataTable
           data={filteredExpenses}
           columns={columns}
           keyExtractor={(item) => item.id}
-          searchPlaceholder="Cari keterangan atau kategori..."
+          searchPlaceholder="Cari biaya..."
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           datePreset={datePreset}
@@ -233,7 +221,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
                   onChange={(e) => setTenantFilter(e.target.value)}
                   className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
                 >
-                  <option value="all">Semua Cabang ({tenants.length})</option>
+                  <option value="all">Semua Cabang</option>
                   {tenants.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.outletName}
@@ -255,7 +243,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
               </select>
             </div>
           }
-          emptyMessage="Belum ada catatan pengeluaran yang sesuai."
+          emptyMessage="Belum ada catatan pengeluaran."
           initialPageSize={10}
         />
       </div>

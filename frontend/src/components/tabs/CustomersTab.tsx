@@ -50,11 +50,11 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
 }) => {
   const isSuperAdmin = currentUserRole === "superadmin";
 
-  // --- STATE UNTUK SUPER ADMIN (TABEL DATA BERSIH) ---
+  // --- STATE SUPER ADMIN ---
   const [adminSearchQuery, setAdminSearchQuery] = useState("");
   const [tenantFilter, setTenantFilter] = useState<string>("all");
 
-  // --- STATE UNTUK TENANT OWNER / KASIR (PANEL 2-KOLOM) ---
+  // --- STATE OPERASIONAL OUTLET ---
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     customers.length > 0 ? customers[0].id : ""
@@ -65,7 +65,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
   const CUST_PAGE_SIZE = 10;
 
   // ==========================================
-  // 1. TAMPILAN SUPER ADMIN (TABEL DATA BERSIH)
+  // 1. TAMPILAN DATA ADMIN (TABEL BERSIH)
   // ==========================================
   if (isSuperAdmin) {
     const filteredAdminCustomers = customers.filter((cust) => {
@@ -103,7 +103,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       },
       {
         id: "contact",
-        header: "Kontak WhatsApp",
+        header: "Kontak",
         cell: (cust) => {
           const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
           return (
@@ -124,7 +124,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       },
       {
         id: "outlet",
-        header: "Cabang / Outlet",
+        header: "Cabang",
         cell: (cust) => {
           const outlet = tenants.find((t) => t.id === cust.tenantId);
           return (
@@ -139,7 +139,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       },
       {
         id: "ordersCount",
-        header: "Total Order",
+        header: "Pesanan",
         cell: (cust) => {
           const count = orders.filter((o) => o.customerId === cust.id).length;
           return (
@@ -151,7 +151,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       },
       {
         id: "totalSpent",
-        header: "Total Belanja (LTV)",
+        header: "Total Belanja",
         cell: (cust) => {
           const spent = orders
             .filter((o) => o.customerId === cust.id && o.paymentStatus === "paid")
@@ -214,20 +214,11 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
 
     return (
       <div className="space-y-5">
-        {/* Header Bersih Khusus Super Admin */}
+        {/* Header Bersih */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
-                Direktori & Data Pelanggan Jaringan
-              </h2>
-              <span className="text-[10px] font-bold bg-blue-900 text-white px-2 py-0.5 rounded-full font-mono">
-                DATA PUSAT
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Kelola dan audit seluruh database pelanggan dari semua cabang Orchid Smart Laundry
-            </p>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Pelanggan</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Database pelanggan seluruh cabang.</p>
           </div>
 
           <button
@@ -238,12 +229,12 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
           </button>
         </div>
 
-        {/* 3 Metric Cards Ringkasan Jaringan */}
+        {/* 3 Metric Cards Ringkasan */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Total Pelanggan Terdaftar
+                Total Pelanggan
               </span>
               <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-100">
                 <Users className="w-3.5 h-3.5" />
@@ -252,13 +243,12 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
               {customers.length}
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Lintas seluruh cabang aktif</p>
           </div>
 
           <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Total Pesanan Tercatat
+                Total Pesanan
               </span>
               <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
                 <ShoppingBag className="w-3.5 h-3.5" />
@@ -267,13 +257,12 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
               {totalOrdersCount}
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Frekuensi cucian pelanggan</p>
           </div>
 
           <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Nilai Akumulasi Belanja (LTV)
+                Total Belanja
               </span>
               <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -282,16 +271,15 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight font-mono">
               Rp {totalNetworkLtv.toLocaleString("id-ID")}
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Omset bersih pelanggan lunas</p>
           </div>
         </div>
 
-        {/* Tabel Data Bersih ShadcnDataTable */}
+        {/* Tabel Data Bersih */}
         <ShadcnDataTable
           data={filteredAdminCustomers}
           columns={adminColumns}
           keyExtractor={(item) => item.id}
-          searchPlaceholder="Cari nama pelanggan, no WA, alamat, atau catatan..."
+          searchPlaceholder="Cari pelanggan..."
           searchQuery={adminSearchQuery}
           onSearchChange={setAdminSearchQuery}
           customFilters={
@@ -302,7 +290,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   onChange={(e) => setTenantFilter(e.target.value)}
                   className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
                 >
-                  <option value="all">Semua Cabang ({tenants.length})</option>
+                  <option value="all">Semua Cabang</option>
                   {tenants.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.outletName}
@@ -312,7 +300,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
               </div>
             ) : undefined
           }
-          emptyMessage="Tidak ada data pelanggan yang sesuai dengan pencarian atau filter cabang."
+          emptyMessage="Tidak ada data pelanggan yang sesuai."
           initialPageSize={10}
         />
       </div>
@@ -320,7 +308,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
   }
 
   // ====================================================
-  // 2. TAMPILAN OPERASIONAL KASIR (TENANT OWNER / STAFF)
+  // 2. TAMPILAN OPERASIONAL OUTLET (TENANT OWNER / STAFF)
   // ====================================================
   const filteredCustomers = customers.filter((cust) => {
     return (
@@ -373,15 +361,15 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Manajemen Pelanggan</h2>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pelanggan</h2>
           <p className="text-xs text-zinc-500">
-            Total {customers.length} pelanggan terdaftar di outlet ini
+            Total {customers.length} pelanggan terdaftar.
           </p>
         </div>
 
         <button
           onClick={onOpenCustomerModal}
-          className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition"
+          className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" /> Tambah Pelanggan
         </button>
@@ -397,7 +385,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
               <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Cari nama, no WA..."
+                placeholder="Cari pelanggan..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 font-medium placeholder:text-zinc-400 transition"
@@ -413,7 +401,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             {filteredCustomers.length === 0 ? (
               <div className="py-16 text-center text-zinc-400 text-xs flex flex-col items-center justify-center">
                 <User className="w-8 h-8 text-zinc-300 mb-2" />
-                <span>Tidak ada pelanggan ditemukan</span>
+                <span>Tidak ada pelanggan</span>
               </div>
             ) : (
               paginatedCustomers.map((cust) => {
@@ -424,7 +412,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   <button
                     key={cust.id}
                     onClick={() => setSelectedCustomerId(cust.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-3 ${
+                    className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-3 cursor-pointer ${
                       isSelected
                         ? "bg-blue-50 border border-blue-200/80 shadow-xs"
                         : "hover:bg-zinc-50 border border-transparent"
@@ -528,9 +516,9 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
           {!selectedCustomer ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 text-zinc-400">
               <User className="w-12 h-12 text-zinc-200 mb-3" />
-              <div className="font-bold text-zinc-800 text-sm">Belum Ada Pelanggan Terpilih</div>
+              <div className="font-bold text-zinc-800 text-sm">Pilih Pelanggan</div>
               <p className="text-xs text-zinc-400 mt-1 max-w-sm">
-                Pilih salah satu pelanggan di panel sebelah kiri untuk melihat detail kontak, analitik belanja, dan riwayat cucian.
+                Pilih salah satu pelanggan di sebelah kiri untuk melihat kontak dan riwayat cucian.
               </p>
             </div>
           ) : (
@@ -546,7 +534,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                       {selectedCustomer.name}
                     </h3>
                     <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                      ID: {selectedCustomer.id}
+                      {selectedCustomer.id}
                     </p>
                   </div>
                 </div>
@@ -566,24 +554,24 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
 
                   <button
                     onClick={() => onEditCustomer(selectedCustomer)}
-                    className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
-                    title="Edit Profil & Kontak Pelanggan"
+                    className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                    title="Edit Profil"
                   >
                     <Pencil className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>Edit Data</span>
+                    <span>Edit</span>
                   </button>
 
                   <button
                     onClick={() => onDeleteCustomer(selectedCustomer.id)}
-                    className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition shadow-xs"
-                    title="Hapus Pelanggan"
+                    className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition shadow-xs cursor-pointer"
+                    title="Hapus"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
 
                   <button
                     onClick={() => onSelectCustomerForOrder(selectedCustomer.id)}
-                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Buat Order</span>
@@ -609,7 +597,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                     <span>Total Order</span>
                   </div>
                   <div className="text-base sm:text-lg font-bold text-zinc-900 mt-1">
-                    {customerOrders.length} Pesanan
+                    {customerOrders.length}
                   </div>
                 </div>
 
@@ -629,7 +617,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                 <div className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/40 space-y-2">
                   <div>
                     <span className="text-zinc-400 text-[11px] flex items-center gap-1">
-                      <Phone className="w-3 h-3" /> Kontak & WhatsApp
+                      <Phone className="w-3 h-3" /> Kontak
                     </span>
                     <p className="font-mono text-zinc-800 font-semibold mt-0.5">
                       {selectedCustomer.phone}
@@ -637,41 +625,41 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   </div>
                   <div>
                     <span className="text-zinc-400 text-[11px] flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> Alamat Pengiriman / Rumah
+                      <MapPin className="w-3 h-3" /> Alamat
                     </span>
                     <p className="text-zinc-700 mt-0.5">
-                      {selectedCustomer.address || "Belum ada alamat tersimpan"}
+                      {selectedCustomer.address || "—"}
                     </p>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/40">
                   <span className="text-zinc-400 text-[11px] flex items-center gap-1">
-                    <ShoppingBag className="w-3 h-3" /> Catatan Khusus Pelanggan
+                    <ShoppingBag className="w-3 h-3" /> Catatan
                   </span>
                   <p className="text-zinc-700 italic mt-0.5 leading-relaxed">
-                    {selectedCustomer.notes || "Tidak ada preferensi / catatan khusus"}
+                    {selectedCustomer.notes || "—"}
                   </p>
                 </div>
               </div>
 
-              {/* Order History with Shadcn-like Table Styling & Pagination */}
+              {/* Order History with Table Styling */}
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <ShoppingBag className="w-4 h-4 text-zinc-600" />
                     <h4 className="font-bold text-zinc-900 text-xs sm:text-sm">
-                      Riwayat Pesanan Pelanggan
+                      Riwayat Pesanan
                     </h4>
                   </div>
                   <span className="text-[11px] text-zinc-400 font-mono">
-                    Total {customerOrders.length} transaksi
+                    {customerOrders.length} transaksi
                   </span>
                 </div>
 
                 {customerOrders.length === 0 ? (
                   <div className="py-10 text-center text-zinc-400 text-xs border border-dashed border-zinc-200 rounded-xl">
-                    Pelanggan ini belum memiliki riwayat cucian. Klik tombol "+ Buat Order" di atas untuk membuat pesanan baru.
+                    Belum ada riwayat cucian.
                   </div>
                 ) : (
                   <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-2xs">
@@ -681,7 +669,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                           <tr className="border-b border-zinc-200 bg-zinc-50/80 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                             <th className="py-2.5 px-3">No. Nota</th>
                             <th className="py-2.5 px-3">Layanan</th>
-                            <th className="py-2.5 px-3">Status Cucian</th>
+                            <th className="py-2.5 px-3">Status</th>
                             <th className="py-2.5 px-3">Pembayaran</th>
                             <th className="py-2.5 px-3 text-right">Total</th>
                           </tr>
@@ -734,10 +722,10 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                       </table>
                     </div>
 
-                    {/* Pagination Bar for Customer Orders */}
+                    {/* Pagination Bar */}
                     <div className="border-t border-zinc-200 px-3 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 bg-zinc-50/50 text-[11px] text-zinc-500">
                       <div className="text-[11px] text-zinc-500">
-                        Menampilkan {customerOrders.length === 0 ? 0 : startIndex + 1} -{" "}
+                        {customerOrders.length === 0 ? 0 : startIndex + 1} -{" "}
                         {Math.min(endIndex, customerOrders.length)} dari {customerOrders.length} transaksi
                       </div>
 
@@ -762,7 +750,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                             onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
                             disabled={orderPage === 1}
                             className="p-1 rounded hover:bg-zinc-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition"
-                            title="Halaman Sebelumnya"
+                            title="Sebelumnya"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
@@ -775,7 +763,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                             onClick={() => setOrderPage((p) => Math.min(totalOrderPages, p + 1))}
                             disabled={orderPage >= totalOrderPages}
                             className="p-1 rounded hover:bg-zinc-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition"
-                            title="Halaman Berikutnya"
+                            title="Berikutnya"
                           >
                             <ChevronRight className="w-4 h-4" />
                           </button>

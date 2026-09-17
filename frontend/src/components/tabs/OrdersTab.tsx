@@ -59,7 +59,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
   // Filtering data
   const filteredOrders = orders.filter((order) => {
-    // 1. Search filter
     const matchSearch =
       order.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (order.customer?.name &&
@@ -68,7 +67,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       (order.rackNumber && order.rackNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       order.serviceType.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // 2. Status filter
     const matchStatus =
       statusFilter === "all"
         ? true
@@ -76,19 +74,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         ? isOrderOverdue(order)
         : order.status === statusFilter;
 
-    // 3. Payment filter
     const matchPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
-
-    // 4. Date preset filter
     const matchDate = filterByDatePreset(order.createdAt, datePreset);
-
-    // 5. Tenant filter (Super Admin)
     const matchTenant = tenantFilter === "all" || order.tenantId === tenantFilter;
 
     return matchSearch && matchStatus && matchPayment && matchDate && matchTenant;
   });
 
-  // Table column definitions
+  // Table column definitions (max 2 kata per header)
   const columns: ColumnDef<Order>[] = [
     {
       id: "invoice",
@@ -116,7 +109,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       ? [
           {
             id: "outlet",
-            header: "Cabang / Outlet",
+            header: "Cabang",
             cell: (order: Order) => {
               const outlet = tenants.find((t) => t.id === order.tenantId);
               return (
@@ -162,38 +155,38 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       id: "total",
       header: "Total",
       cell: (order) => (
-        <span className="font-bold text-zinc-900 text-xs">
+        <span className="font-bold text-zinc-900 text-xs font-mono">
           Rp {order.totalAmount.toLocaleString("id-ID")}
         </span>
       ),
     },
     {
       id: "payment",
-      header: "Status Bayar",
+      header: "Pembayaran",
       cell: (order) =>
         order.paymentStatus === "paid" ? (
           <button
             type="button"
             onClick={() => setQuickPayOrder(order)}
             className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full transition cursor-pointer"
-            title="Klik untuk ubah metode atau batalkan lunas"
+            title="Ubah status bayar"
           >
-            Lunas ({order.paymentMethod || "cash"}) ▾
+            Lunas ▾
           </button>
         ) : (
           <button
             type="button"
             onClick={() => setQuickPayOrder(order)}
             className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full transition cursor-pointer"
-            title="Klik untuk pilih metode pelunasan kasir"
+            title="Ubah status bayar"
           >
-            Belum Lunas ✎
+            Belum Lunas
           </button>
         ),
     },
     {
       id: "status",
-      header: "Status Cucian",
+      header: "Status",
       cell: (order) => (
         <div>
           <select
@@ -212,10 +205,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           </select>
           {isOrderOverdue(order) && (
             <div
-              className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md mt-1 flex items-center gap-1 shadow-xs"
-              title="Cucian sudah lebih dari 3 hari siap diambil tapi belum diambil tetangga/pelanggan"
+              className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md mt-1 flex items-center gap-1"
+              title="Cucian belum diambil"
             >
-              <span>⚠️ Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h</span>
+              <span>Menginap {Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)}h</span>
             </div>
           )}
         </div>
@@ -223,16 +216,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     },
     {
       id: "actions",
-      header: isSuperAdmin ? "Aksi & Audit" : "Aksi Kasir",
+      header: "Aksi",
       align: "right",
       cell: (order) => (
         <div className="flex items-center justify-end gap-1.5">
-          {/* Cetak Struk Thermal / Audit Nota */}
+          {/* Cetak Struk */}
           <button
             type="button"
             onClick={() => onOpenReceiptModal(order)}
             className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition cursor-pointer"
-            title="Cetak Struk Thermal (58mm / 80mm)"
+            title="Cetak Struk"
           >
             <Printer className="w-3.5 h-3.5" />
           </button>
@@ -242,7 +235,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             type="button"
             onClick={() => onOpenEditOrderModal(order)}
             className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition cursor-pointer"
-            title="Koreksi / Edit Pesanan"
+            title="Edit Pesanan"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -259,11 +252,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 : "bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200"
             }`}
-            title={
-              isOrderOverdue(order)
-                ? "Kirim Pengingat Cucian Menginap via WhatsApp"
-                : "Kirim Pesan WhatsApp"
-            }
+            title="Kirim WhatsApp"
           >
             <WhatsAppIcon className="w-3.5 h-3.5" />
           </a>
@@ -274,7 +263,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               type="button"
               onClick={() => onCancelOrder(order)}
               className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition cursor-pointer"
-              title="Batalkan Pesanan Ini"
+              title="Batalkan Pesanan"
             >
               <XCircle className="w-3.5 h-3.5" />
             </button>
@@ -283,7 +272,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               type="button"
               onClick={() => onDeleteOrder(order.id)}
               className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
-              title="Hapus Pesanan Permanen"
+              title="Hapus Pesanan"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -299,28 +288,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {isSuperAdmin ? (
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
-                Data & Audit Pesanan Jaringan
-              </h2>
-              <span className="text-[10px] font-bold bg-blue-900 text-white px-2 py-0.5 rounded-full font-mono">
-                AUDIT PUSAT
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Rekapitulasi pesanan seluruh cabang, status cucian, dan pemantauan pembayaran
-            </p>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Pesanan</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Rekapitulasi pesanan seluruh cabang.</p>
           </div>
         ) : (
           <div>
-            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pesanan Laundry</h2>
-            <p className="text-xs text-zinc-500">
-              Daftar pesanan aktif, cetak struk thermal, koreksi kasir, dan pengiriman notifikasi WhatsApp
-            </p>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pesanan</h2>
+            <p className="text-xs text-zinc-500">Daftar pesanan aktif dan riwayat kasir.</p>
           </div>
         )}
 
-        {/* Tombol + Order Baru hanya tampil untuk Kasir / Tenant Owner, BUKAN Super Admin */}
         {!isSuperAdmin && (
           <button
             onClick={onOpenOrderModal}
@@ -331,26 +308,25 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         )}
       </div>
 
-      {/* Reusable Data Table with Search, Date Presets, Column Toggle & Pagination */}
+      {/* Reusable Data Table */}
       <ShadcnDataTable
         data={filteredOrders}
         columns={columns}
         keyExtractor={(item) => item.id}
-        searchPlaceholder="Cari no. nota, pelanggan, no HP..."
+        searchPlaceholder="Cari pesanan..."
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         datePreset={datePreset}
         onDatePresetChange={setDatePreset}
         customFilters={
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Cabang Filter untuk Super Admin */}
             {isSuperAdmin && tenants.length > 0 && (
               <select
                 value={tenantFilter}
                 onChange={(e) => setTenantFilter(e.target.value)}
                 className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
               >
-                <option value="all">Semua Cabang ({tenants.length})</option>
+                <option value="all">Semua Cabang</option>
                 {tenants.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.outletName}
@@ -366,7 +342,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
             >
               <option value="all">Semua Status</option>
-              <option value="overdue">⚠️ Menginap (&gt;3 Hari)</option>
+              <option value="overdue">Menginap</option>
               <option value="pending">Antrian</option>
               <option value="washing">Sedang Dicuci</option>
               <option value="drying_ironing">Setrika / Lipat</option>
@@ -387,7 +363,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             </select>
           </div>
         }
-        emptyMessage="Tidak ada pesanan yang sesuai dengan kriteria pencarian dan filter."
+        emptyMessage="Tidak ada pesanan yang sesuai."
         initialPageSize={10}
       />
 
@@ -397,7 +373,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           <div className="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-3">
               <div>
-                <h4 className="font-extrabold text-sm text-slate-950">Pelunasan Tagihan Kasir</h4>
+                <h4 className="font-extrabold text-sm text-slate-950">Pelunasan Tagihan</h4>
                 <p className="text-[11px] font-mono text-slate-500 font-semibold">{quickPayOrder.invoiceNo}</p>
               </div>
               <button
@@ -415,8 +391,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 <span className="font-bold text-slate-900">{quickPayOrder.customer?.name || "Pelanggan Umum"}</span>
               </div>
               <div className="text-right">
-                <span className="text-slate-500 text-[11px] block">Total Tagihan:</span>
-                <span className="font-black text-slate-950 text-sm">
+                <span className="text-slate-500 text-[11px] block">Total:</span>
+                <span className="font-black text-slate-950 text-sm font-mono">
                   Rp {quickPayOrder.totalAmount.toLocaleString("id-ID")}
                 </span>
               </div>
@@ -424,7 +400,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
             {quickPayOrder.paymentStatus !== "paid" ? (
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-slate-700 block">Pilih Metode Pelunasan:</span>
+                <span className="text-xs font-semibold text-slate-700 block">Metode Pembayaran:</span>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -434,7 +410,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     }}
                     className="py-2 px-1 text-center bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-bold text-xs transition cursor-pointer"
                   >
-                    💵 Tunai
+                    Tunai
                   </button>
                   <button
                     type="button"
@@ -444,7 +420,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     }}
                     className="py-2 px-1 text-center bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-xl font-bold text-xs transition cursor-pointer"
                   >
-                    📱 QRIS
+                    QRIS
                   </button>
                   <button
                     type="button"
@@ -454,13 +430,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     }}
                     className="py-2 px-1 text-center bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl font-bold text-xs transition cursor-pointer"
                   >
-                    🏦 Transfer
+                    Transfer
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-2 pt-1">
-                <p className="text-xs text-slate-600">Pesanan ini sudah tercatat <b>Lunas</b> ({quickPayOrder.paymentMethod || "cash"}).</p>
+                <p className="text-xs text-slate-600">Pesanan ini sudah tercatat <b>Lunas</b>.</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -469,7 +445,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                   }}
                   className="w-full py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-xl font-bold text-xs transition cursor-pointer"
                 >
-                  Ubah Kembali Menjadi Belum Lunas
+                  Ubah Belum Lunas
                 </button>
               </div>
             )}
