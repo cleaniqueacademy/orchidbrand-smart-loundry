@@ -396,15 +396,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
                 {currentUser?.name
                   ? currentUser.name.slice(0, 2).toUpperCase()
-                  : isSuperAdmin ? "AP" : "BS"}
+                  : isSuperAdmin ? "SA" : "OP"}
               </div>
               {!isCollapsed && (
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-zinc-900 truncate">
-                    {currentUser?.name || (isSuperAdmin ? "Admin Pusat" : "Budi Santoso")}
+                    {currentUser?.name || (isSuperAdmin ? "Super Admin" : "Pengguna")}
                   </div>
                   <div className="text-[10px] text-zinc-400 truncate">
-                    {currentUser?.email || (isSuperAdmin ? "admin@orchidbrand.com" : "budi@laundrymelati.com")}
+                    {currentUser?.email || ""}
                   </div>
                 </div>
               )}
@@ -428,10 +428,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="p-2 rounded-lg bg-zinc-50 border border-zinc-100 mb-2">
                   <div className="text-xs font-bold text-zinc-900 truncate">
-                    {currentUser?.name || (isSuperAdmin ? "Admin Pusat" : "Budi Santoso")}
+                    {currentUser?.name || (isSuperAdmin ? "Super Admin" : "Pengguna")}
                   </div>
                   <div className="text-[10px] text-zinc-500 truncate">
-                    {currentUser?.email || (isSuperAdmin ? "admin@orchidbrand.com" : "budi@laundrymelati.com")}
+                    {currentUser?.email || ""}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
                     <span className="font-semibold text-blue-950">

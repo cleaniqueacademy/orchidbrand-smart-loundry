@@ -5,8 +5,6 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  ShieldCheck,
-  Store,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
@@ -78,12 +76,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     executeLogin(email, password);
   };
 
-  const handleQuickFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage("");
-    executeLogin(demoEmail, demoPass);
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex flex-col justify-center items-center p-4 sm:p-6 text-white selection:bg-white selection:text-blue-900">
@@ -206,47 +199,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </button>
           </form>
 
-          {/* Quick Demo Access Buttons */}
-          <div className="mt-6 pt-5 border-t border-blue-100">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2.5 text-center">
-              Pilihan Akun Demo (Klik untuk Isi Cepat)
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill("admin@orchidbrand.com", "admin123")}
-                className="p-2.5 rounded-xl border border-zinc-200 hover:border-blue-300 hover:bg-blue-50 text-left transition flex flex-col gap-1 group"
-              >
-                <div className="flex items-center gap-1.5 text-zinc-900 font-bold text-xs">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
-                  <span>Super Admin</span>
-                </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  admin@orchidbrand.com
-                </div>
-                <div className="text-[10px] text-zinc-400 font-mono">
-                  pass: admin123
-                </div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickFill("budi@laundrymelati.com", "budi123")}
-                className="p-2.5 rounded-xl border border-zinc-200 hover:border-blue-300 hover:bg-blue-50 text-left transition flex flex-col gap-1 group"
-              >
-                <div className="flex items-center gap-1.5 text-zinc-900 font-bold text-xs">
-                  <Store className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Owner Cabang</span>
-                </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  budi@laundrymelati.com
-                </div>
-                <div className="text-[10px] text-zinc-400 font-mono">
-                  pass: budi123
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer Notice */}
