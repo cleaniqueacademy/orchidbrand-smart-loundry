@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Plus, User, ShieldCheck, Mail, Store, Trash2, Calendar } from "lucide-react";
+import { Plus, User, ShieldCheck, Mail, Store, Trash2, Calendar, Clock, Sparkles } from "lucide-react";
 import { User as UserType, Role, Tenant } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { useToast } from "../common/ToastContext";
+import { ExtendSubscriptionModal } from "../modals/ExtendSubscriptionModal";
+import { checkUserActiveStatus } from "../../utils/subscriptionUtils";
 
 interface UsersTabProps {
   users: UserType[];
@@ -11,6 +13,10 @@ interface UsersTabProps {
   onDeleteUser: (id: string) => void;
   onToggleStatus: (userId: string, currentStatus: "active" | "inactive") => void;
   onUpdateSubscription: (userId: string, subscriptionUntil: string) => void;
+  onExtendSubscription?: (
+    userId: string,
+    payload: { days?: number; newDate?: string; activate: boolean }
+  ) => Promise<void>;
 }
 
 const roleBadgeConfig: Record<Role, { label: string; className: string }> = {
@@ -35,11 +41,13 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   onDeleteUser,
   onToggleStatus,
   onUpdateSubscription,
+  onExtendSubscription,
 }) => {
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [userToExtend, setUserToExtend] = useState<UserType | null>(null);
 
   const filteredUsers = users.filter((u) => {
     const matchSearch =
@@ -48,7 +56,17 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       (u.tenantName && u.tenantName.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchRole = roleFilter === "all" || u.role === roleFilter;
-    const matchStatus = statusFilter === "all" || (u.status || "active") === statusFilter;
+
+    const matchStatus = (() => {
+      if (statusFilter === "all") return true;
+      const statusInfo = checkUserActiveStatus(u);
+      if (statusFilter === "active") return statusInfo.isActive;
+      if (statusFilter === "expiring_soon")
+        return statusInfo.isActive && statusInfo.daysRemaining <= 7;
+      if (statusFilter === "expired") return statusInfo.isExpired;
+      if (statusFilter === "inactive") return u.status === "inactive";
+      return true;
+    })();
 
     return matchSearch && matchRole && matchStatus;
   });
@@ -159,79 +177,49 @@ export const UsersTab: React.FC<UsersTabProps> = ({
     },
     {
       id: "subscription",
-      header: "Langganan Sampai",
+      header: "Masa Aktif & Lisensi",
       cell: (u) => {
         if (u.role === "superadmin") {
           return (
-            <span className="text-zinc-400 text-xs font-mono italic">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-mono">
               Permanen (HQ)
             </span>
           );
         }
 
-        const dateStr = u.subscriptionUntil;
-        if (!dateStr) {
-          return (
-            <button
-              onClick={() => {
-                const newDate = prompt(
-                  `Atur batas tanggal langganan untuk ${u.name} (Format: YYYY-MM-DD):`,
-                  new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10)
-                );
-                if (newDate) onUpdateSubscription(u.id, newDate);
-              }}
-              className="text-[11px] text-zinc-500 hover:text-zinc-900 underline font-medium"
-            >
-              + Set Tanggal
-            </button>
-          );
-        }
-
-        const expDate = new Date(dateStr);
-        const today = new Date();
-        const diffMs = expDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        const isExpired = diffDays < 0;
+        const statusInfo = checkUserActiveStatus(u);
 
         return (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-2 min-w-[200px]">
             <div>
-              <div className="font-mono text-xs font-semibold text-zinc-900">
-                {new Intl.DateTimeFormat("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                }).format(expDate)}
+              <div className="font-mono text-xs font-bold text-zinc-900">
+                {u.subscriptionUntil
+                  ? new Intl.DateTimeFormat("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }).format(new Date(`${u.subscriptionUntil}T23:59:59`))
+                  : "Belum Diatur"}
               </div>
-              <div className="text-[10px] mt-0.5">
-                {isExpired ? (
-                  <span className="text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                    Kedaluwarsa
-                  </span>
-                ) : diffDays <= 7 ? (
-                  <span className="text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                    Sisa {diffDays} hari
-                  </span>
-                ) : (
-                  <span className="text-emerald-700 font-medium">
-                    {diffDays} hari lagi
-                  </span>
-                )}
+              <div className="mt-0.5">
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${statusInfo.statusBadge.className}`}
+                >
+                  <span
+                    className={`w-1 h-1 rounded-full ${statusInfo.statusBadge.dotColor}`}
+                  />
+                  <span>{statusInfo.statusBadge.label}</span>
+                </span>
               </div>
             </div>
 
             <button
-              onClick={() => {
-                const newDate = prompt(
-                  `Perpanjang / ubah tanggal langganan ${u.name} (Format: YYYY-MM-DD):`,
-                  dateStr
-                );
-                if (newDate) onUpdateSubscription(u.id, newDate);
-              }}
-              className="p-1 rounded text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition"
-              title="Ubah Tanggal Langganan"
+              onClick={() => setUserToExtend(u)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 active:bg-blue-200 border border-blue-200 transition shadow-2xs shrink-0 cursor-pointer"
+              title="Perpanjang Masa Aktif Akun (+X Hari)"
             >
-              <Calendar className="w-3.5 h-3.5" />
+              <Calendar className="w-3 h-3 text-blue-600" />
+              <span>Perpanjang</span>
             </button>
           </div>
         );
@@ -312,22 +300,32 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-            Akun Aktif
+            Masa Aktif Valid
           </span>
           <div className="text-xl font-bold text-emerald-700 mt-1">
-            {users.filter((u) => (u.status || "active") === "active").length} Aktif
+            {
+              users.filter(
+                (u) => u.role === "superadmin" || checkUserActiveStatus(u).isActive
+              ).length
+            }{" "}
+            Aktif
           </div>
           <p className="text-[10px] text-zinc-400 mt-0.5">Dapat login & beroperasi</p>
         </div>
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600">
-            Nonaktif / Expired
+            Kedaluwarsa / Nonaktif
           </span>
           <div className="text-xl font-bold text-rose-600 mt-1">
-            {users.filter((u) => (u.status || "active") === "inactive").length} Terkunci
+            {
+              users.filter(
+                (u) => u.role !== "superadmin" && !checkUserActiveStatus(u).isActive
+              ).length
+            }{" "}
+            Terkunci
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Akses login diblokir</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Masa aktif habis / diblokir</p>
         </div>
 
         <div className="bg-white border border-zinc-200 p-3.5 rounded-xl shadow-xs">
@@ -337,7 +335,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
           <div className="text-xl font-bold text-zinc-900 mt-1">
             {users.filter((u) => u.role === "superadmin").length} Admin Pusat
           </div>
-          <p className="text-[10px] text-zinc-400 mt-0.5">Akses kendali penuh</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Akses kendali permanen</p>
         </div>
       </div>
 
@@ -370,8 +368,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                 className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
               >
                 <option value="all">Semua Status</option>
-                <option value="active">Status: Aktif</option>
-                <option value="inactive">Status: Nonaktif</option>
+                <option value="active">🟢 Masa Aktif Valid</option>
+                <option value="expiring_soon">🟡 Segera Habis (≤7 Hari)</option>
+                <option value="expired">🔴 Kedaluwarsa (Expired)</option>
+                <option value="inactive">⚫ Status Nonaktif</option>
               </select>
             </div>
           }
@@ -379,6 +379,20 @@ export const UsersTab: React.FC<UsersTabProps> = ({
           initialPageSize={10}
         />
       </div>
+
+      {/* Modal Perpanjang Masa Aktif (+X Hari / Kalender) */}
+      <ExtendSubscriptionModal
+        isOpen={!!userToExtend}
+        user={userToExtend}
+        onClose={() => setUserToExtend(null)}
+        onExtend={async (userId, payload) => {
+          if (onExtendSubscription) {
+            await onExtendSubscription(userId, payload);
+          } else if (payload.newDate) {
+            onUpdateSubscription(userId, payload.newDate);
+          }
+        }}
+      />
     </div>
   );
 };

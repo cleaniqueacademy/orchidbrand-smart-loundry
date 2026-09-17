@@ -4,23 +4,25 @@ import {
   Phone,
   Search,
   MapPin,
-  FileText,
   ShoppingBag,
   TrendingUp,
-  Receipt,
-  Calendar,
   ChevronRight,
   ChevronLeft,
   User,
   Pencil,
   Trash2,
+  Store,
+  Users,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
-import { Customer, Order, OrderStatus } from "../../types";
+import { Customer, Order, OrderStatus, Role, Tenant } from "../../types";
+import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 
 interface CustomersTabProps {
   customers: Customer[];
   orders: Order[];
+  tenants?: Tenant[];
+  currentUserRole?: Role;
   onOpenCustomerModal: () => void;
   onSelectCustomerForOrder: (customerId: string) => void;
   onEditCustomer: (customer: Customer) => void;
@@ -39,24 +41,287 @@ const statusBadgeStyles: Record<OrderStatus, string> = {
 export const CustomersTab: React.FC<CustomersTabProps> = ({
   customers,
   orders,
+  tenants = [],
+  currentUserRole = "staff",
   onOpenCustomerModal,
   onSelectCustomerForOrder,
   onEditCustomer,
   onDeleteCustomer,
 }) => {
+  const isSuperAdmin = currentUserRole === "superadmin";
+
+  // --- STATE UNTUK SUPER ADMIN (TABEL DATA BERSIH) ---
+  const [adminSearchQuery, setAdminSearchQuery] = useState("");
+  const [tenantFilter, setTenantFilter] = useState<string>("all");
+
+  // --- STATE UNTUK TENANT OWNER / KASIR (PANEL 2-KOLOM) ---
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     customers.length > 0 ? customers[0].id : ""
   );
-
-  // Pagination for order history (right panel)
   const [orderPage, setOrderPage] = useState(1);
   const [orderPageSize, setOrderPageSize] = useState(5);
-
-  // Pagination for customer list (left panel)
   const [custPage, setCustPage] = useState(1);
   const CUST_PAGE_SIZE = 10;
 
+  // ==========================================
+  // 1. TAMPILAN SUPER ADMIN (TABEL DATA BERSIH)
+  // ==========================================
+  if (isSuperAdmin) {
+    const filteredAdminCustomers = customers.filter((cust) => {
+      const q = adminSearchQuery.toLowerCase();
+      const matchSearch =
+        cust.name.toLowerCase().includes(q) ||
+        cust.phone.includes(q) ||
+        (cust.address && cust.address.toLowerCase().includes(q)) ||
+        (cust.notes && cust.notes.toLowerCase().includes(q));
+
+      const matchTenant = tenantFilter === "all" || cust.tenantId === tenantFilter;
+      return matchSearch && matchTenant;
+    });
+
+    const totalOrdersCount = orders.length;
+    const totalNetworkLtv = orders
+      .filter((o) => o.paymentStatus === "paid")
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    const adminColumns: ColumnDef<Customer>[] = [
+      {
+        id: "customer",
+        header: "Pelanggan",
+        cell: (cust) => (
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              {cust.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-zinc-900 text-xs truncate">{cust.name}</div>
+              <div className="font-mono text-[10px] text-zinc-400 mt-0.5">{cust.id}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "contact",
+        header: "Kontak WhatsApp",
+        cell: (cust) => {
+          const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-zinc-700">{cust.phone}</span>
+              <a
+                href={`https://wa.me/${cleanPhone}`}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition shrink-0"
+                title="Kirim pesan WhatsApp"
+              >
+                <WhatsAppIcon className="w-3 h-3 text-emerald-600" />
+              </a>
+            </div>
+          );
+        },
+      },
+      {
+        id: "outlet",
+        header: "Cabang / Outlet",
+        cell: (cust) => {
+          const outlet = tenants.find((t) => t.id === cust.tenantId);
+          return (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
+              <Store className="w-3 h-3 text-blue-700" />
+              <span className="truncate max-w-[130px]">
+                {outlet?.outletName || "Cabang Melati"}
+              </span>
+            </span>
+          );
+        },
+      },
+      {
+        id: "ordersCount",
+        header: "Total Order",
+        cell: (cust) => {
+          const count = orders.filter((o) => o.customerId === cust.id).length;
+          return (
+            <span className="inline-flex items-center text-[10px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 rounded-full">
+              {count}x pesanan
+            </span>
+          );
+        },
+      },
+      {
+        id: "totalSpent",
+        header: "Total Belanja (LTV)",
+        cell: (cust) => {
+          const spent = orders
+            .filter((o) => o.customerId === cust.id && o.paymentStatus === "paid")
+            .reduce((sum, o) => sum + o.totalAmount, 0);
+          return (
+            <span className="font-bold text-zinc-900 text-xs font-mono">
+              Rp {spent.toLocaleString("id-ID")}
+            </span>
+          );
+        },
+      },
+      {
+        id: "address",
+        header: "Alamat",
+        cell: (cust) => (
+          <span
+            className="text-zinc-600 text-xs max-w-[200px] truncate block"
+            title={cust.address || "-"}
+          >
+            {cust.address || "-"}
+          </span>
+        ),
+      },
+      {
+        id: "notes",
+        header: "Catatan",
+        cell: (cust) => (
+          <span
+            className="text-zinc-500 text-[11px] italic max-w-[180px] truncate block"
+            title={cust.notes || "-"}
+          >
+            {cust.notes || "-"}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Aksi",
+        align: "right",
+        cell: (cust) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              onClick={() => onEditCustomer(cust)}
+              className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 transition shadow-2xs cursor-pointer"
+              title="Edit Data Pelanggan"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onDeleteCustomer(cust.id)}
+              className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition shadow-2xs cursor-pointer"
+              title="Hapus Pelanggan"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ];
+
+    return (
+      <div className="space-y-5">
+        {/* Header Bersih Khusus Super Admin */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
+                Direktori & Data Pelanggan Jaringan
+              </h2>
+              <span className="text-[10px] font-bold bg-blue-900 text-white px-2 py-0.5 rounded-full font-mono">
+                DATA PUSAT
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Kelola dan audit seluruh database pelanggan dari semua cabang Orchid Smart Laundry
+            </p>
+          </div>
+
+          <button
+            onClick={onOpenCustomerModal}
+            className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Tambah Pelanggan
+          </button>
+        </div>
+
+        {/* 3 Metric Cards Ringkasan Jaringan */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                Total Pelanggan Terdaftar
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-100">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
+              {customers.length}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">Lintas seluruh cabang aktif</p>
+          </div>
+
+          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                Total Pesanan Tercatat
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
+                <ShoppingBag className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
+              {totalOrdersCount}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">Frekuensi cucian pelanggan</p>
+          </div>
+
+          <div className="bg-white border border-zinc-200 p-4 rounded-xl shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                Nilai Akumulasi Belanja (LTV)
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+                <TrendingUp className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight font-mono">
+              Rp {totalNetworkLtv.toLocaleString("id-ID")}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">Omset bersih pelanggan lunas</p>
+          </div>
+        </div>
+
+        {/* Tabel Data Bersih ShadcnDataTable */}
+        <ShadcnDataTable
+          data={filteredAdminCustomers}
+          columns={adminColumns}
+          keyExtractor={(item) => item.id}
+          searchPlaceholder="Cari nama pelanggan, no WA, alamat, atau catatan..."
+          searchQuery={adminSearchQuery}
+          onSearchChange={setAdminSearchQuery}
+          customFilters={
+            tenants.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <select
+                  value={tenantFilter}
+                  onChange={(e) => setTenantFilter(e.target.value)}
+                  className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
+                >
+                  <option value="all">Semua Cabang ({tenants.length})</option>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.outletName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : undefined
+          }
+          emptyMessage="Tidak ada data pelanggan yang sesuai dengan pencarian atau filter cabang."
+          initialPageSize={10}
+        />
+      </div>
+    );
+  }
+
+  // ====================================================
+  // 2. TAMPILAN OPERASIONAL KASIR (TENANT OWNER / STAFF)
+  // ====================================================
   const filteredCustomers = customers.filter((cust) => {
     return (
       cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,29 +330,24 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
     );
   });
 
-  // Left panel pagination
   const totalCustPages = Math.max(1, Math.ceil(filteredCustomers.length / CUST_PAGE_SIZE));
   const custStartIdx = (custPage - 1) * CUST_PAGE_SIZE;
   const paginatedCustomers = filteredCustomers.slice(custStartIdx, custStartIdx + CUST_PAGE_SIZE);
 
-  // Reset customer page when search changes
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setCustPage(1);
   };
 
-  // Selected customer data
   const selectedCustomer =
     customers.find((c) => c.id === selectedCustomerId) ||
     filteredCustomers[0] ||
     null;
 
-  // Reset page when switching customer
   useEffect(() => {
     setOrderPage(1);
   }, [selectedCustomerId]);
 
-  // Selected customer orders
   const customerOrders = selectedCustomer
     ? orders.filter((o) => o.customerId === selectedCustomer.id)
     : [];
@@ -103,7 +363,6 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
     ? selectedCustomer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62")
     : "";
 
-  // Order pagination slice
   const totalOrderPages = Math.max(1, Math.ceil(customerOrders.length / orderPageSize));
   const startIndex = (orderPage - 1) * orderPageSize;
   const endIndex = startIndex + orderPageSize;
@@ -128,7 +387,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         </button>
       </div>
 
-      {/* Split Panel Layout (Left: 4 cols, Right: 8 cols for generous breathing room) */}
+      {/* Split Panel Layout (Left: 4 cols, Right: 8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* PANEL KIRI: Daftar Pelanggan (4 cols) */}
         <div className="lg:col-span-4 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col h-[680px] overflow-hidden">
@@ -292,7 +551,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   </div>
                 </div>
 
-                {/* Direct Action Buttons - Clean and spacious */}
+                {/* Direct Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap shrink-0">
                   <a
                     href={`https://wa.me/${cleanPhone}`}
@@ -356,7 +615,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
 
                 <div className="bg-zinc-50/80 p-3.5 rounded-xl border border-zinc-200/80">
                   <div className="flex items-center gap-1.5 text-zinc-500 text-[11px] font-medium">
-                    <Receipt className="w-3.5 h-3.5 text-zinc-400" />
+                    <TrendingUp className="w-3.5 h-3.5 text-zinc-400" />
                     <span>Rata-Rata Order</span>
                   </div>
                   <div className="text-base sm:text-lg font-bold text-zinc-900 mt-1 font-mono">
@@ -365,128 +624,134 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                 </div>
               </div>
 
-              {/* Contact & Notes Info Box */}
+              {/* Detail Info: Phone, Address, Notes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 bg-white rounded-xl border border-zinc-200 space-y-2">
-                  <div className="font-semibold text-zinc-900 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Kontak & WhatsApp</span>
+                <div className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/40 space-y-2">
+                  <div>
+                    <span className="text-zinc-400 text-[11px] flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> Kontak & WhatsApp
+                    </span>
+                    <p className="font-mono text-zinc-800 font-semibold mt-0.5">
+                      {selectedCustomer.phone}
+                    </p>
                   </div>
-                  <div className="font-mono text-zinc-700">{selectedCustomer.phone}</div>
-
-                  <div className="pt-2 border-t border-zinc-100">
-                    <div className="font-semibold text-zinc-900 flex items-center gap-1.5 mb-1">
-                      <MapPin className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Alamat Pengiriman / Rumah</span>
-                    </div>
-                    <div className="text-zinc-600">
-                      {selectedCustomer.address || "Belum ada catatan alamat"}
-                    </div>
+                  <div>
+                    <span className="text-zinc-400 text-[11px] flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Alamat Pengiriman / Rumah
+                    </span>
+                    <p className="text-zinc-700 mt-0.5">
+                      {selectedCustomer.address || "Belum ada alamat tersimpan"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-white rounded-xl border border-zinc-200 space-y-2">
-                  <div className="font-semibold text-zinc-900 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Catatan Khusus Pelanggan</span>
-                  </div>
-                  <p className="text-zinc-600 italic">
-                    {selectedCustomer.notes || "Tidak ada preferensi khusus (standar laundry)"}
+                <div className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/40">
+                  <span className="text-zinc-400 text-[11px] flex items-center gap-1">
+                    <ShoppingBag className="w-3 h-3" /> Catatan Khusus Pelanggan
+                  </span>
+                  <p className="text-zinc-700 italic mt-0.5 leading-relaxed">
+                    {selectedCustomer.notes || "Tidak ada preferensi / catatan khusus"}
                   </p>
                 </div>
               </div>
 
-              {/* Riwayat Pesanan Pelanggan with Responsive Table and Pagination */}
-              <div className="space-y-2.5 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Riwayat Pesanan Pelanggan</span>
+              {/* Order History with Shadcn-like Table Styling & Pagination */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-zinc-600" />
+                    <h4 className="font-bold text-zinc-900 text-xs sm:text-sm">
+                      Riwayat Pesanan Pelanggan
+                    </h4>
                   </div>
-                  <span className="text-[11px] text-zinc-400">
+                  <span className="text-[11px] text-zinc-400 font-mono">
                     Total {customerOrders.length} transaksi
                   </span>
                 </div>
 
-                <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs min-w-[540px]">
-                      <thead className="bg-zinc-50 border-b border-zinc-200 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                        <tr>
-                          <th className="py-2.5 px-3.5 whitespace-nowrap">No. Nota</th>
-                          <th className="py-2.5 px-3.5 whitespace-nowrap">Layanan</th>
-                          <th className="py-2.5 px-3.5 whitespace-nowrap">Status Cucian</th>
-                          <th className="py-2.5 px-3.5 whitespace-nowrap">Pembayaran</th>
-                          <th className="py-2.5 px-3.5 text-right whitespace-nowrap">Total Biaya</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-100">
-                        {paginatedOrders.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="py-8 text-center text-zinc-400 text-xs">
-                              Pelanggan ini belum memiliki riwayat pesanan
-                            </td>
+                {customerOrders.length === 0 ? (
+                  <div className="py-10 text-center text-zinc-400 text-xs border border-dashed border-zinc-200 rounded-xl">
+                    Pelanggan ini belum memiliki riwayat cucian. Klik tombol "+ Buat Order" di atas untuk membuat pesanan baru.
+                  </div>
+                ) : (
+                  <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-2xs">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-zinc-200 bg-zinc-50/80 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                            <th className="py-2.5 px-3">No. Nota</th>
+                            <th className="py-2.5 px-3">Layanan</th>
+                            <th className="py-2.5 px-3">Status Cucian</th>
+                            <th className="py-2.5 px-3">Pembayaran</th>
+                            <th className="py-2.5 px-3 text-right">Total</th>
                           </tr>
-                        ) : (
-                          paginatedOrders.map((ord) => (
-                            <tr key={ord.id} className="hover:bg-zinc-50/70 transition-colors">
-                              <td className="py-2.5 px-3.5 font-mono font-semibold text-zinc-900 whitespace-nowrap">
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100">
+                          {paginatedOrders.map((ord) => (
+                            <tr key={ord.id} className="hover:bg-zinc-50/70 transition">
+                              <td className="py-2.5 px-3 font-mono font-bold text-zinc-900">
                                 {ord.invoiceNo}
+                                <div className="text-[10px] font-normal text-zinc-400 font-sans mt-0.5">
+                                  {new Date(ord.createdAt).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </div>
                               </td>
-                              <td className="py-2.5 px-3.5 text-zinc-700 whitespace-nowrap">
-                                {ord.serviceType} <span className="text-zinc-400 font-mono">({ord.weightOrQty} {ord.unit})</span>
+                              <td className="py-2.5 px-3 text-zinc-700">
+                                <div className="font-medium text-zinc-800">{ord.serviceType}</div>
+                                <div className="text-[10px] text-zinc-400">
+                                  {ord.weightOrQty} {ord.unit}
+                                </div>
                               </td>
-                              <td className="py-2.5 px-3.5 whitespace-nowrap">
+                              <td className="py-2.5 px-3">
                                 <span
-                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                                     statusBadgeStyles[ord.status] || "bg-zinc-100 text-zinc-700"
                                   }`}
                                 >
                                   {ord.status}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3.5 whitespace-nowrap">
+                              <td className="py-2.5 px-3">
                                 <span
-                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                                     ord.paymentStatus === "paid"
-                                      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                                      : "text-amber-700 bg-amber-50 border-amber-200"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
                                   }`}
                                 >
                                   {ord.paymentStatus === "paid" ? "Lunas" : "Belum Lunas"}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3.5 text-right font-bold text-zinc-900 whitespace-nowrap font-mono">
+                              <td className="py-2.5 px-3 text-right font-bold text-zinc-900 font-mono">
                                 Rp {ord.totalAmount.toLocaleString("id-ID")}
                               </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
-                  {/* Pagination Controls */}
-                  {customerOrders.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-3.5 py-2.5 border-t border-zinc-200 bg-zinc-50/60 text-xs text-zinc-500">
-                      <div className="text-[11px]">
-                        Menampilkan <span className="font-semibold text-zinc-800">{Math.min(startIndex + 1, customerOrders.length)}</span> -{" "}
-                        <span className="font-semibold text-zinc-800">{Math.min(endIndex, customerOrders.length)}</span> dari{" "}
-                        <span className="font-semibold text-zinc-800">{customerOrders.length}</span> transaksi
+                    {/* Pagination Bar for Customer Orders */}
+                    <div className="border-t border-zinc-200 px-3 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 bg-zinc-50/50 text-[11px] text-zinc-500">
+                      <div className="text-[11px] text-zinc-500">
+                        Menampilkan {customerOrders.length === 0 ? 0 : startIndex + 1} -{" "}
+                        {Math.min(endIndex, customerOrders.length)} dari {customerOrders.length} transaksi
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] text-zinc-400">Baris:</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-zinc-500 text-[11px]">Baris:</span>
                           <select
                             value={orderPageSize}
                             onChange={(e) => {
                               setOrderPageSize(Number(e.target.value));
                               setOrderPage(1);
                             }}
-                            className="text-[11px] bg-white border border-zinc-200 rounded px-1.5 py-0.5 font-medium outline-none cursor-pointer"
+                            className="bg-white border border-zinc-200 rounded px-1.5 py-0.5 text-[11px] text-zinc-700 focus:outline-none focus:border-zinc-900"
                           >
-                            <option value={3}>3</option>
                             <option value={5}>5</option>
                             <option value={10}>10</option>
                           </select>
@@ -517,8 +782,8 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -527,4 +792,3 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
     </div>
   );
 };
-

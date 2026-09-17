@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Order, Customer, TabType } from "./types";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Header } from "./components/layout/Header";
@@ -12,10 +12,12 @@ import { ReportsTab } from "./components/tabs/ReportsTab";
 import { LoginPage } from "./components/auth/LoginPage";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
+import { InactiveAccountModal } from "./components/modals/InactiveAccountModal";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
 import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
 import { getWaLink } from "./utils/waLink";
+import { checkUserActiveStatus } from "./utils/subscriptionUtils";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
@@ -31,7 +33,15 @@ export default function App() {
     handleLoginSuccess,
     handleLogout,
     handleSelectTenant,
+    refreshUserSession,
   } = useAuthSession();
+
+  // Jika bukan Super Admin dan mencoba membuka tab khusus admin, kembalikan ke overview
+  useEffect(() => {
+    if (currentUserRole !== "superadmin" && (activeTab === "tenants" || activeTab === "users")) {
+      setActiveTab("overview");
+    }
+  }, [currentUserRole, activeTab]);
 
   // Laundry Data & Operations Composable
   const {
@@ -56,6 +66,7 @@ export default function App() {
     handleDeleteCustomer,
     handleToggleUserStatus,
     handleUpdateUserSubscription,
+    handleExtendUserSubscription,
     handleCreateTenant,
     handleCreateUser,
     handleDeleteUser,
@@ -101,8 +112,26 @@ export default function App() {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  const activeStatus = checkUserActiveStatus(currentUser);
+
   return (
     <div className="min-h-screen bg-zinc-50/50 flex text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
+      {/* Modal / Layer Besar Pemblokiran Saat Akun Tidak Aktif / Habis Masa Aktif */}
+      {!activeStatus.isActive && currentUserRole !== "superadmin" && (
+        <InactiveAccountModal
+          isOpen={true}
+          user={currentUser}
+          onRefreshStatus={async () => {
+            const isNowActive = await refreshUserSession();
+            if (isNowActive) {
+              fetchData();
+            }
+            return isNowActive;
+          }}
+          onLogout={handleLogout}
+        />
+      )}
+
       {/* Shadcn Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -171,6 +200,8 @@ export default function App() {
           {activeTab === "orders" && (
             <OrdersTab
               orders={orders}
+              tenants={tenants}
+              currentUserRole={currentUserRole}
               onOpenOrderModal={() => {
                 setPreselectedCustomerId("");
                 setShowOrderModal(true);
@@ -189,6 +220,8 @@ export default function App() {
             <CashflowTab
               stats={stats}
               expenses={expenses}
+              tenants={tenants}
+              currentUserRole={currentUserRole}
               onOpenExpenseModal={() => setShowExpenseModal(true)}
               onDeleteExpense={handleDeleteExpense}
             />
@@ -198,6 +231,8 @@ export default function App() {
             <CustomersTab
               customers={customers}
               orders={orders}
+              tenants={tenants}
+              currentUserRole={currentUserRole}
               onOpenCustomerModal={() => setShowCustomerModal(true)}
               onSelectCustomerForOrder={(customerId) => {
                 setPreselectedCustomerId(customerId);
@@ -208,7 +243,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === "tenants" && (
+          {activeTab === "tenants" && currentUserRole === "superadmin" && (
             <TenantsTab
               tenants={tenants}
               onOpenTenantModal={() => setShowTenantModal(true)}
@@ -217,7 +252,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === "users" && (
+          {activeTab === "users" && currentUserRole === "superadmin" && (
             <UsersTab
               users={users}
               tenants={tenants}
@@ -225,6 +260,7 @@ export default function App() {
               onDeleteUser={handleDeleteUser}
               onToggleStatus={handleToggleUserStatus}
               onUpdateSubscription={handleUpdateUserSubscription}
+              onExtendSubscription={handleExtendUserSubscription}
             />
           )}
 

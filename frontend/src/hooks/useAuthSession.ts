@@ -113,8 +113,27 @@ export function useAuthSession() {
     }
   };
 
+  const refreshUserSession = async (): Promise<boolean> => {
+    if (!currentUser) return false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/status?userId=${currentUser.id}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        setCurrentUser(data.user);
+        setCurrentUserRole(data.user.role);
+        localStorage.setItem(AUTH_KEY, JSON.stringify(data.user));
+        return !data.statusInfo?.isInactive;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to refresh session:", err);
+      return false;
+    }
+  };
+
   return {
     currentUser,
+    setCurrentUser,
     currentUserRole,
     setCurrentUserRole,
     tenantId,
@@ -122,5 +141,6 @@ export function useAuthSession() {
     handleLoginSuccess,
     handleLogout,
     handleSelectTenant,
+    refreshUserSession,
   };
 }

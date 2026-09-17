@@ -553,6 +553,34 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     }
   };
 
+  // Extend User Subscription (+X days or specific date)
+  const handleExtendUserSubscription = async (
+    userId: string,
+    payload: { days?: number; newDate?: string; activate: boolean }
+  ) => {
+    const targetUser = users.find((u) => u.id === userId);
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        fetchData();
+        toast.success(
+          "Masa Aktif Diperpanjang!",
+          data.message || `Akun ${targetUser?.name || "Pengguna"} berhasil diperpanjang.`
+        );
+      } else {
+        toast.error("Gagal Memperpanjang Masa Aktif", data.message || "Respons server gagal.");
+      }
+    } catch (err: any) {
+      console.error("Extend subscription error:", err);
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+    }
+  };
+
   // Create Tenant
   const handleCreateTenant = async (tenantData: {
     outletName: string;
@@ -678,6 +706,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     handleDeleteCustomer,
     handleToggleUserStatus,
     handleUpdateUserSubscription,
+    handleExtendUserSubscription,
     handleCreateTenant,
     handleCreateUser,
     handleDeleteUser,

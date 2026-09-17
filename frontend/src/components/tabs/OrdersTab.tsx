@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Plus, Phone, Printer, Edit3, Trash2, XCircle } from "lucide-react";
+import { Plus, Phone, Printer, Edit3, Trash2, XCircle, Store } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
-import { Order, OrderStatus, DateFilterPreset } from "../../types";
+import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
 import {
   ShadcnDataTable,
   ColumnDef,
@@ -10,6 +10,8 @@ import {
 
 interface OrdersTabProps {
   orders: Order[];
+  tenants?: Tenant[];
+  currentUserRole?: Role;
   onOpenOrderModal: () => void;
   onUpdateStatus: (orderId: string, status: string) => void;
   onUpdatePayment: (orderId: string, paymentStatus: string, paymentMethod?: string) => void;
@@ -31,6 +33,8 @@ const statusBadgeStyles: Record<OrderStatus, string> = {
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
   orders,
+  tenants = [],
+  currentUserRole = "staff",
   onOpenOrderModal,
   onUpdateStatus,
   onUpdatePayment,
@@ -40,10 +44,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onCancelOrder,
   onDeleteOrder,
 }) => {
+  const isSuperAdmin = currentUserRole === "superadmin";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [datePreset, setDatePreset] = useState<DateFilterPreset>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [tenantFilter, setTenantFilter] = useState<string>("all");
   const [quickPayOrder, setQuickPayOrder] = useState<Order | null>(null);
 
   const isOrderOverdue = (order: Order) =>
@@ -75,7 +82,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     // 4. Date preset filter
     const matchDate = filterByDatePreset(order.createdAt, datePreset);
 
-    return matchSearch && matchStatus && matchPayment && matchDate;
+    // 5. Tenant filter (Super Admin)
+    const matchTenant = tenantFilter === "all" || order.tenantId === tenantFilter;
+
+    return matchSearch && matchStatus && matchPayment && matchDate && matchTenant;
   });
 
   // Table column definitions
@@ -102,6 +112,25 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         </div>
       ),
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            id: "outlet",
+            header: "Cabang / Outlet",
+            cell: (order: Order) => {
+              const outlet = tenants.find((t) => t.id === order.tenantId);
+              return (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
+                  <Store className="w-3 h-3 text-blue-700 shrink-0" />
+                  <span className="truncate max-w-[120px]">
+                    {outlet?.outletName || "Cabang Melati"}
+                  </span>
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       id: "customer",
       header: "Pelanggan",
@@ -194,15 +223,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     },
     {
       id: "actions",
-      header: "Aksi Kasir",
+      header: isSuperAdmin ? "Aksi & Audit" : "Aksi Kasir",
       align: "right",
       cell: (order) => (
         <div className="flex items-center justify-end gap-1.5">
-          {/* Cetak Struk Kasir Thermal */}
+          {/* Cetak Struk Thermal / Audit Nota */}
           <button
             type="button"
             onClick={() => onOpenReceiptModal(order)}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition"
+            className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition cursor-pointer"
             title="Cetak Struk Thermal (58mm / 80mm)"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -212,7 +241,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           <button
             type="button"
             onClick={() => onOpenEditOrderModal(order)}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition"
+            className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-700 hover:bg-amber-50 border border-zinc-200 transition cursor-pointer"
             title="Koreksi / Edit Pesanan"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -244,7 +273,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <button
               type="button"
               onClick={() => onCancelOrder(order)}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 transition cursor-pointer"
               title="Batalkan Pesanan Ini"
             >
               <XCircle className="w-3.5 h-3.5" />
@@ -253,7 +282,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <button
               type="button"
               onClick={() => onDeleteOrder(order.id)}
-              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition"
+              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
               title="Hapus Pesanan Permanen"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -268,19 +297,38 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     <div className="space-y-4">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pesanan Laundry</h2>
-          <p className="text-xs text-zinc-500">
-            Daftar pesanan aktif, cetak struk thermal, koreksi kasir, dan pengiriman notifikasi WhatsApp
-          </p>
-        </div>
+        {isSuperAdmin ? (
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
+                Data & Audit Pesanan Jaringan
+              </h2>
+              <span className="text-[10px] font-bold bg-blue-900 text-white px-2 py-0.5 rounded-full font-mono">
+                AUDIT PUSAT
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Rekapitulasi pesanan seluruh cabang, status cucian, dan pemantauan pembayaran
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pesanan Laundry</h2>
+            <p className="text-xs text-zinc-500">
+              Daftar pesanan aktif, cetak struk thermal, koreksi kasir, dan pengiriman notifikasi WhatsApp
+            </p>
+          </div>
+        )}
 
-        <button
-          onClick={onOpenOrderModal}
-          className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition"
-        >
-          <Plus className="w-3.5 h-3.5" /> Order Baru
-        </button>
+        {/* Tombol + Order Baru hanya tampil untuk Kasir / Tenant Owner, BUKAN Super Admin */}
+        {!isSuperAdmin && (
+          <button
+            onClick={onOpenOrderModal}
+            className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Order Baru
+          </button>
+        )}
       </div>
 
       {/* Reusable Data Table with Search, Date Presets, Column Toggle & Pagination */}
@@ -294,7 +342,23 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         datePreset={datePreset}
         onDatePresetChange={setDatePreset}
         customFilters={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Cabang Filter untuk Super Admin */}
+            {isSuperAdmin && tenants.length > 0 && (
+              <select
+                value={tenantFilter}
+                onChange={(e) => setTenantFilter(e.target.value)}
+                className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
+              >
+                <option value="all">Semua Cabang ({tenants.length})</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.outletName}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -339,7 +403,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setQuickPayOrder(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 ✕
               </button>
@@ -358,62 +422,56 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               </div>
             </div>
 
-            <p className="text-[11px] font-bold text-slate-700 mb-2">Pilih Metode Pembayaran Lunas:</p>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdatePayment(quickPayOrder.id, "paid", "cash");
-                  setQuickPayOrder(null);
-                }}
-                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
-              >
-                <span className="text-base">💵</span>
-                <span>Tunai</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdatePayment(quickPayOrder.id, "paid", "qris");
-                  setQuickPayOrder(null);
-                }}
-                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
-              >
-                <span className="text-base">📱</span>
-                <span>QRIS</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdatePayment(quickPayOrder.id, "paid", "transfer");
-                  setQuickPayOrder(null);
-                }}
-                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition shadow-2xs hover:scale-[1.02]"
-              >
-                <span className="text-base">🏦</span>
-                <span>Transfer</span>
-              </button>
-            </div>
-
-            {quickPayOrder.paymentStatus === "paid" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdatePayment(quickPayOrder.id, "unpaid", "cash");
-                  setQuickPayOrder(null);
-                }}
-                className="w-full py-2 text-xs text-amber-800 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 font-semibold transition text-center"
-              >
-                Kembalikan ke Status Belum Lunas
-              </button>
+            {quickPayOrder.paymentStatus !== "paid" ? (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-slate-700 block">Pilih Metode Pelunasan:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdatePayment(quickPayOrder.id, "paid", "cash");
+                      setQuickPayOrder(null);
+                    }}
+                    className="py-2 px-1 text-center bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-bold text-xs transition cursor-pointer"
+                  >
+                    💵 Tunai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdatePayment(quickPayOrder.id, "paid", "qris");
+                      setQuickPayOrder(null);
+                    }}
+                    className="py-2 px-1 text-center bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 rounded-xl font-bold text-xs transition cursor-pointer"
+                  >
+                    📱 QRIS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdatePayment(quickPayOrder.id, "paid", "transfer");
+                      setQuickPayOrder(null);
+                    }}
+                    className="py-2 px-1 text-center bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl font-bold text-xs transition cursor-pointer"
+                  >
+                    🏦 Transfer
+                  </button>
+                </div>
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => setQuickPayOrder(null)}
-                className="w-full py-2 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition text-center"
-              >
-                Tutup
-              </button>
+              <div className="space-y-2 pt-1">
+                <p className="text-xs text-slate-600">Pesanan ini sudah tercatat <b>Lunas</b> ({quickPayOrder.paymentMethod || "cash"}).</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdatePayment(quickPayOrder.id, "unpaid");
+                    setQuickPayOrder(null);
+                  }}
+                  className="w-full py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-xl font-bold text-xs transition cursor-pointer"
+                >
+                  Ubah Kembali Menjadi Belum Lunas
+                </button>
+              </div>
             )}
           </div>
         </div>

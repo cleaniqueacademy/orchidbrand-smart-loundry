@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { User } from "../../types";
+import { InactiveAccountModal } from "../modals/InactiveAccountModal";
 
 interface LoginPageProps {
   onLoginSuccess: (user: User) => void;
@@ -25,6 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [inactiveAccountUser, setInactiveAccountUser] = useState<any | null>(null);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -47,13 +49,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(data.message || "Gagal masuk ke sistem. Periksa email atau kata sandi Anda.");
+        if (
+          (data.code === "ACCOUNT_INACTIVE" || data.code === "SUBSCRIPTION_EXPIRED") &&
+          data.user
+        ) {
+          setInactiveAccountUser(data.user);
+          setErrorMessage(data.message);
+        } else {
+          setErrorMessage(
+            data.message || "Gagal masuk ke sistem. Periksa email atau kata sandi Anda."
+          );
+        }
         setLoading(false);
         return;
       }
 
       setSuccessMessage("Login berhasil! Mengalihkan ke dashboard...");
-      setTimeout(() => { onLoginSuccess(data.user); }, 600);
+      setTimeout(() => {
+        onLoginSuccess(data.user);
+      }, 600);
     } catch {
       setErrorMessage("Terjadi kesalahan koneksi ke server. Pastikan backend aktif.");
       setLoading(false);
@@ -239,6 +253,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
       </div>
+
+      {/* Modal / Layer Besar Akun Nonaktif atau Masa Aktif Habis */}
+      <InactiveAccountModal
+        isOpen={!!inactiveAccountUser}
+        user={inactiveAccountUser}
+        onClose={() => setInactiveAccountUser(null)}
+        isDismissable={true}
+      />
     </div>
   );
 };

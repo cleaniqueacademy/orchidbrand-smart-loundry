@@ -166,34 +166,93 @@ app.post("/api/auth/login", async (c) => {
     if (foundUser.passwordHash !== password) {
       return c.json({ success: false, message: "Kata sandi salah." }, 401);
     }
-    if (foundUser.status === "inactive") {
+
+    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
+    const userSummary = {
+      id: foundUser.id,
+      name: foundUser.name,
+      email: foundUser.email,
+      role: foundUser.role,
+      status: foundUser.status || "active",
+      subscriptionUntil: foundUser.subscriptionUntil,
+      tenantId: userTenant ? userTenant.id : null,
+      tenantName: userTenant ? userTenant.outletName : null,
+    };
+
+    if (foundUser.status === "inactive" && foundUser.role !== "superadmin") {
       return c.json({
         success: false,
+        code: "ACCOUNT_INACTIVE",
         message: "Akun Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi langganan offline Anda.",
+        user: userSummary,
       }, 403);
     }
-    if (foundUser.subscriptionUntil) {
-      const expDate = new Date(foundUser.subscriptionUntil);
+
+    if (foundUser.role !== "superadmin" && foundUser.subscriptionUntil) {
+      const expDate = new Date(`${foundUser.subscriptionUntil}T23:59:59`);
       if (!isNaN(expDate.getTime()) && expDate < new Date()) {
         return c.json({
           success: false,
-          message: `Masa langganan Anda telah berakhir pada ${foundUser.subscriptionUntil}. Silakan hubungi Super Admin untuk perpanjangan.`,
+          code: "SUBSCRIPTION_EXPIRED",
+          message: `Masa aktif akun Anda telah berakhir pada ${foundUser.subscriptionUntil}. Silakan hubungi Super Admin untuk perpanjangan.`,
+          user: userSummary,
         }, 403);
       }
     }
-    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
+
     return c.json({
       success: true,
       message: "Login berhasil",
+      user: userSummary,
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Cek status masa aktif user secara realtime
+app.get("/api/auth/status", async (c) => {
+  try {
+    const userId = c.req.query("userId");
+    if (!userId) {
+      return c.json({ success: false, message: "userId diperlukan" }, 400);
+    }
+    const foundUser = (await db.select().from(users).where(eq(users.id, userId)))[0];
+    if (!foundUser) {
+      return c.json({ success: false, message: "User tidak ditemukan" }, 404);
+    }
+    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
+
+    let isExpired = false;
+    let daysRemaining = 0;
+    if (foundUser.subscriptionUntil) {
+      const expDate = new Date(`${foundUser.subscriptionUntil}T23:59:59`);
+      if (!isNaN(expDate.getTime())) {
+        const diffMs = expDate.getTime() - Date.now();
+        daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        isExpired = diffMs < 0;
+      }
+    }
+
+    const isInactive =
+      foundUser.role !== "superadmin" && (foundUser.status === "inactive" || isExpired);
+
+    return c.json({
+      success: true,
       user: {
         id: foundUser.id,
         name: foundUser.name,
         email: foundUser.email,
         role: foundUser.role,
-        status: foundUser.status,
+        status: foundUser.status || "active",
         subscriptionUntil: foundUser.subscriptionUntil,
         tenantId: userTenant ? userTenant.id : null,
         tenantName: userTenant ? userTenant.outletName : null,
+      },
+      statusInfo: {
+        isInactive,
+        isExpired,
+        daysRemaining,
       },
     });
   } catch (error: any) {
@@ -307,7 +366,87 @@ app.patch("/api/users/:id/status", async (c) => {
     if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
 
     await db.update(users).set(updatePayload).where(eq(users.id, id));
+
+    // Sinkronkan ke tenant jika pengguna adalah pemilik tenant
+    if (status !== undefined || subscriptionUntil !== undefined) {
+      const tenantPayload: any = {};
+      if (status !== undefined) tenantPayload.status = status;
+      if (subscriptionUntil !== undefined) tenantPayload.subscriptionUntil = subscriptionUntil;
+      await db.update(tenants).set(tenantPayload).where(eq(tenants.userId, id));
+    }
+
     return c.json({ success: true, message: "Status akun berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Perpanjang masa aktif pengguna (+X hari atau tanggal tertentu)
+app.post("/api/users/:id/extend", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { days, newDate, activate = true } = body;
+
+    const targetUser = (await db.select().from(users).where(eq(users.id, id)))[0];
+    if (!targetUser) {
+      return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
+    }
+
+    let finalDate = "";
+
+    if (newDate) {
+      finalDate = newDate;
+    } else if (days !== undefined) {
+      const addDays = Number(days) || 0;
+      let baseDate = new Date();
+
+      // Jika saat ini masih aktif (belum kedaluwarsa), tambahkan dari tanggal expired saat ini
+      if (targetUser.subscriptionUntil) {
+        const currentExp = new Date(`${targetUser.subscriptionUntil}T23:59:59`);
+        if (!isNaN(currentExp.getTime()) && currentExp > new Date()) {
+          baseDate = new Date(targetUser.subscriptionUntil);
+        }
+      }
+
+      baseDate.setDate(baseDate.getDate() + addDays);
+      finalDate = baseDate.toISOString().slice(0, 10);
+    } else {
+      return c.json({ success: false, message: "Parameter days atau newDate wajib disertakan" }, 400);
+    }
+
+    const updatePayload: any = {
+      subscriptionUntil: finalDate,
+    };
+    if (activate) {
+      updatePayload.status = "active";
+    }
+
+    await db.update(users).set(updatePayload).where(eq(users.id, id));
+
+    // Sinkronkan ke cabang tenant jika ada
+    const tenantPayload: any = { subscriptionUntil: finalDate };
+    if (activate) tenantPayload.status = "active";
+    await db.update(tenants).set(tenantPayload).where(eq(tenants.userId, id));
+
+    const updatedUser = (await db.select().from(users).where(eq(users.id, id)))[0];
+    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, id)))[0];
+
+    return c.json({
+      success: true,
+      message: `Masa aktif ${targetUser.name} berhasil diperpanjang hingga ${finalDate}`,
+      newSubscriptionUntil: finalDate,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status || "active",
+        subscriptionUntil: updatedUser.subscriptionUntil,
+        tenantId: userTenant ? userTenant.id : null,
+        tenantName: userTenant ? userTenant.outletName : null,
+      },
+    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -341,7 +480,7 @@ app.get("/api/customers", async (c) => {
 app.post("/api/customers", async (c) => {
   try {
     const body = await c.req.json();
-    const tenantId = body.tenantId || "tenant-01";
+    const tenantId = body.tenantId && body.tenantId !== "all" ? body.tenantId : "tenant-01";
     const newCust = {
       id: `cust-${Date.now()}`,
       tenantId,
