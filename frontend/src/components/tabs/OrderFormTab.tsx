@@ -8,8 +8,9 @@ import {
   ShoppingBag,
   Receipt,
   Lock,
+  Clock,
 } from "lucide-react";
-import { Order, Customer, OrderStatus, PaymentStatus, OrderItem, LaundryService } from "../../types";
+import { Order, Customer, OrderStatus, PaymentStatus, OrderItem, LaundryService, Service } from "../../types";
 import { useToast } from "../common/ToastContext";
 
 interface OrderFormTabProps {
@@ -37,6 +38,7 @@ interface OrderFormTabProps {
     paymentMethod: string;
     notes?: string;
     rackNumber?: string;
+    estimatedCompletionAt?: string;
   }) => Promise<void>;
   onSubmitEdit: (
     orderId: string,
@@ -53,6 +55,7 @@ interface OrderFormTabProps {
       paymentMethod: string;
       notes?: string;
       rackNumber?: string;
+      estimatedCompletionAt?: string;
     }
   ) => Promise<void>;
 }
@@ -90,15 +93,39 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
 }) => {
   const toast = useToast();
 
+  const [dbServices, setDbServices] = useState<Service[]>([]);
+  const [estimatedHours, setEstimatedHours] = useState<number>(48);
+  const [customEstimatedDate, setCustomEstimatedDate] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setDbServices(json.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const availableServices =
-    tenantServices && tenantServices.length > 0
+    dbServices.length > 0
+      ? dbServices.map((s) => ({
+          label: s.name,
+          unit: s.unit,
+          price: s.pricePerUnit,
+          step: s.unit === "kg" ? 0.5 : 1,
+          durationHours: s.durationHours || 48,
+        }))
+      : tenantServices && tenantServices.length > 0
       ? tenantServices.map((s) => ({
           label: s.name,
           unit: s.unit,
           price: s.price,
           step: s.unit === "kg" ? 0.5 : 1,
+          durationHours: 48,
         }))
-      : DEFAULT_SERVICE_PRESETS;
+      : DEFAULT_SERVICE_PRESETS.map((s) => ({ ...s, durationHours: 48 }));
 
   // Customer Mode & Selection
   const [customerMode, setCustomerMode] = useState<"existing" | "new">("existing");
@@ -107,7 +134,7 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerAddress, setNewCustomerAddress] = useState("");
 
-  const initialPreset = availableServices[0] || DEFAULT_SERVICE_PRESETS[0];
+  const initialPreset = availableServices[0] || { ...DEFAULT_SERVICE_PRESETS[0], durationHours: 48 };
 
   // Order Items
   const [items, setItems] = useState<FormItem[]>([
@@ -144,6 +171,18 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
       setNotes(order.notes || "");
       setRackNumber(order.rackNumber || "");
 
+      if (order.estimatedCompletionAt) {
+        try {
+          const est = new Date(order.estimatedCompletionAt);
+          const localIso = new Date(est.getTime() - est.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+          setCustomEstimatedDate(localIso);
+        } catch {
+          // ignore
+        }
+      }
+
       if (order.items && order.items.length > 0) {
         setItems(
           order.items.map((it, idx) => ({
@@ -173,6 +212,14 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
       setCustomerId(initialCustomerId);
       setCustomerMode("existing");
     }
+
+    if (mode === "create" && !customEstimatedDate) {
+      const defaultDate = new Date(Date.now() + 48 * 3600000);
+      const localIso = new Date(defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setCustomEstimatedDate(localIso);
+    }
   }, [mode, order, initialCustomerId]);
 
   // Update item service
@@ -185,6 +232,14 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
     if (preset) {
       target.unit = preset.unit;
       target.pricePerUnit = preset.price;
+      if (preset.durationHours) {
+        setEstimatedHours(preset.durationHours);
+        const estDate = new Date(Date.now() + preset.durationHours * 3600000);
+        const localIso = new Date(estDate.getTime() - estDate.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        setCustomEstimatedDate(localIso);
+      }
     }
     target.subtotal = Math.round(target.weightOrQty * target.pricePerUnit);
     setItems(updated);
@@ -319,6 +374,9 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
           paymentMethod,
           notes: notes.trim() || undefined,
           rackNumber: rackNumber.trim() || undefined,
+          estimatedCompletionAt: customEstimatedDate
+            ? new Date(customEstimatedDate).toISOString()
+            : undefined,
         });
       } else if (mode === "edit" && order) {
         await onSubmitEdit(order.id, {
@@ -334,6 +392,9 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
           paymentMethod,
           notes: notes.trim() || undefined,
           rackNumber: rackNumber.trim() || undefined,
+          estimatedCompletionAt: customEstimatedDate
+            ? new Date(customEstimatedDate).toISOString()
+            : undefined,
         });
       }
       onBack();
@@ -736,6 +797,28 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
                   <option value="qris">QRIS</option>
                   <option value="transfer">Transfer Bank</option>
                 </select>
+              </div>
+
+              {/* Target Estimasi Selesai (SLA) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-zinc-700 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Target Selesai (SLA)</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-1.5 py-0.5 rounded">
+                    {estimatedHours} Jam
+                  </span>
+                </div>
+                <input
+                  type="datetime-local"
+                  value={customEstimatedDate}
+                  onChange={(e) => setCustomEstimatedDate(e.target.value)}
+                  className="w-full text-xs font-medium border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
+                />
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Otomatis terisi durasi layanan atau sesuaikan manual.
+                </p>
               </div>
 
               {/* Status Cucian (Hanya Mode Edit) */}

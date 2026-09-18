@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
-import { users, tenants, customers, orders, expenses } from "./db/schema";
+import { users, tenants, customers, orders, expenses, services } from "./db/schema";
 import { eq, desc } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import { sendWhatsAppMessage, autoRestoreSavedSessions } from "./services/whatsapp";
@@ -40,6 +40,195 @@ app.get("/api/health", (c) => {
     timestamp: new Date().toISOString(),
     message: "Orchid Brand Smart Laundry API is running smoothly on PostgreSQL!",
   });
+});
+
+// 2. Public Tracking Endpoint (No Auth Required)
+app.get("/api/track/:invoiceNo", async (c) => {
+  try {
+    const rawInvoiceNo = c.req.param("invoiceNo")?.trim();
+    if (!rawInvoiceNo) {
+      return c.json({ success: false, message: "Nomor nota wajib diisi" }, 400);
+    }
+
+    const orderResults = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.invoiceNo, rawInvoiceNo));
+    const order = orderResults[0];
+
+    if (!order) {
+      return c.json({ success: false, message: "Pesanan dengan nomor nota tersebut tidak ditemukan" }, 404);
+    }
+
+    const tenantResults = await db.select().from(tenants).where(eq(tenants.id, order.tenantId));
+    const tenant = tenantResults[0];
+
+    const customerResults = await db.select().from(customers).where(eq(customers.id, order.customerId));
+    const customer = customerResults[0];
+
+    // Sanitize phone number (mask for public view e.g. 0812****789)
+    let maskedPhone = "";
+    if (customer?.phone) {
+      const p = customer.phone;
+      maskedPhone = p.length > 6 ? p.slice(0, 4) + "****" + p.slice(-3) : p;
+    }
+
+    let parsedItems = null;
+    if (order.items) {
+      try {
+        parsedItems = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+      } catch {}
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        order: {
+          id: order.id,
+          invoiceNo: order.invoiceNo,
+          serviceType: order.serviceType,
+          weightOrQty: order.weightOrQty,
+          unit: order.unit,
+          pricePerUnit: order.pricePerUnit,
+          totalAmount: order.totalAmount,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
+          rackNumber: order.status === "ready" ? order.rackNumber : null,
+          notes: order.notes,
+          items: parsedItems,
+          createdAt: order.createdAt,
+          estimatedCompletionAt: order.estimatedCompletionAt,
+          completedAt: order.completedAt,
+        },
+        outlet: {
+          outletName: tenant?.outletName || "Orchid Smart Laundry",
+          phone: tenant?.phone || "",
+          address: tenant?.address || "",
+          operatingHours: {
+            weekdays: "Senin - Jumat : 08.00 - 16.00",
+            saturday: "Sabtu : 08.00 - 13.00",
+            sunday: "Minggu / Tanggal Merah : Tutup",
+          },
+        },
+        customer: {
+          name: customer?.name || "Pelanggan",
+          maskedPhone,
+        },
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// 3. Master Services CRUD per Tenant
+const DEFAULT_PRESET_SERVICES = [
+  { name: "Cuci Komplit Reguler", unit: "kg", pricePerUnit: 8000, minOrder: 3, durationHours: 48 },
+  { name: "Cuci Komplit Kilat", unit: "kg", pricePerUnit: 12000, minOrder: 2, durationHours: 24 },
+  { name: "Cuci Komplit Express", unit: "kg", pricePerUnit: 16000, minOrder: 1, durationHours: 6 },
+  { name: "Cuci Kering Saja", unit: "kg", pricePerUnit: 6000, minOrder: 2, durationHours: 24 },
+  { name: "Setrika Uap Saja", unit: "kg", pricePerUnit: 6000, minOrder: 2, durationHours: 24 },
+  { name: "Cuci Bedcover King", unit: "pcs", pricePerUnit: 35000, minOrder: 1, durationHours: 48 },
+  { name: "Cuci Bedcover Single", unit: "pcs", pricePerUnit: 25000, minOrder: 1, durationHours: 48 },
+  { name: "Cuci Sepatu Premium", unit: "pasang", pricePerUnit: 25000, minOrder: 1, durationHours: 48 },
+  { name: "Cuci Karpet", unit: "meter", pricePerUnit: 15000, minOrder: 1, durationHours: 72 },
+  { name: "Cuci Selimut", unit: "pcs", pricePerUnit: 20000, minOrder: 1, durationHours: 48 },
+];
+
+app.get("/api/services", async (c) => {
+  try {
+    const tenantId = c.req.query("tenantId");
+    if (!tenantId || tenantId === "all") {
+      const allServices = await db.select().from(services);
+      return c.json({ success: true, data: allServices });
+    }
+
+    let existingServices = await db
+      .select()
+      .from(services)
+      .where(eq(services.tenantId, tenantId));
+
+    // Auto-seed default services for tenant if none exist yet
+    if (existingServices.length === 0) {
+      for (const def of DEFAULT_PRESET_SERVICES) {
+        await db.insert(services).values({
+          id: `srv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          tenantId,
+          name: def.name,
+          unit: def.unit,
+          pricePerUnit: def.pricePerUnit,
+          minOrder: def.minOrder,
+          durationHours: def.durationHours,
+          status: "active",
+          createdAt: new Date().toISOString(),
+        });
+      }
+      existingServices = await db.select().from(services).where(eq(services.tenantId, tenantId));
+    }
+
+    return c.json({ success: true, data: existingServices });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.post("/api/services", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { tenantId, name, unit, pricePerUnit, minOrder, durationHours, status } = body;
+
+    if (!tenantId || !name || pricePerUnit === undefined) {
+      return c.json({ success: false, message: "Tenant, Nama Layanan, dan Tarif wajib diisi" }, 400);
+    }
+
+    const newService = {
+      id: `srv-${Date.now()}`,
+      tenantId,
+      name: String(name).trim(),
+      unit: unit || "kg",
+      pricePerUnit: Number(pricePerUnit) || 0,
+      minOrder: Number(minOrder) || 1,
+      durationHours: Number(durationHours) || 48,
+      status: status || "active",
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.insert(services).values(newService);
+    return c.json({ success: true, message: "Layanan berhasil ditambahkan", data: newService });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.put("/api/services/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+
+    const updateData: any = {};
+    if (body.name !== undefined) updateData.name = String(body.name).trim();
+    if (body.unit !== undefined) updateData.unit = body.unit;
+    if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit) || 0;
+    if (body.minOrder !== undefined) updateData.minOrder = Number(body.minOrder) || 1;
+    if (body.durationHours !== undefined) updateData.durationHours = Number(body.durationHours) || 48;
+    if (body.status !== undefined) updateData.status = body.status;
+
+    await db.update(services).set(updateData).where(eq(services.id, id));
+    return c.json({ success: true, message: "Layanan berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.delete("/api/services/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(services).where(eq(services.id, id));
+    return c.json({ success: true, message: "Layanan berhasil dihapus" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
 });
 
 // 2. Tenants & Users (Superadmin view)
@@ -102,11 +291,12 @@ app.post("/api/tenants", async (c) => {
     const { ownerName, ownerEmail, password, outletName, phone, address, services } = body;
 
     const newUserId = `user-${Date.now()}`;
+    const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
     await db.insert(users).values({
       id: newUserId,
       name: ownerName,
       email: ownerEmail,
-      passwordHash: password || "123456",
+      passwordHash: hashedPassword,
       role: "tenant_owner",
     });
 
@@ -196,10 +386,29 @@ app.post("/api/auth/login", async (c) => {
     if (!foundUser) {
       return c.json({ success: false, message: "Email atau kata sandi tidak ditemukan." }, 401);
     }
-    const isPasswordValid = foundUser.passwordHash === password;
+    let isPasswordValid = false;
+    try {
+      isPasswordValid = await Bun.password.verify(password, foundUser.passwordHash);
+    } catch {
+      isPasswordValid = foundUser.passwordHash === password;
+    }
+
+    if (!isPasswordValid && foundUser.passwordHash === password) {
+      isPasswordValid = true;
+    }
 
     if (!isPasswordValid) {
       return c.json({ success: false, message: "Kata sandi yang Anda masukkan salah." }, 401);
+    }
+
+    // Auto-upgrade legacy plain-text password to secure bcrypt hash
+    if (!foundUser.passwordHash.startsWith("$2b$") && !foundUser.passwordHash.startsWith("$2a$")) {
+      try {
+        const upgradedHash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 10 });
+        await db.update(users).set({ passwordHash: upgradedHash }).where(eq(users.id, foundUser.id));
+      } catch (upErr) {
+        console.warn("[Auth] Password auto-hash upgrade notice:", upErr);
+      }
     }
 
     const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
@@ -235,10 +444,21 @@ app.post("/api/auth/login", async (c) => {
       }
     }
 
+    // Generate session token
+    const token = Buffer.from(
+      JSON.stringify({
+        userId: foundUser.id,
+        role: foundUser.role,
+        tenantId: userTenant?.id || null,
+        exp: Date.now() + 7 * 24 * 3600 * 1000,
+      })
+    ).toString("base64");
+
     return c.json({
       success: true,
       message: "Login berhasil",
       user: userSummary,
+      token,
     });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
@@ -332,11 +552,12 @@ app.post("/api/users", async (c) => {
     const { name, email, password, role, tenantId, status, subscriptionUntil } = body;
 
     const newUserId = `user-${Date.now()}`;
+    const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
     await db.insert(users).values({
       id: newUserId,
       name,
       email,
-      passwordHash: password || "123456",
+      passwordHash: hashedPassword,
       role: role || "staff",
       status: status || "active",
       subscriptionUntil: subscriptionUntil || null,
@@ -374,7 +595,9 @@ app.put("/api/users/:id", async (c) => {
     if (name !== undefined) updatePayload.name = name;
     if (email !== undefined) updatePayload.email = email;
     if (role !== undefined) updatePayload.role = role;
-    if (password !== undefined) updatePayload.passwordHash = password;
+    if (password !== undefined && String(password).trim()) {
+      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
+    }
     if (status !== undefined) updatePayload.status = status;
     if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
 
@@ -686,6 +909,13 @@ app.post("/api/orders", async (c) => {
       finalPricePerUnit = body.items[0]?.pricePerUnit || 0;
     }
 
+    // Calculate estimated completion SLA
+    let estimatedCompletionAt = body.estimatedCompletionAt || null;
+    if (!estimatedCompletionAt) {
+      const durationHours = Number(body.durationHours) || (finalServiceType.toLowerCase().includes("express") ? 6 : finalServiceType.toLowerCase().includes("kilat") ? 24 : 48);
+      estimatedCompletionAt = new Date(Date.now() + durationHours * 3600 * 1000).toISOString();
+    }
+
     const newOrder = {
       id: `ord-${Date.now()}`,
       tenantId,
@@ -703,6 +933,7 @@ app.post("/api/orders", async (c) => {
       notes: body.notes || "",
       rackNumber: body.rackNumber ? String(body.rackNumber).trim() : null,
       createdAt: new Date().toISOString(),
+      estimatedCompletionAt,
     };
 
     await db.insert(orders).values(newOrder);
@@ -738,7 +969,7 @@ app.patch("/api/orders/:id/status", async (c) => {
       );
     }
 
-    const completedAt = status === "completed" || status === "ready" ? new Date().toISOString() : null;
+    const completedAt = status === "completed" ? new Date().toISOString() : null;
     const paymentStatus = status === "completed" ? "paid" : existing.paymentStatus;
 
     await db
@@ -752,8 +983,9 @@ app.patch("/api/orders/:id/status", async (c) => {
     const tenantResults = await db.select().from(tenants).where(eq(tenants.id, existing.tenantId));
     const tenant = tenantResults[0];
 
+    // WhatsApp notification ONLY prepared and sent when status is "ready" (Siap Diambil)
     let waData = null;
-    if (cust && cust.phone) {
+    if (status === "ready" && cust && cust.phone) {
       const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
       const outletName = tenant ? tenant.outletName : "Orchid Brand Smart Laundry";
       const paymentNote = existing.paymentStatus === "paid" ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${existing.totalAmount.toLocaleString("id-ID")})`;
@@ -778,7 +1010,7 @@ app.patch("/api/orders/:id/status", async (c) => {
             .join("\n");
       }
 
-      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}${rackText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
       waData = {
         phone: cleanPhone,
@@ -786,8 +1018,8 @@ app.patch("/api/orders/:id/status", async (c) => {
         waUrl: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`,
       };
 
-      // Auto-send via Baileys if tenant waMode is 'baileys' and order is ready/completed
-      if ((status === "ready" || status === "completed") && tenant?.waMode === "baileys") {
+      // Auto-send via Baileys if tenant waMode is 'baileys' and order is ready
+      if (tenant?.waMode === "baileys") {
         try {
           const sendRes = await sendWhatsAppMessage(existing.tenantId, cust.phone, messageText);
           if (sendRes.success) {
@@ -887,12 +1119,11 @@ app.put("/api/orders/:id", async (c) => {
         updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
       }
     }
+    if (body.estimatedCompletionAt !== undefined) updateData.estimatedCompletionAt = body.estimatedCompletionAt;
     if (body.status !== undefined) {
       updateData.status = body.status;
-      if (body.status === "completed" || body.status === "ready") {
-        updateData.completedAt = new Date().toISOString();
-      }
       if (body.status === "completed") {
+        updateData.completedAt = new Date().toISOString();
         updateData.paymentStatus = "paid";
       }
     }

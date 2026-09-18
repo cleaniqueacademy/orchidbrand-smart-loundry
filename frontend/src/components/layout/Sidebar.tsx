@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Tag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TabType, Role, Tenant, User } from "../../types";
@@ -145,13 +146,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const adminDataNav = [
-    {
-      id: "orders" as TabType,
+    { id: "orders" as TabType,
       label: "Pesanan",
       icon: ShoppingBag,
       count: activeOrdersCount > 0 ? activeOrdersCount : undefined,
       highlight: readyOrdersCount > 0 ? readyOrdersCount : undefined,
     },
+    { id: "services" as TabType, label: "Layanan", icon: Tag },
     { id: "cashflow" as TabType, label: "Arus Kas", icon: DollarSign },
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
     { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
@@ -167,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: activeOrdersCount > 0 ? activeOrdersCount : undefined,
       highlight: readyOrdersCount > 0 ? readyOrdersCount : undefined,
     },
+    { id: "services" as TabType, label: "Layanan", icon: Tag },
     { id: "cashflow" as TabType, label: "Buku Kas", icon: DollarSign },
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
     { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },

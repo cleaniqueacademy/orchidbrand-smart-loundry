@@ -28,6 +28,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("58mm");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const activeTenant = tenant || {
@@ -39,8 +40,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   useEffect(() => {
     if (order?.invoiceNo) {
-      // Generate QR Code containing invoice tracking info
-      QRCode.toDataURL(order.invoiceNo, {
+      // Generate QR Code containing public tracking link
+      const trackingUrl = `${window.location.origin}/track/${encodeURIComponent(order.invoiceNo)}`;
+      QRCode.toDataURL(trackingUrl, {
         width: 140,
         margin: 1,
         color: {
@@ -81,6 +83,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             .join("\n")
         : `Layanan : ${order.serviceType}\nJumlah  : ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
+    const trackingUrl = `${window.location.origin}/track/${encodeURIComponent(order.invoiceNo)}`;
+
     const text = `🧾 *NOTA LAUNDRY - ${activeTenant.outletName.toUpperCase()}*
 📍 ${activeTenant.address}
 📞 ${activeTenant.phone}
@@ -94,6 +98,13 @@ ${itemsSection}
 TOTAL   : Rp ${order.totalAmount.toLocaleString("id-ID")}
 Status  : ${order.paymentStatus === "paid" ? `LUNAS (${order.paymentMethod || "Tunai"})` : "BELUM LUNAS"}
 ----------------------------------------
+🔍 *Lacak Status Cucian Online:*
+${trackingUrl}
+----------------------------------------
+⏰ Jam Buka Outlet:
+• Senin - Jumat : 08.00 - 16.00
+• Sabtu : 08.00 - 13.00
+----------------------------------------
 Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
 
     navigator.clipboard.writeText(text).then(() => {
@@ -103,9 +114,19 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
     });
   };
 
+  const handleCopyTrackingLink = () => {
+    const trackingUrl = `${window.location.origin}/track/${encodeURIComponent(order.invoiceNo)}`;
+    navigator.clipboard.writeText(trackingUrl).then(() => {
+      setCopiedLink(true);
+      toast.success("Link Pelacakan Disalin", "Tautan pelacakan publik siap dibagikan ke pelanggan.");
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
+  };
+
   const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
 
   const getReceiptText = () => {
+    const trackingUrl = `${window.location.origin}/track/${encodeURIComponent(order.invoiceNo)}`;
     const paymentNote =
       order.paymentStatus === "paid"
         ? `✅ LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
@@ -123,7 +144,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
             .join("\n")
         : `🧺 *Layanan:* ${order.serviceType}\n⚖️ *Jumlah:* ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
-    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}${rackText}\n\n🔍 *Lacak Status Cucian Online:*\n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
   };
 
   const handleSendViaBaileys = async () => {
@@ -405,8 +426,11 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                     QR Nota
                   </div>
                 )}
-                <div className="text-[9px] text-zinc-500 tracking-wider mt-1 text-center font-medium">
-                  Scan untuk Cek Resi
+                <div className="text-[9px] text-zinc-700 tracking-wider mt-1 text-center font-bold">
+                  Scan QR untuk Cek Progres Cucian
+                </div>
+                <div className="text-[7.5px] text-zinc-500 font-mono text-center">
+                  {window.location.host}/track/{order.invoiceNo}
                 </div>
               </div>
 
@@ -414,7 +438,12 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
               <div className="border-t border-dashed border-zinc-300 pt-2 mt-2 text-[8.5px] leading-tight text-zinc-500 text-center space-y-0.5">
                 <p>1. Pengambilan cucian wajib membawa nota ini.</p>
                 <p>2. Barang tidak diambil &gt; 30 hari di luar tanggung jawab kami.</p>
-                <p className="font-bold text-zinc-700 pt-1">
+                <div className="py-1 font-medium text-zinc-600">
+                  <p className="font-bold text-zinc-700">⏰ Jam Buka Outlet:</p>
+                  <p>Senin - Jumat : 08.00 - 16.00</p>
+                  <p>Sabtu : 08.00 - 13.00</p>
+                </div>
+                <p className="font-bold text-zinc-700 pt-0.5">
                   *** TERIMA KASIH ATAS KUNJUNGAN ANDA ***
                 </p>
                 <p className="text-[8px] text-zinc-400">Powered by Orchid Brand Smart Laundry</p>
@@ -439,6 +468,25 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                   <>
                     <Copy className="w-3.5 h-3.5" />
                     <span>Salin Teks</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyTrackingLink}
+                className="w-1/2 sm:w-auto px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition"
+                title="Salin link pelacakan publik untuk pelanggan"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400">Link Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Salin Link</span>
                   </>
                 )}
               </button>

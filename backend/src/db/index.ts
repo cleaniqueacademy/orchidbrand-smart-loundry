@@ -84,7 +84,21 @@ export async function initPostgresTables() {
     `;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rack_number TEXT;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items TEXT;`;
-    await client`UPDATE orders SET status = 'process' WHERE status IN ('pending', 'washing', 'drying_ironing');`;
+    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_completion_at TEXT;`;
+
+    await client`
+      CREATE TABLE IF NOT EXISTS services (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        name TEXT NOT NULL,
+        unit TEXT NOT NULL DEFAULT 'kg',
+        price_per_unit DOUBLE PRECISION NOT NULL,
+        min_order DOUBLE PRECISION DEFAULT 1,
+        duration_hours DOUBLE PRECISION DEFAULT 48,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TEXT NOT NULL
+      );
+    `;
 
     await client`
       CREATE TABLE IF NOT EXISTS expenses (

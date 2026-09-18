@@ -12,6 +12,8 @@ import { UsersTab } from "./components/tabs/UsersTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
 import { SettingsTab } from "./components/tabs/SettingsTab";
 import { OrderFormTab } from "./components/tabs/OrderFormTab";
+import { ServicesTab } from "./components/tabs/ServicesTab";
+import { PublicTrackingPage } from "./components/tracking/PublicTrackingPage";
 import { LoginPage } from "./components/auth/LoginPage";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
@@ -25,6 +27,30 @@ import { checkUserActiveStatus } from "./utils/subscriptionUtils";
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Public Tracking Page State (URL /track/:invoiceNo or ?track=... or ?invoice=...)
+  const [trackingInvoice, setTrackingInvoice] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const match = window.location.pathname.match(/\/track\/([^/?#]+)/);
+    if (match && match[1]) return decodeURIComponent(match[1]);
+    const params = new URLSearchParams(window.location.search);
+    return params.get("track") || params.get("invoice") || null;
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const match = window.location.pathname.match(/\/track\/([^/?#]+)/);
+      if (match && match[1]) {
+        setTrackingInvoice(decodeURIComponent(match[1]));
+      } else {
+        const params = new URLSearchParams(window.location.search);
+        const inv = params.get("track") || params.get("invoice");
+        setTrackingInvoice(inv ? decodeURIComponent(inv) : null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Desktop Draggable Sidebar States
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -156,6 +182,21 @@ export default function App() {
 
   const getOrderWaLink = (order: Order) => getWaLink(order, tenants);
 
+  // Public tracking page view (takes priority over login / app shell)
+  if (trackingInvoice !== null) {
+    return (
+      <PublicTrackingPage
+        initialInvoiceNo={trackingInvoice}
+        onBackToApp={() => {
+          if (window.history.pushState) {
+            window.history.pushState({}, "", "/");
+          }
+          setTrackingInvoice(null);
+        }}
+      />
+    );
+  }
+
   if (!currentUser) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
@@ -277,6 +318,14 @@ export default function App() {
                   onOpenEditOrderModal={handleOpenEditOrder}
                   onCancelOrder={handleCancelOrder}
                   onDeleteOrder={handleDeleteOrder}
+                />
+              )}
+
+              {activeTab === "services" && (
+                <ServicesTab
+                  tenantId={tenantId}
+                  tenants={tenants}
+                  currentUserRole={currentUserRole}
                 />
               )}
 

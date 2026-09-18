@@ -47,8 +47,21 @@ export interface Order {
   notes?: string;
   rackNumber?: string | null;
   createdAt: string;
+  estimatedCompletionAt?: string | null;
   completedAt?: string | null;
   customer?: { id: string; name: string; phone: string } | null;
+}
+
+export interface Service {
+  id: string;
+  tenantId: string;
+  name: string;
+  unit: string;
+  pricePerUnit: number;
+  minOrder?: number;
+  durationHours?: number;
+  status: "active" | "inactive";
+  createdAt?: string;
 }
 
 export interface Customer {
@@ -109,4 +122,4 @@ export interface User {
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
 
-export type TabType = "overview" | "orders" | "cashflow" | "customers" | "reports" | "tenants" | "users" | "settings" | "create-order" | "edit-order";
+export type TabType = "overview" | "orders" | "cashflow" | "customers" | "services" | "reports" | "tenants" | "users" | "settings" | "create-order" | "edit-order";

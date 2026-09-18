@@ -132,7 +132,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
             ? `Pesanan ${targetOrder.invoiceNo} kini di tahap: ${label}`
             : `Status berhasil diubah ke ${label}`
         );
-        if (data.waData && (newStatus === "ready" || newStatus === "completed")) {
+        if (data.waData && newStatus === "ready") {
           if (data.waData.autoSent) {
             toast.success(
               "WA Terkirim Otomatis!",
@@ -202,6 +202,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     paymentMethod: string;
     notes?: string;
     rackNumber?: string;
+    estimatedCompletionAt?: string;
   }) => {
     const totalAmount =
       orderData.totalAmount !== undefined

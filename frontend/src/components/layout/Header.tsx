@@ -21,6 +21,7 @@ const tabBreadcrumbs: Record<TabType, string> = {
   orders: "Pesanan",
   cashflow: "Arus Kas",
   customers: "Pelanggan",
+  services: "Layanan",
   reports: "Laporan",
   tenants: "Cabang",
   users: "Pengguna",

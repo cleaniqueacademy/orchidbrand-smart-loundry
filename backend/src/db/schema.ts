@@ -51,7 +51,20 @@ export const orders = pgTable("orders", {
   rackNumber: text("rack_number"),
   items: text("items"), // JSON stringified array of OrderItem: [{ id, serviceType, weightOrQty, unit, pricePerUnit, subtotal, notes }]
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  estimatedCompletionAt: text("estimated_completion_at"),
   completedAt: text("completed_at"),
+});
+
+export const services = pgTable("services", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  name: text("name").notNull(),
+  unit: text("unit").notNull().default("kg"), // 'kg' | 'pcs' | 'meter' | 'pasang'
+  pricePerUnit: doublePrecision("price_per_unit").notNull(),
+  minOrder: doublePrecision("min_order").default(1),
+  durationHours: doublePrecision("duration_hours").default(48), // e.g. 48 hours for regular
+  status: text("status").notNull().default("active"), // 'active' | 'inactive'
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const expenses = pgTable("expenses", {

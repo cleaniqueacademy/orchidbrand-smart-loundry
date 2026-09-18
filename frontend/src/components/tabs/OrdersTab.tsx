@@ -71,6 +71,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     order.status === "ready" &&
     Date.now() - new Date(order.createdAt).getTime() > 3 * 24 * 60 * 60 * 1000;
 
+  const isSlaLate = (order: Order) =>
+    Boolean(
+      order.estimatedCompletionAt &&
+        new Date(order.estimatedCompletionAt).getTime() < Date.now() &&
+        order.status !== "ready" &&
+        order.status !== "completed" &&
+        order.status !== "cancelled"
+    );
+
   // Filtering data
   const filteredOrders = orders.filter((order) => {
     const matchSearch =
@@ -84,6 +93,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     const matchStatus =
       statusFilter === "all"
         ? true
+        : statusFilter === "late_sla"
+        ? isSlaLate(order)
         : statusFilter === "overdue"
         ? isOrderOverdue(order)
         : statusFilter === "process"
@@ -102,24 +113,52 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     {
       id: "invoice",
       header: "No. Nota",
-      cell: (order) => (
-        <div className="whitespace-nowrap">
-          <div className="font-mono font-bold text-zinc-900 text-xs">{order.invoiceNo}</div>
-          <div className="text-[10px] text-zinc-400 mt-0.5">
-            {new Date(order.createdAt).toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </div>
-          {order.rackNumber && (
-            <div className="inline-flex items-center gap-1 font-mono font-bold text-[9.5px] text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded mt-1">
-              <span>📍 {order.rackNumber}</span>
+      cell: (order) => {
+        const late = isSlaLate(order);
+        return (
+          <div className="whitespace-nowrap">
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono font-bold text-zinc-900 text-xs">{order.invoiceNo}</span>
+              {late && (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
+                  Telat SLA
+                </span>
+              )}
             </div>
-          )}
-        </div>
-      ),
+            <div className="text-[10px] text-zinc-400 mt-0.5">
+              {new Date(order.createdAt).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+            {order.estimatedCompletionAt && (
+              <div
+                className={`text-[9.5px] mt-0.5 flex items-center gap-1 font-medium ${
+                  late ? "text-rose-600 font-semibold" : "text-zinc-500"
+                }`}
+                title="Target Selesai Layanan"
+              >
+                <Clock className="w-2.5 h-2.5 shrink-0" />
+                <span>
+                  SLA: {new Date(order.estimatedCompletionAt).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            )}
+            {order.rackNumber && (
+              <div className="inline-flex items-center gap-1 font-mono font-bold text-[9.5px] text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded mt-1">
+                <span>📍 {order.rackNumber}</span>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     ...(isSuperAdmin
       ? [
@@ -331,22 +370,22 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             )
           )}
 
-          {/* WhatsApp Notification */}
-          <a
-            href={getWaLink(order)}
-            target="_blank"
-            rel="noreferrer"
-            className={`p-1.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition ${
-              isOrderOverdue(order)
-                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-                : order.status === "ready"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                : "bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200"
-            }`}
-            title="Kirim WhatsApp"
-          >
-            <WhatsAppIcon className="w-3.5 h-3.5" />
-          </a>
+          {/* WhatsApp Notification - Hanya dikirim saat status Siap Diambil */}
+          {order.status === "ready" && (
+            <a
+              href={getWaLink(order)}
+              target="_blank"
+              rel="noreferrer"
+              className={`p-1.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition ${
+                isOrderOverdue(order)
+                  ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+              }`}
+              title="Kirim Notifikasi Siap Diambil via WhatsApp"
+            >
+              <WhatsAppIcon className="w-3.5 h-3.5" />
+            </a>
+          )}
 
           {/* Batalkan atau Hapus Pesanan (Khusus Operasional Kasir) */}
           {!isSuperAdmin && (
@@ -517,6 +556,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               className="py-1.5 px-2.5 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
             >
               <option value="all">Semua Status</option>
+              <option value="late_sla">Telat SLA ⚠️</option>
               <option value="overdue">Menginap</option>
               <option value="process">Diproses</option>
               <option value="ready">Siap Diambil</option>

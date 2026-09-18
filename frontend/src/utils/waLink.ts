@@ -35,10 +35,10 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
   if (isOverdue) {
     // Skenario Pengingat Cucian Menginap (>3 Hari belum diambil)
     const daysCount = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000);
-    text = `Halo Kak ${custName}! 👋\n\nPengingat ramah dari *${outletName}* 🧺\nCucian Anda dengan No. Nota *${order.invoiceNo}* sudah selesai dan tersimpan di toko selama ${daysCount} hari.\n\n${itemsText}\n💰 *Status Bayar:* ${paymentText}${rackText}\n\nMohon pakaian dapat segera diambil ya Kak agar rak tidak menumpuk. Terima kasih banyak! 🙏`;
+    text = `Halo Kak ${custName}! 👋\n\nPengingat ramah dari *${outletName}* 🧺\nCucian Anda dengan No. Nota *${order.invoiceNo}* sudah selesai dan tersimpan di toko selama ${daysCount} hari.\n\n${itemsText}\n💰 *Status Bayar:* ${paymentText}${rackText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nMohon pakaian dapat segera diambil ya Kak agar rak tidak menumpuk. Terima kasih banyak! 🙏`;
   } else if (order.status === "ready") {
     // Skenario Cucian Siap Diambil
-    text = `Halo Kak ${custName}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💰 *Status Bayar:* ${paymentText}${rackText}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    text = `Halo Kak ${custName}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💰 *Status Bayar:* ${paymentText}${rackText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
   } else if (order.status === "completed") {
     // Skenario Selesai Diambil
     text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺✨\nPesanan No. Nota *${order.invoiceNo}* telah selesai diambil.\n\nSemoga pakaian selalu bersih, rapi, dan harum. Ditunggu kunjungan berikutnya ya Kak! 🙏`;
