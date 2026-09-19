@@ -13,18 +13,25 @@ import { ReportsTab } from "./components/tabs/ReportsTab";
 import { SettingsTab } from "./components/tabs/SettingsTab";
 import { OrderFormTab } from "./components/tabs/OrderFormTab";
 import { ServicesTab } from "./components/tabs/ServicesTab";
+import { SystemLogsTab } from "./components/tabs/SystemLogsTab";
 import { PublicTrackingPage } from "./components/tracking/PublicTrackingPage";
 import { LoginPage } from "./components/auth/LoginPage";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
 import { InactiveAccountModal } from "./components/modals/InactiveAccountModal";
+import { OpenShiftModal } from "./components/modals/OpenShiftModal";
+import { CloseShiftModal } from "./components/modals/CloseShiftModal";
+import { WhatsAppLogsModal } from "./components/modals/WhatsAppLogsModal";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
 import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
-import { getWaLink } from "./utils/waLink";
+import { useCashierShift } from "./hooks/useCashierShift";
+import { getWaLink, getWaMessageText } from "./utils/waLink";
 import { checkUserActiveStatus } from "./utils/subscriptionUtils";
+import { useToast } from "./components/common/ToastContext";
 
 export default function App() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -96,12 +103,34 @@ export default function App() {
     refreshUserSession,
   } = useAuthSession();
 
-  // Jika bukan Super Admin dan mencoba membuka tab khusus admin, kembalikan ke overview
+  // Route Guard berdasarkan 3 Role:
+  // 1. Super Admin: Platform SaaS & Troubleshooting Hub (overview, tenants, users, orders, logs, reports)
+  // 2. Staff: Khusus Operasional Kasir (orders, customers, create-order, edit-order)
+  // 3. Tenant Owner: Seluruh Operasional Toko miliknya (overview, orders, services, cashflow, customers, reports, settings)
   useEffect(() => {
-    if (currentUserRole !== "superadmin" && (activeTab === "tenants" || activeTab === "users")) {
-      setActiveTab("overview");
+    if (currentUserRole === "superadmin") {
+      const allowedAdminTabs: TabType[] = ["overview", "tenants", "users", "orders", "logs", "reports"];
+      if (!allowedAdminTabs.includes(activeTab)) {
+        setActiveTab("overview");
+      }
+    } else if (currentUserRole === "staff") {
+      const allowedStaffTabs: TabType[] = ["overview", "orders", "customers", "create-order", "edit-order"];
+      if (!allowedStaffTabs.includes(activeTab)) {
+        setActiveTab("overview");
+      }
+    } else {
+      // Tenant Owner tidak boleh membuka tab khusus Super Admin
+      if (activeTab === "tenants" || activeTab === "users" || activeTab === "logs") {
+        setActiveTab("overview");
+      }
     }
   }, [currentUserRole, activeTab]);
+
+  // Cashier Shift Composable & Modals
+  const cashierShift = useCashierShift(tenantId, currentUser?.id || null);
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [selectedOrderForWaLogs, setSelectedOrderForWaLogs] = useState<Order | null>(null);
 
   // Laundry Data & Operations Composable
   const {
@@ -137,6 +166,10 @@ export default function App() {
 
   // WhatsApp Gateway Composable (always target a valid tenant ID)
   const effectiveTenantId = tenantId === "all" ? (tenants[0]?.id || "tenant-01") : tenantId;
+  const currentActiveTenant = tenants.find((t) => t.id === effectiveTenantId) || tenants[0];
+  const isShiftEnabled =
+    currentActiveTenant?.enableCashierShift !== "false" &&
+    currentActiveTenant?.enableCashierShift !== false;
   const waGateway = useWhatsAppGateway(effectiveTenantId);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
@@ -181,6 +214,42 @@ export default function App() {
   };
 
   const getOrderWaLink = (order: Order) => getWaLink(order, tenants);
+
+  const handleSendDirectWa = async (order: Order): Promise<{ success: boolean; error?: string }> => {
+    if (!order.customer?.phone) {
+      toast.warning("Nomor WA Tidak Ditemukan", "Pelanggan ini tidak memiliki nomor telepon terdaftar.");
+      return { success: false, error: "Nomor telepon tidak ditemukan" };
+    }
+
+    const { text } = getWaMessageText(order, tenants);
+    const targetTenant = tenants.find((t) => t.id === order.tenantId) || tenants[0];
+
+    try {
+      const res = await waGateway.sendDirectMessage(order.customer.phone, text, {
+        orderId: order.id,
+        recipientName: order.customer?.name,
+      });
+
+      if (res.success) {
+        toast.success(
+          "WhatsApp Berhasil Terkirim!",
+          `Notifikasi dikirim via WhatsApp resmi ${targetTenant?.outletName || "toko"} ke ${order.customer?.name || "pelanggan"} (${order.customer?.phone}).`
+        );
+        fetchData();
+        return { success: true };
+      } else {
+        toast.error("Gagal Mengirim via WA Toko", res.error || "Membuka WhatsApp Web manual...");
+        const cleanPhone = order.customer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, "_blank");
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Pengiriman", err.message || "Beralih ke WhatsApp Web");
+      const cleanPhone = order.customer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, "_blank");
+      return { success: false, error: err.message };
+    }
+  };
 
   // Public tracking page view (takes priority over login / app shell)
   if (trackingInvoice !== null) {
@@ -269,11 +338,18 @@ export default function App() {
           currentUserRole={currentUserRole}
           currentUser={currentUser}
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
-          onRefresh={fetchData}
+          onRefresh={() => {
+            fetchData();
+            cashierShift.fetchActiveShift();
+          }}
           onLogout={handleLogout}
           loading={loading}
           waData={waGateway.waData}
           onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
+          currentShift={cashierShift.currentShift}
+          enableCashierShift={isShiftEnabled}
+          onOpenShiftModal={() => setShowOpenShiftModal(true)}
+          onCloseShiftModal={() => setShowCloseShiftModal(true)}
         />
 
         {/* Dynamic Tab Body */}
@@ -294,6 +370,11 @@ export default function App() {
                   users={users}
                   tenantId={tenantId}
                   currentUserRole={currentUserRole}
+                  currentUser={currentUser}
+                  currentShift={cashierShift.currentShift}
+                  enableCashierShift={isShiftEnabled}
+                  onOpenShiftModal={() => setShowOpenShiftModal(true)}
+                  onCloseShiftModal={() => setShowCloseShiftModal(true)}
                   onSelectTenant={(id) => handleSelectTenant(id, tenants)}
                   onOpenTenantModal={() => setShowTenantModal(true)}
                   onOpenUserModal={() => setShowUserModal(true)}
@@ -302,6 +383,8 @@ export default function App() {
                   onUpdateStatus={handleUpdateStatus}
                   getWaLink={getOrderWaLink}
                   setActiveTab={setActiveTab}
+                  waData={waGateway.waData}
+                  onSendDirectWa={handleSendDirectWa}
                 />
               )}
 
@@ -318,6 +401,9 @@ export default function App() {
                   onOpenEditOrderModal={handleOpenEditOrder}
                   onCancelOrder={handleCancelOrder}
                   onDeleteOrder={handleDeleteOrder}
+                  onOpenWaLogsModal={(order) => setSelectedOrderForWaLogs(order)}
+                  onSendDirectWa={handleSendDirectWa}
+                  isWaConnected={waGateway.waData?.status === "connected"}
                 />
               )}
 
@@ -362,7 +448,9 @@ export default function App() {
                   expenses={expenses}
                   orders={orders}
                   tenants={tenants}
+                  tenantId={tenantId}
                   currentUserRole={currentUserRole}
+                  enableCashierShift={isShiftEnabled}
                   onOpenExpenseModal={handleOpenExpenseModal}
                   onDeleteExpense={handleDeleteExpense}
                 />
@@ -403,6 +491,13 @@ export default function App() {
                 />
               )}
 
+              {activeTab === "logs" && currentUserRole === "superadmin" && (
+                <SystemLogsTab
+                  tenants={tenants}
+                  currentTenantId={tenantId}
+                />
+              )}
+
               {activeTab === "reports" && (
                 <ReportsTab
                   orders={orders}
@@ -411,12 +506,13 @@ export default function App() {
                   currentTenantId={tenantId}
                   customers={customers}
                   currentUserRole={currentUserRole}
+                  users={users}
                 />
               )}
 
               {activeTab === "settings" && (
                 <SettingsTab
-                  tenant={tenants.find((t) => t.id === tenantId) || tenants[0]}
+                  tenant={currentActiveTenant}
                   currentUser={currentUser}
                   onUpdateTenant={handleUpdateTenant}
                   onUpdateUser={async (id, data) => {
@@ -428,6 +524,7 @@ export default function App() {
                   }}
                   onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
                   waStatus={waGateway.waData?.status}
+                  setActiveTab={setActiveTab}
                 />
               )}
             </motion.div>
@@ -489,6 +586,45 @@ export default function App() {
         tenants={tenants}
         currentTenantId={effectiveTenantId}
         onSelectTenant={(id) => handleSelectTenant(id, tenants)}
+        currentUserRole={currentUserRole}
+        currentUser={currentUser}
+      />
+
+      {/* Cashier Shift: Buka Shift Modal */}
+      <OpenShiftModal
+        isOpen={showOpenShiftModal}
+        onClose={() => setShowOpenShiftModal(false)}
+        cashierName={currentUser.name || currentUser.email || "Kasir"}
+        onConfirmOpen={async (startingCash, notes) => {
+          const ok = await cashierShift.openShift(startingCash, notes);
+          if (ok) {
+            fetchData();
+          }
+          return ok;
+        }}
+      />
+
+      {/* Cashier Shift: Tutup Shift & Rekonsiliasi Kas Modal */}
+      <CloseShiftModal
+        isOpen={showCloseShiftModal}
+        onClose={() => setShowCloseShiftModal(false)}
+        currentShift={cashierShift.currentShift}
+        onConfirmClose={async (actualCashTotal, notes) => {
+          const res = await cashierShift.closeShift(actualCashTotal, notes);
+          if (res) {
+            fetchData();
+          }
+          return res;
+        }}
+      />
+
+      {/* WhatsApp Logs Audit Modal */}
+      <WhatsAppLogsModal
+        isOpen={!!selectedOrderForWaLogs}
+        onClose={() => setSelectedOrderForWaLogs(null)}
+        orderId={selectedOrderForWaLogs?.id}
+        invoiceNo={selectedOrderForWaLogs?.invoiceNo}
+        tenantId={selectedOrderForWaLogs?.tenantId || effectiveTenantId}
       />
     </div>
   );

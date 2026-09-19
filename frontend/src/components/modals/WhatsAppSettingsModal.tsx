@@ -17,7 +17,7 @@ import {
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 import { useConfirm } from "../common/ConfirmContext";
-import { Tenant } from "../../types";
+import { Tenant, Role, User } from "../../types";
 import { ModalWrapper } from "../common/ModalWrapper";
 
 interface WhatsAppSettingsModalProps {
@@ -33,6 +33,8 @@ interface WhatsAppSettingsModalProps {
   tenants?: Tenant[];
   currentTenantId?: string;
   onSelectTenant?: (tenantId: string) => void;
+  currentUserRole?: Role;
+  currentUser?: User | null;
 }
 
 export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
@@ -48,8 +50,11 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
   tenants = [],
   currentTenantId,
   onSelectTenant,
+  currentUserRole,
+  currentUser,
 }) => {
   const confirm = useConfirm();
+  const isStaff = currentUserRole === "staff";
 
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState(
@@ -93,9 +98,13 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
               <WhatsAppIcon className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-white">Pengaturan WhatsApp</h2>
+              <h2 className="font-bold text-sm text-white">
+                {isStaff ? "Status WhatsApp Toko" : "Pengaturan WhatsApp"}
+              </h2>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                Pilih metode pengiriman: Otomatis atau Manual
+                {isStaff
+                  ? "Akun WhatsApp Resmi Cabang (Dikelola oleh Pemilik Toko / Owner)"
+                  : "Pilih metode pengiriman: Otomatis atau Manual"}
               </p>
             </div>
           </div>
@@ -109,8 +118,25 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5 text-zinc-800 text-xs">
-          {/* Multi-Tenant Selector if more than 1 tenant exists */}
-          {tenants.length > 1 && onSelectTenant && (
+          {/* Staff Info Banner */}
+          {isStaff && (
+            <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-xl flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs text-emerald-950">
+                  WhatsApp Otomatis Menggunakan Akun Owner Toko
+                </h4>
+                <p className="text-[11px] text-emerald-800/90 mt-0.5 leading-relaxed">
+                  Sebagai <strong>Staff Kasir</strong> di <strong>{currentTenant?.outletName}</strong>, Anda otomatis menggunakan akun WhatsApp resmi outlet yang telah dihubungkan oleh Pemilik Toko ({currentTenant?.owner?.name || "Owner Cabang"}). Seluruh konfirmasi pesanan baru &amp; notifikasi cucian siap diambil yang Anda buat otomatis dikirimkan langsung dari nomor ini tanpa perlu menghubungkan WhatsApp pribadi.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Multi-Tenant Selector if more than 1 tenant exists and not staff */}
+          {!isStaff && tenants.length > 1 && onSelectTenant && (
             <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Store className="w-4 h-4 text-zinc-500 shrink-0" />
@@ -133,101 +159,103 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
             </div>
           )}
 
-          {/* 1. Mode Selector */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="font-bold text-zinc-900 block text-xs uppercase tracking-wider text-[11px]">
-                Metode Pengiriman:
-              </label>
-              <span className="text-[10px] text-zinc-400 font-medium">Dapat diubah sewaktu-waktu</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Option 1: Otomatis */}
-              <div
-                onClick={() => onUpdateMode("baileys")}
-                className={`p-3.5 rounded-xl border-2 cursor-pointer transition relative ${
-                  waData.waMode === "baileys"
-                    ? "border-emerald-600 bg-emerald-50/40 shadow-xs ring-1 ring-emerald-600"
-                    : "border-zinc-200 hover:border-zinc-300 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        waData.waMode === "baileys"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-zinc-100 text-zinc-600"
-                      }`}
-                    >
-                      <Bot className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <span className="font-bold text-zinc-900 block">Kirim Otomatis</span>
-                      <span className="text-[10px] text-emerald-700 font-semibold">Kirim Langsung</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {waData.waMode === "baileys" ? (
-                      <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-zinc-300" />
-                    )}
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-zinc-500 mt-2.5 leading-relaxed">
-                  Hubungkan nomor WhatsApp untuk mengirimkan notifikasi cucian selesai dan nota secara langsung.
-                </p>
+          {/* 1. Mode Selector (Hanya untuk Owner & Super Admin) */}
+          {!isStaff && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-zinc-900 block text-xs uppercase tracking-wider text-[11px]">
+                  Metode Pengiriman:
+                </label>
+                <span className="text-[10px] text-zinc-400 font-medium">Dapat diubah sewaktu-waktu</span>
               </div>
 
-              {/* Option 2: Manual */}
-              <div
-                onClick={() => onUpdateMode("manual")}
-                className={`p-3.5 rounded-xl border-2 cursor-pointer transition relative ${
-                  waData.waMode === "manual"
-                    ? "border-blue-700 bg-blue-50/40 shadow-xs ring-1 ring-blue-700"
-                    : "border-zinc-200 hover:border-zinc-300 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        waData.waMode === "manual"
-                          ? "bg-blue-800 text-white"
-                          : "bg-zinc-100 text-zinc-600"
-                      }`}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Option 1: Otomatis */}
+                <div
+                  onClick={() => onUpdateMode("baileys")}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition relative ${
+                    waData.waMode === "baileys"
+                      ? "border-emerald-600 bg-emerald-50/40 shadow-xs ring-1 ring-emerald-600"
+                      : "border-zinc-200 hover:border-zinc-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                          waData.waMode === "baileys"
+                            ? "bg-emerald-600 text-white"
+                            : "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        <Bot className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-zinc-900 block">Kirim Otomatis</span>
+                        <span className="text-[10px] text-emerald-700 font-semibold">Kirim Langsung</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-zinc-900 block">Kirim Manual</span>
-                      <span className="text-[10px] text-blue-700 font-semibold">Tautan Langsung</span>
+
+                    <div className="flex items-center gap-1">
+                      {waData.waMode === "baileys" ? (
+                        <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-zinc-300" />
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    {waData.waMode === "manual" ? (
-                      <div className="w-4 h-4 rounded-full bg-blue-800 text-white flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-zinc-300" />
-                    )}
-                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-2.5 leading-relaxed">
+                    Hubungkan nomor WhatsApp untuk mengirimkan notifikasi cucian selesai dan nota secara langsung.
+                  </p>
                 </div>
 
-                <p className="text-[11px] text-zinc-500 mt-2.5 leading-relaxed">
-                  Sistem membuka aplikasi WhatsApp dengan pesan nota yang terisi otomatis saat tombol diklik.
-                </p>
+                {/* Option 2: Manual */}
+                <div
+                  onClick={() => onUpdateMode("manual")}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition relative ${
+                    waData.waMode === "manual"
+                      ? "border-blue-700 bg-blue-50/40 shadow-xs ring-1 ring-blue-700"
+                      : "border-zinc-200 hover:border-zinc-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                          waData.waMode === "manual"
+                            ? "bg-blue-800 text-white"
+                            : "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-zinc-900 block">Kirim Manual</span>
+                        <span className="text-[10px] text-blue-700 font-semibold">Tautan Langsung</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {waData.waMode === "manual" ? (
+                        <div className="w-4 h-4 rounded-full bg-blue-800 text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-zinc-300" />
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-500 mt-2.5 leading-relaxed">
+                    Sistem membuka aplikasi WhatsApp dengan pesan nota yang terisi otomatis saat tombol diklik.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* 2. Connection Area */}
           {waData.waMode === "baileys" ? (
@@ -275,14 +303,16 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      onClick={handleDisconnectConfirm}
-                      disabled={loading}
-                      className="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
-                    >
-                      <Unlink className="w-3.5 h-3.5" />
-                      <span>Putuskan</span>
-                    </button>
+                    {!isStaff && (
+                      <button
+                        onClick={handleDisconnectConfirm}
+                        disabled={loading}
+                        className="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                      >
+                        <Unlink className="w-3.5 h-3.5" />
+                        <span>Putuskan</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Form Test Message */}
@@ -342,8 +372,23 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                 </div>
               )}
 
-              {/* State: WAITING FOR QR SCAN */}
-              {waData.status === "qrcode" && waData.qrCodeDataUrl && (
+              {/* Staff notice when not connected */}
+              {isStaff && waData.status !== "connected" && (
+                <div className="py-6 text-center space-y-3 bg-white p-5 rounded-xl border border-amber-200 shadow-2xs">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+                    <Store className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-zinc-900 text-xs">WhatsApp Toko Belum Terhubung</div>
+                    <p className="text-[11px] text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                      WhatsApp resmi <strong>{currentTenant?.outletName}</strong> belum dihubungkan oleh Pemilik Toko ({currentTenant?.owner?.name || "Owner Cabang"}). Silakan hubungi Owner untuk memindai QR Code WhatsApp melalui akun Owner.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* State: WAITING FOR QR SCAN (Khusus Owner / Admin) */}
+              {!isStaff && waData.status === "qrcode" && waData.qrCodeDataUrl && (
                 <div className="space-y-4 text-center py-2">
                   <div className="bg-white p-4 rounded-2xl border border-zinc-300 inline-block shadow-md">
                     <img
@@ -389,8 +434,8 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                 </div>
               )}
 
-              {/* State: CONNECTING (Without QR yet) */}
-              {waData.status === "connecting" && (
+              {/* State: CONNECTING (Khusus Owner / Admin) */}
+              {!isStaff && waData.status === "connecting" && (
                 <div className="py-8 text-center space-y-3">
                   <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
                   <div className="font-semibold text-zinc-800 text-xs">
@@ -400,8 +445,8 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                 </div>
               )}
 
-              {/* State: DISCONNECTED */}
-              {waData.status === "disconnected" && (
+              {/* State: DISCONNECTED (Khusus Owner / Admin) */}
+              {!isStaff && waData.status === "disconnected" && (
                 <div className="py-4 text-center space-y-3">
                   <div className="w-10 h-10 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
                     <QrCode className="w-5 h-5" />

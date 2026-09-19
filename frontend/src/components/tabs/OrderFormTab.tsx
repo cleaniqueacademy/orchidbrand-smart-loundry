@@ -9,6 +9,11 @@ import {
   Receipt,
   Lock,
   Clock,
+  Search,
+  X,
+  Banknote,
+  QrCode,
+  CreditCard,
 } from "lucide-react";
 import { Order, Customer, OrderStatus, PaymentStatus, OrderItem, LaundryService, Service } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -37,7 +42,6 @@ interface OrderFormTabProps {
     paymentStatus: string;
     paymentMethod: string;
     notes?: string;
-    rackNumber?: string;
     estimatedCompletionAt?: string;
   }) => Promise<void>;
   onSubmitEdit: (
@@ -54,7 +58,6 @@ interface OrderFormTabProps {
       paymentStatus: PaymentStatus;
       paymentMethod: string;
       notes?: string;
-      rackNumber?: string;
       estimatedCompletionAt?: string;
     }
   ) => Promise<void>;
@@ -134,6 +137,33 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerAddress, setNewCustomerAddress] = useState("");
 
+  // Searchable Customer State
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const customerDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+      c.phone.includes(customerSearchQuery) ||
+      (c.address && c.address.toLowerCase().includes(customerSearchQuery.toLowerCase()))
+  );
+
   const initialPreset = availableServices[0] || { ...DEFAULT_SERVICE_PRESETS[0], durationHours: 48 };
 
   // Order Items
@@ -154,7 +184,6 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("process");
   const [notes, setNotes] = useState("");
-  const [rackNumber, setRackNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Initialize data on edit or preselected customer
@@ -169,7 +198,6 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
         : (order.status || "process");
       setOrderStatus(initialStatus);
       setNotes(order.notes || "");
-      setRackNumber(order.rackNumber || "");
 
       if (order.estimatedCompletionAt) {
         try {
@@ -373,7 +401,6 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
           paymentStatus,
           paymentMethod,
           notes: notes.trim() || undefined,
-          rackNumber: rackNumber.trim() || undefined,
           estimatedCompletionAt: customEstimatedDate
             ? new Date(customEstimatedDate).toISOString()
             : undefined,
@@ -391,7 +418,6 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
           paymentStatus,
           paymentMethod,
           notes: notes.trim() || undefined,
-          rackNumber: rackNumber.trim() || undefined,
           estimatedCompletionAt: customEstimatedDate
             ? new Date(customEstimatedDate).toISOString()
             : undefined,
@@ -485,22 +511,128 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
               </div>
 
               {customerMode === "existing" ? (
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Pilih Pelanggan <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                    className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2.5 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
-                  >
-                    <option value="">-- Pilih dari daftar pelanggan --</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} - {c.phone}
-                      </option>
-                    ))}
-                  </select>
+                <div ref={customerDropdownRef} className="space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-zinc-700">
+                      Pilih Pelanggan <span className="text-rose-500">*</span>
+                    </label>
+                    {selectedCustomer && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerId("");
+                          setCustomerSearchQuery("");
+                          setIsCustomerDropdownOpen(true);
+                        }}
+                        className="text-xs text-blue-700 hover:text-blue-900 font-semibold hover:underline cursor-pointer"
+                      >
+                        Ganti Pelanggan
+                      </button>
+                    )}
+                  </div>
+
+                  {selectedCustomer ? (
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-sky-200 bg-sky-50/50">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold text-xs shrink-0 border border-sky-200">
+                          {selectedCustomer.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-zinc-900 truncate">
+                            {selectedCustomer.name}
+                          </div>
+                          <div className="text-[11px] text-zinc-500 font-mono mt-0.5 truncate">
+                            {selectedCustomer.phone} {selectedCustomer.address ? `• ${selectedCustomer.address}` : ""}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerId("");
+                          setCustomerSearchQuery("");
+                          setIsCustomerDropdownOpen(true);
+                        }}
+                        className="p-1.5 px-2.5 rounded-lg border border-sky-200 bg-white text-sky-700 hover:bg-sky-50 transition cursor-pointer text-xs font-semibold shrink-0 ml-2 shadow-2xs"
+                        title="Pilih pelanggan lain"
+                      >
+                        Ubah
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Ketik nama atau nomor telepon pelanggan..."
+                          value={customerSearchQuery}
+                          onChange={(e) => {
+                            setCustomerSearchQuery(e.target.value);
+                            setIsCustomerDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsCustomerDropdownOpen(true)}
+                          className="w-full text-sm border border-zinc-200 rounded-lg pl-9 pr-9 py-2.5 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
+                        />
+                        {customerSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setCustomerSearchQuery("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-1"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropdown Hasil Pencarian */}
+                      {isCustomerDropdownOpen && (
+                        <div className="absolute z-30 top-full left-0 right-0 mt-1.5 bg-white border border-zinc-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-zinc-100">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-zinc-500">
+                              <p>Tidak ada pelanggan dengan kata kunci "{customerSearchQuery}".</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCustomerMode("new");
+                                  setNewCustomerName(customerSearchQuery);
+                                  setIsCustomerDropdownOpen(false);
+                                }}
+                                className="mt-2 text-xs text-blue-700 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Daftarkan sebagai Pelanggan Baru
+                              </button>
+                            </div>
+                          ) : (
+                            filteredCustomers.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setCustomerId(c.id);
+                                  setCustomerSearchQuery("");
+                                  setIsCustomerDropdownOpen(false);
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 hover:bg-sky-50/60 transition flex items-center justify-between gap-3 group cursor-pointer"
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-xs font-semibold text-zinc-900 group-hover:text-blue-900">
+                                    {c.name}
+                                  </div>
+                                  <div className="text-[11px] text-zinc-500 font-mono mt-0.5 truncate">
+                                    {c.phone} {c.address ? `• ${c.address}` : ""}
+                                  </div>
+                                </div>
+                                <span className="text-[11px] text-sky-700 bg-sky-50 px-2 py-0.5 rounded font-semibold shrink-0 group-hover:bg-sky-100">
+                                  Pilih
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -676,49 +808,35 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="w-full py-2.5 border-2 border-dashed border-zinc-300 hover:border-zinc-900 hover:bg-zinc-50 rounded-xl text-xs font-bold text-zinc-700 hover:text-zinc-900 flex items-center justify-center gap-2 transition cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-dashed border-zinc-300 hover:border-zinc-500 hover:bg-zinc-50 text-zinc-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>+ Tambah Item</span>
+                <Plus className="w-4 h-4 text-zinc-600" />
+                <span>Tambah Item</span>
               </button>
             </div>
 
-            {/* Card 3: Catatan & Nomor Rak */}
+            {/* Card 3: Catatan */}
             <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-zinc-900 pb-2 border-b border-zinc-100">
                 Informasi Tambahan
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Catatan Pesanan
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Instruksi khusus cucian..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Nomor Rak
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Rak A-03 / Keranjang 2"
-                    value={rackNumber}
-                    onChange={(e) => setRackNumber(e.target.value)}
-                    className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                  Catatan Pesanan
+                </label>
+                <input
+                  type="text"
+                  placeholder="Instruksi khusus cucian..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2.5 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition"
+                />
               </div>
             </div>
           </div>
 
           {/* Right Column: Ringkasan & Pembayaran (4 cols) */}
-          <div className="lg:col-span-4 space-y-6 sticky top-6">
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
             <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs space-y-5">
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
                 <Receipt className="w-4 h-4 text-zinc-700" />
@@ -788,15 +906,44 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
                 <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
                   Metode Bayar
                 </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full text-xs font-semibold border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none"
-                >
-                  <option value="cash">Tunai</option>
-                  <option value="qris">QRIS</option>
-                  <option value="transfer">Transfer Bank</option>
-                </select>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      paymentMethod === "cash"
+                        ? "bg-sky-50 text-sky-900 border-sky-400 shadow-xs"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <Banknote className="w-3.5 h-3.5" />
+                    <span>Tunai</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("qris")}
+                    className={`py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      paymentMethod === "qris"
+                        ? "bg-sky-50 text-sky-900 border-sky-400 shadow-xs"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>QRIS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("transfer")}
+                    className={`py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      paymentMethod === "transfer"
+                        ? "bg-sky-50 text-sky-900 border-sky-400 shadow-xs"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Transfer</span>
+                  </button>
+                </div>
               </div>
 
               {/* Target Estimasi Selesai (SLA) */}

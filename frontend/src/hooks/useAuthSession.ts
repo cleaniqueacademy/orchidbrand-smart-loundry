@@ -45,7 +45,7 @@ export function useAuthSession() {
       const saved = localStorage.getItem(AUTH_KEY);
       if (saved) {
         const u = JSON.parse(saved);
-        if (u && u.role === "tenant_owner" && u.tenantId) {
+        if (u && (u.role === "tenant_owner" || u.role === "staff") && u.tenantId) {
           return u.tenantId;
         }
         if (u && u.role === "superadmin") {
@@ -65,7 +65,7 @@ export function useAuthSession() {
     toast.success("Login Berhasil", `Selamat datang kembali, ${user.name}!`);
     setCurrentUser(user);
     setCurrentUserRole(user.role);
-    if (user.role === "tenant_owner" && user.tenantId) {
+    if ((user.role === "tenant_owner" || user.role === "staff") && user.tenantId) {
       setTenantId(user.tenantId);
     } else if (user.role === "superadmin") {
       setTenantId("all");
@@ -106,6 +106,10 @@ export function useAuthSession() {
   const handleSelectTenant = (id: string, _tenants: Tenant[]) => {
     if (currentUserRole === "superadmin") {
       setTenantId("all");
+      return;
+    }
+    if (currentUserRole === "staff") {
+      // Staff locked to assigned branch
       return;
     }
     setTenantId(id);

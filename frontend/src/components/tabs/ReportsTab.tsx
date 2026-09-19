@@ -7,6 +7,8 @@ import { ReportMetricsCards } from "./reports/ReportMetricsCards";
 import { ReportAnalyticsPanels } from "./reports/ReportAnalyticsPanels";
 import { ReportLedgerTable } from "./reports/ReportLedgerTable";
 import { PrintPreviewModal } from "./reports/PrintPreviewModal";
+import { SuperAdminPlatformReport } from "./reports/SuperAdminPlatformReport";
+import { User } from "../../types";
 
 interface ReportsTabProps {
   orders: Order[];
@@ -15,17 +17,18 @@ interface ReportsTabProps {
   currentTenantId: string;
   customers: Customer[];
   currentUserRole?: Role;
+  users?: User[];
 }
 
-export const ReportsTab: React.FC<ReportsTabProps> = ({
+const TenantStoreReport: React.FC<ReportsTabProps> = ({
   orders,
   expenses,
   tenants,
   currentTenantId,
   currentUserRole = "staff",
 }) => {
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const isSuperAdmin = currentUserRole === "superadmin";
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const {
     activeTenant,
@@ -216,3 +219,17 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({
     </div>
   );
 };
+
+export const ReportsTab: React.FC<ReportsTabProps> = (props) => {
+  if (props.currentUserRole === "superadmin") {
+    return (
+      <SuperAdminPlatformReport
+        tenants={props.tenants}
+        users={props.users || []}
+        orders={props.orders}
+      />
+    );
+  }
+  return <TenantStoreReport {...props} />;
+};
+

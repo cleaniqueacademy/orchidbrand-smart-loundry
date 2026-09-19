@@ -40,21 +40,36 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
     {
       id: "outlet",
       header: "Cabang",
-      cell: (t) => (
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
-            <Store className="w-4 h-4 text-zinc-700" />
+      className: "min-w-[170px]",
+      cell: (t) => {
+        const parts = t.outletName.includes(" - ")
+          ? t.outletName.split(" - ")
+          : ["Orchid Laundry", t.outletName];
+        const brandName = parts[0];
+        const branchName = parts.slice(1).join(" - ") || t.outletName;
+
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-sky-50 border border-sky-200/80 text-sky-700 flex items-center justify-center shrink-0 shadow-2xs">
+              <Store className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-zinc-900 text-xs tracking-tight whitespace-nowrap" title={t.outletName}>
+                {branchName}
+              </div>
+              <div className="font-mono text-[10px] text-zinc-400 mt-0.5 flex items-center gap-1.5 whitespace-nowrap">
+                <span className="bg-zinc-100 px-1.5 py-0.2 rounded text-zinc-600 font-semibold">{t.id}</span>
+                <span className="text-zinc-400">• {brandName}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-zinc-900 text-xs">{t.outletName}</div>
-            <div className="font-mono text-[10px] text-zinc-400 mt-0.5">{t.id}</div>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: "owner",
       header: "Pemilik",
+      className: "min-w-[140px]",
       cell: (t) => {
         const ownerUser = users?.find(
           (u) =>
@@ -64,13 +79,13 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
             (u.tenantId === t.id && u.role === "tenant_owner")
         );
         return (
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="font-semibold text-zinc-900 text-xs">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="min-w-0">
+              <div className="font-semibold text-zinc-900 text-xs whitespace-nowrap">
                 {t.owner?.name || ownerUser?.name || "Budi Santoso"}
               </div>
-              <div className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5 font-mono">
-                <Mail className="w-2.5 h-2.5" />
+              <div className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5 font-mono whitespace-nowrap">
+                <Mail className="w-2.5 h-2.5 text-zinc-400 shrink-0" />
                 <span>{t.owner?.email || ownerUser?.email || "—"}</span>
               </div>
             </div>
@@ -78,7 +93,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setUserToReset(ownerUser)}
-                className="p-1 rounded-lg border border-zinc-200 text-zinc-400 hover:text-blue-700 hover:bg-blue-50 transition cursor-pointer shrink-0"
+                className="p-1 rounded-md border border-zinc-200 text-zinc-400 hover:text-blue-700 hover:bg-blue-50 transition cursor-pointer shrink-0"
                 title={`Reset Password ${ownerUser.name}`}
               >
                 <KeyRound className="w-3 h-3" />
@@ -91,25 +106,29 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
     {
       id: "contact",
       header: "Kontak",
+      className: "min-w-[150px]",
       cell: (t) => (
-        <div>
-          <div className="text-zinc-800 text-xs font-mono flex items-center gap-1">
-            <Phone className="w-2.5 h-2.5 text-zinc-400" />
+        <div className="min-w-0">
+          <div className="text-zinc-800 text-xs font-mono font-semibold flex items-center gap-1.5 whitespace-nowrap">
+            <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
             <span>{t.phone}</span>
           </div>
-          <div className="text-[10px] text-zinc-400 truncate max-w-xs mt-0.5">{t.address}</div>
+          <div className="text-[11px] text-zinc-500 truncate max-w-[150px] mt-0.5" title={t.address}>
+            {t.address}
+          </div>
         </div>
       ),
     },
     {
       id: "status",
       header: "Status",
-      className: "whitespace-nowrap min-w-[110px]",
+      align: "center",
+      className: "w-[80px] whitespace-nowrap",
       cell: (t) => {
         const isActive = (t.status || "active") === "active";
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 select-none ${
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 select-none ${
               isActive
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : "bg-rose-50 text-rose-800 border-rose-200"
@@ -128,7 +147,8 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
     {
       id: "subscription",
       header: "Masa Aktif",
-      className: "whitespace-nowrap min-w-[175px]",
+      align: "center",
+      className: "w-[105px] whitespace-nowrap",
       cell: (t) => {
         const dateStr = t.subscriptionUntil || "2026-12-31";
         const expDate = new Date(dateStr);
@@ -138,7 +158,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         const isExpired = diffDays < 0;
 
         return (
-          <div className="flex items-center gap-2 whitespace-nowrap">
+          <div className="flex flex-col items-center justify-center">
             <span className="font-mono text-xs font-semibold text-zinc-900">
               {new Intl.DateTimeFormat("id-ID", {
                 day: "numeric",
@@ -146,33 +166,39 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
                 year: "numeric",
               }).format(expDate)}
             </span>
-            <span className="shrink-0">
+            <div className="mt-0.5">
               {isExpired ? (
-                <span className="inline-flex items-center text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
+                <span className="inline-flex items-center text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
                   Kedaluwarsa
                 </span>
               ) : (
-                <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap shrink-0">
+                <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                   {diffDays} hari lagi
                 </span>
               )}
-            </span>
+            </div>
           </div>
         );
       },
     },
     {
       id: "orders",
-      header: "Total Pesanan",
+      header: "Pesanan",
+      align: "center",
+      className: "w-[75px] whitespace-nowrap",
       cell: (t) => (
-        <span className="font-semibold text-zinc-800 text-xs">{t.totalOrders} order</span>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-900 border border-sky-200/80">
+          {t.totalOrders || 0} order
+        </span>
       ),
     },
     {
       id: "omset",
-      header: "Total Omset",
+      header: "Omset",
+      align: "right",
+      className: "w-[100px] whitespace-nowrap text-right",
       cell: (t) => (
-        <span className="font-bold text-zinc-900 text-xs whitespace-nowrap">
+        <span className="font-bold text-emerald-700 text-xs whitespace-nowrap">
           Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
         </span>
       ),

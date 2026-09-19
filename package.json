@@ -11,6 +11,8 @@
     "dev:frontend": "bun --filter orchidbrand-frontend dev",
     "build": "bun --filter '*' build",
     "db:push": "bun --filter orchidbrand-backend db:push",
+    "db:push:force": "bun --filter orchidbrand-backend db:push:force",
+    "db:seed": "bun --filter orchidbrand-backend db:seed",
     "docker:db": "docker compose up -d postgres",
     "docker:db:down": "docker compose stop postgres",
     "docker:up": "docker compose --profile full-stack up --build -d",

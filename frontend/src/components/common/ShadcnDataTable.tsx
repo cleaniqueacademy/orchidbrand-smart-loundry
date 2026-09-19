@@ -196,7 +196,7 @@ export function ShadcnDataTable<T>({
                 {activeColumns.map((col) => (
                   <th
                     key={col.id}
-                    className={`py-3 px-4 whitespace-nowrap ${
+                    className={`py-3 px-3.5 whitespace-nowrap ${
                       col.align === "right"
                         ? "text-right"
                         : col.align === "center"
@@ -228,7 +228,7 @@ export function ShadcnDataTable<T>({
                     {activeColumns.map((col) => (
                       <td
                         key={col.id}
-                        className={`py-3 px-4 align-middle ${
+                        className={`py-3 px-3.5 align-middle ${
                           col.align === "right"
                             ? "text-right"
                             : col.align === "center"

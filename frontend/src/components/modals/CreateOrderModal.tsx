@@ -24,7 +24,6 @@ interface CreateOrderModalProps {
     paymentStatus: string;
     paymentMethod: string;
     notes?: string;
-    rackNumber?: string;
   }) => Promise<void>;
 }
 
@@ -51,7 +50,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
-  const [rackNumber, setRackNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -129,7 +127,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         paymentStatus,
         paymentMethod,
         notes,
-        rackNumber: rackNumber.trim() || undefined,
       });
 
       // Reset form states
@@ -137,7 +134,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       setNewCustomerPhone("");
       setNewCustomerAddress("");
       setNotes("");
-      setRackNumber("");
       onClose();
     } finally {
       setSubmitting(false);
@@ -400,19 +396,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 placeholder="Contoh: jangan campur putih"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                <span>No. Rak / Keranjang</span>
-                <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Cegah Tertukar</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Rak B-03 / Keranjang 4"
-                value={rackNumber}
-                onChange={(e) => setRackNumber(e.target.value)}
                 className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium"
               />
             </div>

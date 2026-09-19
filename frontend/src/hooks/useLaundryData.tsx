@@ -201,7 +201,6 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     paymentStatus: string;
     paymentMethod: string;
     notes?: string;
-    rackNumber?: string;
     estimatedCompletionAt?: string;
   }) => {
     const totalAmount =
@@ -223,9 +222,12 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       const data = await res.json();
       if (data.success) {
         fetchData();
+        const waNote = data.waData?.autoSent
+          ? " • Notifikasi WA nota digital otomatis terkirim!"
+          : "";
         toast.success(
           "Pesanan Berhasil Dibuat",
-          `Nota ${data.data?.invoiceNo || ""} sebesar Rp ${totalAmount.toLocaleString("id-ID")} telah tercatat.`
+          `Nota ${data.data?.invoiceNo || ""} sebesar Rp ${totalAmount.toLocaleString("id-ID")} telah tercatat.${waNote}`
         );
       } else {
         toast.error("Gagal Membuat Order", data.message || "Terjadi kesalahan pada server");

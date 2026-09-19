@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Tag,
+  Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TabType, Role, Tenant, User } from "../../types";
@@ -137,28 +138,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isSuperAdmin = currentUserRole === "superadmin";
+  const isStaff = currentUserRole === "staff";
 
-  // Menu Super Admin: maksimal 2 kata per label
-  const adminSystemNav = [
+  // Menu Super Admin: Platform SaaS + Audit & Troubleshooting Data
+  const superAdminNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Building2 },
     { id: "tenants" as TabType, label: "Cabang", icon: Store },
     { id: "users" as TabType, label: "Pengguna", icon: ShieldCheck },
+    { id: "orders" as TabType, label: "Data Order", icon: ShoppingBag },
+    { id: "logs" as TabType, label: "Data Log", icon: Activity },
+    { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
   ];
 
-  const adminDataNav = [
-    { id: "orders" as TabType,
-      label: "Pesanan",
+  // Menu Staff: Meja Kerja Kasir & Operasional
+  const staffNav = [
+    { id: "overview" as TabType, label: "Dashboard", icon: Sparkles },
+    {
+      id: "orders" as TabType,
+      label: "Kasir",
       icon: ShoppingBag,
       count: activeOrdersCount > 0 ? activeOrdersCount : undefined,
       highlight: readyOrdersCount > 0 ? readyOrdersCount : undefined,
     },
-    { id: "services" as TabType, label: "Layanan", icon: Tag },
-    { id: "cashflow" as TabType, label: "Arus Kas", icon: DollarSign },
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
-    { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
   ];
 
-  // Menu Tenant Owner / Staff: maksimal 2 kata per label
+  // Menu Tenant Owner: Operasional Lengkap
   const tenantOperationalNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Sparkles },
     {
@@ -314,75 +319,75 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Content */}
         <div className={`flex-1 ${isCollapsed ? "px-2" : "px-3"} py-3 overflow-y-auto space-y-4`}>
           {isSuperAdmin ? (
-            <>
-              {/* Grup 1: Manajemen Sistem */}
-              <div>
-                {isCollapsed ? (
-                  <div className="h-px bg-zinc-100 my-2 mx-1" />
-                ) : (
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                    Manajemen Sistem
-                  </div>
-                )}
-                {renderNavButtons(adminSystemNav)}
-              </div>
-
-              {/* Grup 2: Data Jaringan */}
-              <div>
-                {isCollapsed ? (
-                  <div className="h-px bg-zinc-100 my-2 mx-1" />
-                ) : (
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                    Data Jaringan
-                  </div>
-                )}
-                {renderNavButtons(adminDataNav)}
-              </div>
-            </>
-          ) : (
-            /* Grup Operasional untuk Tenant */
+            /* Grup Manajemen Platform SaaS untuk Super Admin */
+            <div>
+              {isCollapsed ? (
+                <div className="h-px bg-zinc-100 my-2 mx-1" />
+              ) : (
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-900/70 px-3 mb-1.5">
+                  Platform SaaS
+                </div>
+              )}
+              {renderNavButtons(superAdminNav)}
+            </div>
+          ) : isStaff ? (
+            /* Grup Operasional untuk Staff */
             <div>
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />
               ) : (
                 <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                  Operasional
+                  Operasional Kasir
+                </div>
+              )}
+              {renderNavButtons(staffNav)}
+            </div>
+          ) : (
+            /* Grup Operasional untuk Tenant Owner */
+            <div>
+              {isCollapsed ? (
+                <div className="h-px bg-zinc-100 my-2 mx-1" />
+              ) : (
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
+                  Operasional Toko
                 </div>
               )}
               {renderNavButtons(tenantOperationalNav)}
             </div>
           )}
 
-          {/* Grup Notifikasi / Integrasi */}
-          <div>
-            {isCollapsed ? (
-              <div className="h-px bg-zinc-100 my-2 mx-1" />
-            ) : (
-              <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                Integrasi
-              </div>
-            )}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              type="button"
-              id="sidebar-btn-whatsapp-settings"
-              onClick={() => {
-                if (onOpenWhatsAppModal) {
-                  onOpenWhatsAppModal();
-                  onClose();
-                }
-              }}
-              className={`w-full group flex items-center ${
-                isCollapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2"
-              } rounded-xl text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-transparent hover:border-emerald-200 transition-colors shadow-2xs cursor-pointer`}
-              title="Pengaturan WhatsApp"
-            >
-              <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              {!isCollapsed && <span className="truncate">Pengaturan WhatsApp</span>}
-            </motion.button>
-          </div>
+          {/* Grup Notifikasi / Integrasi (Khusus Tenant Owner) */}
+          {!isStaff && !isSuperAdmin && (
+            <div>
+              {isCollapsed ? (
+                <div className="h-px bg-zinc-100 my-2 mx-1" />
+              ) : (
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
+                  Integrasi
+                </div>
+              )}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                type="button"
+                id="sidebar-btn-whatsapp-settings"
+                onClick={() => {
+                  if (onOpenWhatsAppModal) {
+                    onOpenWhatsAppModal();
+                    onClose();
+                  }
+                }}
+                className={`w-full group flex items-center ${
+                  isCollapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2"
+                } rounded-xl text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-transparent hover:border-emerald-200 transition-colors shadow-2xs cursor-pointer`}
+                title="Pengaturan WhatsApp"
+              >
+                <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                {!isCollapsed && <span className="truncate">Pengaturan WhatsApp</span>}
+              </motion.button>
+            </div>
+          )}
         </div>
 
         {/* Bottom User Profile */}
@@ -437,7 +442,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
                     <span className="font-semibold text-blue-950">
-                      {isSuperAdmin ? "Super Admin" : "Tenant Owner"}
+                      {isSuperAdmin ? "Super Admin" : isStaff ? "Staff" : "Tenant Owner"}
                     </span>
                     <span>·</span>
                     <span className="text-emerald-700 font-medium">Aktif</span>

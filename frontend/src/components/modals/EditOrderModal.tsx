@@ -22,7 +22,6 @@ interface EditOrderModalProps {
       paymentStatus: PaymentStatus;
       paymentMethod: string;
       notes?: string;
-      rackNumber?: string;
     }
   ) => Promise<void>;
 }
@@ -46,7 +45,6 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("unpaid");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
-  const [rackNumber, setRackNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -62,7 +60,6 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
       setPaymentStatus(order.paymentStatus);
       setPaymentMethod(order.paymentMethod || "cash");
       setNotes(order.notes || "");
-      setRackNumber(order.rackNumber || "");
     }
   }, [order]);
 
@@ -122,7 +119,6 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
         paymentStatus,
         paymentMethod,
         notes,
-        rackNumber: rackNumber.trim() || undefined,
       });
       onClose();
     } finally {
@@ -353,33 +349,18 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
             </div>
           </div>
 
-          {/* Catatan Khusus & No. Rak */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Catatan / Instruksi Khusus
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Jangan campur baju putih..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                <span>No. Rak / Keranjang</span>
-                <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Lokasi Simpan</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Rak B-03 / Keranjang 4"
-                value={rackNumber}
-                onChange={(e) => setRackNumber(e.target.value)}
-                className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
-              />
-            </div>
+          {/* Catatan Khusus */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">
+              Catatan Order (Opsional)
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: jangan campur putih"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-medium"
+            />
           </div>
 
           {/* Action Buttons */}

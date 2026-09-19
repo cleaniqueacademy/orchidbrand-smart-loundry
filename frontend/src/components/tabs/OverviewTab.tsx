@@ -1,7 +1,9 @@
 import React from "react";
-import { CashflowStats, Order, TabType, Tenant, User, Role } from "../../types";
+import { CashflowStats, Order, TabType, Tenant, User, Role, CashierShift } from "../../types";
 import { AdminOverviewTab } from "./overview/AdminOverviewTab";
 import { TenantOverviewTab } from "./overview/TenantOverviewTab";
+import { StaffOverviewTab } from "./overview/StaffOverviewTab";
+import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 
 interface OverviewTabProps {
   stats: CashflowStats;
@@ -10,6 +12,11 @@ interface OverviewTabProps {
   users?: User[];
   tenantId: string;
   currentUserRole: Role;
+  currentUser?: User | null;
+  currentShift?: CashierShift | null;
+  enableCashierShift?: boolean;
+  onOpenShiftModal?: () => void;
+  onCloseShiftModal?: () => void;
   onSelectTenant: (id: string) => void;
   onOpenTenantModal: () => void;
   onOpenUserModal: () => void;
@@ -18,6 +25,8 @@ interface OverviewTabProps {
   onUpdateStatus: (orderId: string, status: string) => void;
   getWaLink: (order: Order) => string;
   setActiveTab: (tab: TabType) => void;
+  waData?: WAStatusData;
+  onSendDirectWa?: (order: Order) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -27,6 +36,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   users = [],
   tenantId,
   currentUserRole,
+  currentUser,
+  currentShift,
+  enableCashierShift = true,
+  onOpenShiftModal,
+  onCloseShiftModal,
   onSelectTenant,
   onOpenTenantModal,
   onOpenUserModal,
@@ -35,8 +49,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onUpdateStatus,
   getWaLink,
   setActiveTab,
+  waData,
+  onSendDirectWa,
 }) => {
-  // If user is Super Admin, always show the Master Platform Dashboard
+  // 1. Super Admin: Platform SaaS HQ Dashboard
   if (currentUserRole === "superadmin") {
     return (
       <AdminOverviewTab
@@ -44,6 +60,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         orders={orders}
         tenants={tenants}
         users={users}
+        onSelectTenant={onSelectTenant}
         onOpenTenantModal={onOpenTenantModal}
         onOpenUserModal={onOpenUserModal}
         setActiveTab={setActiveTab}
@@ -51,7 +68,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     );
   }
 
-  // Otherwise, show the Branch Operational POS Dashboard for Tenant Owner & Staff
+  // 2. Staff: Meja Kerja Kasir & Antrean Operasional Cuci
+  if (currentUserRole === "staff") {
+    const activeTenant =
+      tenants.find((t) => t.id === tenantId) ||
+      tenants[0];
+
+    return (
+      <StaffOverviewTab
+        orders={orders}
+        tenant={activeTenant}
+        currentUser={currentUser}
+        currentShift={currentShift}
+        enableCashierShift={enableCashierShift}
+        onOpenShiftModal={onOpenShiftModal}
+        onCloseShiftModal={onCloseShiftModal}
+        onOpenOrderModal={onOpenOrderModal}
+        onUpdateStatus={onUpdateStatus}
+        getWaLink={getWaLink}
+        setActiveTab={setActiveTab}
+        onSendDirectWa={onSendDirectWa}
+        isWaConnected={waData?.status === "connected"}
+      />
+    );
+  }
+
+  // 3. Tenant Owner: Dashboard Bisnis, Keuangan, & Pengawasan Kas Laci Cabang
   return (
     <TenantOverviewTab
       stats={stats}
@@ -59,11 +101,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       tenants={tenants}
       tenantId={tenantId}
       currentUserRole={currentUserRole}
+      currentUser={currentUser}
+      currentShift={currentShift}
+      enableCashierShift={enableCashierShift}
+      onOpenShiftModal={onOpenShiftModal}
+      onCloseShiftModal={onCloseShiftModal}
       onOpenOrderModal={onOpenOrderModal}
       onOpenExpenseModal={onOpenExpenseModal}
       onUpdateStatus={onUpdateStatus}
       getWaLink={getWaLink}
       setActiveTab={setActiveTab}
+      waData={waData}
+      onSendDirectWa={onSendDirectWa}
     />
   );
 };

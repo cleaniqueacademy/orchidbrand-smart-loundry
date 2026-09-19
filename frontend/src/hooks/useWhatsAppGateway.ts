@@ -140,13 +140,14 @@ export function useWhatsAppGateway(tenantId: string) {
   // Send Direct Message (used by Receipt, Orders, etc.)
   const sendDirectMessage = async (
     phone: string,
-    message: string
+    message: string,
+    meta?: { orderId?: string; recipientName?: string }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch(`${API_BASE}/whatsapp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId, phone, message }),
+        body: JSON.stringify({ tenantId, phone, message, ...meta }),
       });
       const json = await res.json();
       if (json.success) {

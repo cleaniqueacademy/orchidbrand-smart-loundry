@@ -150,6 +150,11 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
         id: sock.user?.id ? sock.user.id.split(":")[0] : "",
         name: sock.user?.name || "Orchid WhatsApp Gateway",
       };
+      try {
+        await db.update(tenants).set({ waMode: "baileys" }).where(eq(tenants.id, tenantId));
+      } catch (err) {
+        console.warn("[Baileys WA] Failed to auto-update waMode in DB:", err);
+      }
       console.log(`✅ [Baileys WA] WhatsApp connected for tenant: ${tenantId} (${session!.connectedUser.id})`);
     }
 
@@ -261,11 +266,14 @@ export async function sendWhatsAppMessage(
 
 export async function autoRestoreSavedSessions() {
   try {
-    const allTenants = await db.select().from(tenants).where(eq(tenants.waMode, "baileys"));
+    const allTenants = await db.select().from(tenants);
     for (const t of allTenants) {
       const dir = getSessionDir(t.id);
       if (fs.existsSync(path.join(dir, "creds.json"))) {
         console.log(`[Baileys WA] Auto-restoring session for tenant: ${t.id} (${t.outletName})`);
+        try {
+          await db.update(tenants).set({ waMode: "baileys" }).where(eq(tenants.id, t.id));
+        } catch {}
         initWhatsAppSession(t.id).catch((err) => {
           console.error(`[Baileys WA] Failed to auto-restore session for ${t.id}:`, err);
         });

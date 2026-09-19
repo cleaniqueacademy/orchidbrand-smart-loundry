@@ -60,6 +60,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     customers.length > 0 ? customers[0].id : ""
   );
+  const [mobileSelectedView, setMobileSelectedView] = useState<"list" | "detail">("list");
   const [orderPage, setOrderPage] = useState(1);
   const [orderPageSize, setOrderPageSize] = useState(5);
   const [custPage, setCustPage] = useState(1);
@@ -383,7 +384,11 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       {/* Split Panel Layout (Left: 4 cols, Right: 8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* PANEL KIRI: Daftar Pelanggan (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col h-[680px] overflow-hidden">
+        <div
+          className={`${
+            mobileSelectedView === "detail" ? "hidden lg:flex" : "flex"
+          } lg:col-span-4 bg-white rounded-xl border border-zinc-200 shadow-sm flex-col h-auto lg:h-[680px] overflow-hidden w-full`}
+        >
           {/* Search Box */}
           <div className="p-3 border-b border-zinc-200 bg-zinc-50/60">
             <div className="relative">
@@ -416,7 +421,10 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                 return (
                   <button
                     key={cust.id}
-                    onClick={() => setSelectedCustomerId(cust.id)}
+                    onClick={() => {
+                      setSelectedCustomerId(cust.id);
+                      setMobileSelectedView("detail");
+                    }}
                     className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-3 cursor-pointer ${
                       isSelected
                         ? "bg-blue-50 border border-blue-200/80 shadow-xs"
@@ -517,9 +525,21 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         </div>
 
         {/* PANEL KANAN: Detail Pelanggan Terpilih (8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-xl border border-zinc-200 shadow-sm p-5 sm:p-6 min-h-[680px] flex flex-col justify-between">
+        <div
+          className={`${
+            mobileSelectedView === "list" ? "hidden lg:flex" : "flex"
+          } lg:col-span-8 bg-white rounded-xl border border-zinc-200 shadow-sm p-4 sm:p-6 min-h-0 lg:min-h-[680px] flex-col justify-between w-full`}
+        >
           {!selectedCustomer ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 text-zinc-400">
+              <button
+                type="button"
+                onClick={() => setMobileSelectedView("list")}
+                className="lg:hidden inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-xl mb-4 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Pilih Pelanggan dari Daftar</span>
+              </button>
               <User className="w-12 h-12 text-zinc-200 mb-3" />
               <div className="font-bold text-zinc-800 text-sm">Pilih Pelanggan</div>
               <p className="text-xs text-zinc-400 mt-1 max-w-sm">
@@ -528,6 +548,19 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
             </div>
           ) : (
             <div className="space-y-5">
+              {/* Mobile Back Button to Customer List */}
+              <div className="lg:hidden pb-3 border-b border-zinc-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setMobileSelectedView("list")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Daftar Pelanggan</span>
+                </button>
+                <span className="text-[11px] text-zinc-400 font-medium">Detail Pelanggan</span>
+              </div>
+
               {/* Header Info Pelanggan & Action Buttons */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
                 <div className="flex items-center gap-3 min-w-0">
@@ -567,7 +600,10 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                   </button>
 
                   <button
-                    onClick={() => onDeleteCustomer(selectedCustomer.id)}
+                    onClick={() => {
+                      onDeleteCustomer(selectedCustomer.id);
+                      setMobileSelectedView("list");
+                    }}
                     className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition shadow-xs cursor-pointer"
                     title="Hapus"
                   >

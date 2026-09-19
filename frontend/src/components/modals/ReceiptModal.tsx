@@ -131,7 +131,6 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
       order.paymentStatus === "paid"
         ? `✅ LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
         : `⚠️ BELUM LUNAS (Rp ${order.totalAmount.toLocaleString("id-ID")})`;
-    const rackText = order.rackNumber ? `\n📍 *Lokasi Rak/Keranjang:* ${order.rackNumber}` : "";
 
     const itemsSummary =
       order.items && order.items.length > 0
@@ -144,7 +143,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
             .join("\n")
         : `🧺 *Layanan:* ${order.serviceType}\n⚖️ *Jumlah:* ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
-    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}${rackText}\n\n🔍 *Lacak Status Cucian Online:*\n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}\n\n🔍 *Lacak Status Cucian Online:*\n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
   };
 
   const handleSendViaBaileys = async () => {
@@ -329,12 +328,6 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                   <div className="flex justify-between">
                     <span className="text-zinc-600">No. WA:</span>
                     <span>{order.customer.phone}</span>
-                  </div>
-                )}
-                {order.rackNumber && (
-                  <div className="flex justify-between font-bold text-zinc-900">
-                    <span className="text-zinc-600">No. Rak/Keranjang:</span>
-                    <span className="bg-zinc-100 px-1 rounded">{order.rackNumber}</span>
                   </div>
                 )}
               </div>

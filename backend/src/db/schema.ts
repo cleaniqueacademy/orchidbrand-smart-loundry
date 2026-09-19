@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("tenant_owner"), // 'superadmin' | 'tenant_owner' | 'staff'
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
   subscriptionUntil: text("subscription_until"), // ISO Date string e.g. '2026-12-31'
+  tenantId: text("tenant_id"), // For staff users, linked to specific tenant outlet
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -21,6 +22,7 @@ export const tenants = pgTable("tenants", {
   subscriptionUntil: text("subscription_until"),
   waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
   services: text("services"), // JSON stringified array of LaundryService
+  enableCashierShift: text("enable_cashier_shift").notNull().default("true"), // 'true' | 'false'
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -48,7 +50,6 @@ export const orders = pgTable("orders", {
   paymentStatus: text("payment_status").notNull().default("unpaid"), // 'unpaid' | 'paid'
   paymentMethod: text("payment_method").default("cash"), // 'cash' | 'transfer' | 'qris'
   notes: text("notes"),
-  rackNumber: text("rack_number"),
   items: text("items"), // JSON stringified array of OrderItem: [{ id, serviceType, weightOrQty, unit, pricePerUnit, subtotal, notes }]
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   estimatedCompletionAt: text("estimated_completion_at"),
@@ -75,5 +76,33 @@ export const expenses = pgTable("expenses", {
   amount: doublePrecision("amount").notNull(),
   notes: text("notes").notNull(),
   expenseDate: text("expense_date").notNull().$defaultFn(() => new Date().toISOString().slice(0, 10)),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const shifts = pgTable("shifts", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  openedAt: text("opened_at").notNull().$defaultFn(() => new Date().toISOString()),
+  closedAt: text("closed_at"),
+  startingCash: doublePrecision("starting_cash").notNull().default(0),
+  systemCashTotal: doublePrecision("system_cash_total").notNull().default(0),
+  actualCashTotal: doublePrecision("actual_cash_total"),
+  discrepancy: doublePrecision("discrepancy").default(0),
+  status: text("status").notNull().default("open"), // 'open' | 'closed'
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const waLogs = pgTable("wa_logs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  orderId: text("order_id").references(() => orders.id),
+  recipientPhone: text("recipient_phone").notNull(),
+  recipientName: text("recipient_name"),
+  messagePreview: text("message_preview"),
+  status: text("status").notNull().default("sent"), // 'sent' | 'failed' | 'queued'
+  mode: text("mode").notNull().default("baileys"), // 'baileys' | 'manual'
+  errorMessage: text("error_message"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });

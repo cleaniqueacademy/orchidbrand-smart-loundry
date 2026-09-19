@@ -45,11 +45,45 @@ export interface Order {
   paymentStatus: PaymentStatus;
   paymentMethod: string;
   notes?: string;
-  rackNumber?: string | null;
   createdAt: string;
   estimatedCompletionAt?: string | null;
   completedAt?: string | null;
   customer?: { id: string; name: string; phone: string } | null;
+  waSent?: boolean;
+  waLogsCount?: number;
+  latestWaLog?: WhatsAppLog | null;
+}
+
+export interface WhatsAppLog {
+  id: string;
+  tenantId: string;
+  orderId?: string | null;
+  recipientPhone: string;
+  recipientName?: string | null;
+  messagePreview?: string | null;
+  status: "sent" | "failed" | "queued";
+  mode: "baileys" | "manual";
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export interface CashierShift {
+  id: string;
+  tenantId: string;
+  userId: string;
+  cashierName?: string;
+  cashierEmail?: string;
+  openedAt: string;
+  closedAt?: string | null;
+  startingCash: number;
+  systemCashTotal: number;
+  actualCashTotal?: number | null;
+  discrepancy?: number | null;
+  status: "open" | "closed";
+  notes?: string | null;
+  createdAt: string;
+  expectedCash?: number;
+  ordersCount?: number;
 }
 
 export interface Service {
@@ -101,6 +135,7 @@ export interface Tenant {
   status: "active" | "inactive";
   subscriptionUntil?: string | null;
   services?: LaundryService[];
+  enableCashierShift?: string | boolean;
   owner?: { id: string; name: string; email: string; role: string } | null;
   totalOrders: number;
   totalOmset: number;
@@ -122,4 +157,4 @@ export interface User {
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
 
-export type TabType = "overview" | "orders" | "cashflow" | "customers" | "services" | "reports" | "tenants" | "users" | "settings" | "create-order" | "edit-order";
+export type TabType = "overview" | "orders" | "cashflow" | "customers" | "services" | "reports" | "tenants" | "users" | "settings" | "create-order" | "edit-order" | "logs";

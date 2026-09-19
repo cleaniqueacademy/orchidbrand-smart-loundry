@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   Plus,
   Phone,
-  Printer,
   Edit3,
   Trash2,
   XCircle,
@@ -12,6 +11,8 @@ import {
   Clock,
   CheckCircle2,
   ShoppingBag,
+  History,
+  RefreshCw,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
@@ -33,6 +34,9 @@ interface OrdersTabProps {
   onOpenEditOrderModal: (order: Order) => void;
   onCancelOrder: (order: Order) => void;
   onDeleteOrder: (orderId: string) => void;
+  onOpenWaLogsModal?: (order: Order) => void;
+  onSendDirectWa?: (order: Order) => Promise<{ success: boolean; error?: string }>;
+  isWaConnected?: boolean;
 }
 
 const statusBadgeStyles: Record<string, string> = {
@@ -57,9 +61,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onOpenEditOrderModal,
   onCancelOrder,
   onDeleteOrder,
+  onOpenWaLogsModal,
+  onSendDirectWa,
+  isWaConnected = false,
 }) => {
   const isSuperAdmin = currentUserRole === "superadmin";
 
+  const [sendingWaId, setSendingWaId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [datePreset, setDatePreset] = useState<DateFilterPreset>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -87,7 +95,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       (order.customer?.name &&
         order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (order.customer?.phone && order.customer.phone.includes(searchQuery)) ||
-      (order.rackNumber && order.rackNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       order.serviceType.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchStatus =
@@ -151,10 +158,19 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 </span>
               </div>
             )}
-            {order.rackNumber && (
-              <div className="inline-flex items-center gap-1 font-mono font-bold text-[9.5px] text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded mt-1">
-                <span>📍 {order.rackNumber}</span>
-              </div>
+            {order.waSent && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenWaLogsModal && onOpenWaLogsModal(order);
+                }}
+                className="inline-flex items-center gap-1 font-semibold text-[9.5px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded mt-1 cursor-pointer hover:bg-emerald-100 transition shadow-2xs"
+                title="Notifikasi WA terkirim. Klik untuk lihat riwayat pengiriman"
+              >
+                <WhatsAppIcon className="w-2.5 h-2.5 text-emerald-600" />
+                <span>WA Terkirim</span>
+              </button>
             )}
           </div>
         );
@@ -337,16 +353,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       align: "right",
       cell: (order) => (
         <div className="flex items-center justify-end gap-1.5">
-          {/* Cetak Struk */}
-          <button
-            type="button"
-            onClick={() => onOpenReceiptModal(order)}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition cursor-pointer"
-            title="Cetak Struk"
-          >
-            <Printer className="w-3.5 h-3.5" />
-          </button>
-
           {/* Edit Data Pesanan (Khusus Operasional Kasir) */}
           {!isSuperAdmin && (
             order.status === "completed" ? (
@@ -370,24 +376,61 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             )
           )}
 
-          {/* WhatsApp Notification - Hanya dikirim saat status Siap Diambil */}
-          {order.status === "ready" && (
-            <a
-              href={getWaLink(order)}
-              target="_blank"
-              rel="noreferrer"
-              className={`p-1.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition ${
-                isOrderOverdue(order)
-                  ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+          {/* WhatsApp Notification: Siap Diambil / Konfirmasi Pesanan */}
+          {order.status !== "completed" && order.status !== "cancelled" && (
+            <button
+              type="button"
+              disabled={sendingWaId === order.id}
+              onClick={async (e) => {
+                if (isWaConnected && onSendDirectWa && !e.shiftKey) {
+                  setSendingWaId(order.id);
+                  try {
+                    await onSendDirectWa(order);
+                  } finally {
+                    setSendingWaId(null);
+                  }
+                } else {
+                  window.open(getWaLink(order), "_blank");
+                }
+              }}
+              className={`p-1.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition cursor-pointer disabled:opacity-50 ${
+                order.status === "ready"
+                  ? isOrderOverdue(order)
+                    ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                  : "bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
               }`}
-              title="Kirim Notifikasi Siap Diambil via WhatsApp"
+              title={
+                isWaConnected
+                  ? order.status === "ready"
+                    ? "Kirim Langsung Notifikasi Siap Diambil via WhatsApp Toko (Owner)"
+                    : "Kirim Langsung Konfirmasi Nota via WhatsApp Toko (Owner)"
+                  : order.status === "ready"
+                    ? "Buka WhatsApp Web (Kirim Notifikasi Siap Diambil)"
+                    : "Buka WhatsApp Web (Kirim Konfirmasi Nota)"
+              }
             >
-              <WhatsAppIcon className="w-3.5 h-3.5" />
-            </a>
+              {sendingWaId === order.id ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <WhatsAppIcon className="w-3.5 h-3.5" />
+              )}
+            </button>
           )}
 
-          {/* Batalkan atau Hapus Pesanan (Khusus Operasional Kasir) */}
+          {/* WhatsApp Logs Audit Button */}
+          {onOpenWaLogsModal && (order.waSent || (order.waLogsCount && order.waLogsCount > 0)) && (
+            <button
+              type="button"
+              onClick={() => onOpenWaLogsModal(order)}
+              className="p-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
+              title="Riwayat Log WhatsApp"
+            >
+              <History className="w-3.5 h-3.5 text-emerald-700" />
+            </button>
+          )}
+
+          {/* Batalkan atau Hapus Pesanan (Khusus Operasional Kasir - Hapus dilarang untuk Staff) */}
           {!isSuperAdmin && (
             order.status === "completed" ? null : order.status !== "cancelled" ? (
               <button
@@ -399,14 +442,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 <XCircle className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => onDeleteOrder(order.id)}
-                className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
-                title="Hapus Pesanan"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              currentUserRole !== "staff" && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteOrder(order.id)}
+                  className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition cursor-pointer"
+                  title="Hapus Pesanan (Khusus Owner)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )
             )
           )}
         </div>

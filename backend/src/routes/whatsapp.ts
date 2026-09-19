@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db } from "../db/index";
-import { tenants } from "../db/schema";
+import { tenants, waLogs } from "../db/schema";
 import { eq } from "drizzle-orm";
 import {
   getWhatsAppStatus,
@@ -69,7 +69,7 @@ whatsappRoutes.post("/disconnect", async (c) => {
 // 4. Send Custom WhatsApp Message
 whatsappRoutes.post("/send", async (c) => {
   try {
-    const { tenantId: rawTenantId, phone, message } = await c.req.json();
+    const { tenantId: rawTenantId, phone, message, orderId, recipientName } = await c.req.json();
     if (!phone || !message) {
       return c.json({ success: false, message: "Nomor WhatsApp dan pesan wajib diisi" }, 400);
     }
@@ -77,7 +77,40 @@ whatsappRoutes.post("/send", async (c) => {
     const tenantId = await resolveTenantId(rawTenantId);
     const result = await sendWhatsAppMessage(tenantId, phone, message);
     if (!result.success) {
+      // Record failure to wa_logs
+      try {
+        await db.insert(waLogs).values({
+          id: `walog-${Date.now()}`,
+          tenantId,
+          orderId: orderId || null,
+          recipientPhone: phone.replace(/[^0-9]/g, "").replace(/^0/, "62"),
+          recipientName: recipientName || null,
+          messagePreview: message.slice(0, 200),
+          status: "failed",
+          mode: "baileys",
+          errorMessage: result.error || "Gagal mengirim",
+          createdAt: new Date().toISOString(),
+        });
+      } catch {}
       return c.json({ success: false, message: result.error }, 400);
+    }
+
+    // Record success to wa_logs
+    try {
+      await db.insert(waLogs).values({
+        id: `walog-${Date.now()}`,
+        tenantId,
+        orderId: orderId || null,
+        recipientPhone: phone.replace(/[^0-9]/g, "").replace(/^0/, "62"),
+        recipientName: recipientName || null,
+        messagePreview: message.slice(0, 200),
+        status: "sent",
+        mode: "baileys",
+        errorMessage: null,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (logErr) {
+      console.warn("[waLogs] Failed to insert send log:", logErr);
     }
 
     return c.json({

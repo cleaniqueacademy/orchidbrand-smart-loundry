@@ -13,6 +13,8 @@ import {
   X,
   Check,
   Layers,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Service, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -180,6 +182,19 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Pagination State for Services
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, tenantId]);
+
+  const totalItems = filteredServices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const validPage = Math.min(page, totalPages);
+  const paginatedServices = filteredServices.slice((validPage - 1) * pageSize, validPage * pageSize);
+
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
@@ -299,7 +314,7 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredServices.map((service) => (
+                paginatedServices.map((service) => (
                   <tr key={service.id} className="hover:bg-zinc-50/70 transition">
                     <td className="py-3 px-4 font-semibold text-zinc-900 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
@@ -361,6 +376,65 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Services Pagination Bar */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-zinc-50/60 border-t border-zinc-200/80 text-xs text-zinc-500">
+            <div className="text-[11px]">
+              Menampilkan{" "}
+              <span className="font-semibold text-zinc-800">
+                {Math.min((validPage - 1) * pageSize + 1, totalItems)}
+              </span>{" "}
+              -{" "}
+              <span className="font-semibold text-zinc-800">
+                {Math.min(validPage * pageSize, totalItems)}
+              </span>{" "}
+              dari <span className="font-semibold text-zinc-800">{totalItems}</span> layanan
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span>Baris:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs outline-none cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={validPage === 1}
+                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  title="Halaman Sebelumnya"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="px-2 text-[11px] font-semibold text-zinc-700">
+                  {validPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={validPage === totalPages}
+                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  title="Halaman Selanjutnya"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal Add / Edit Service */}

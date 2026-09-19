@@ -3,17 +3,22 @@ import {
   Store,
   Save,
   Calendar,
-  Plus,
-  Trash2,
-  Tag,
-  RotateCcw,
   Edit2,
   User as UserIcon,
+  Calculator,
+  ArrowRight,
+  Layers,
+  CheckCircle2,
+  Clock,
+  Shield,
+  Sliders,
+  Check,
 } from "lucide-react";
-import { Tenant, User, LaundryService } from "../../types";
+import { Tenant, User } from "../../types";
 import { useToast } from "../common/ToastContext";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { EditProfileModal } from "../modals/EditProfileModal";
+import { StaffManagementSection } from "./StaffManagementSection";
 
 interface SettingsTabProps {
   tenant?: Tenant | null;
@@ -24,25 +29,15 @@ interface SettingsTabProps {
       outletName?: string;
       phone?: string;
       address?: string;
-      services?: LaundryService[];
       ownerName?: string;
+      enableCashierShift?: string | boolean;
     }
   ) => Promise<boolean>;
   onUpdateUser?: (id: string, userData: { name?: string; password?: string }) => Promise<boolean>;
   onOpenWhatsAppModal?: () => void;
   waStatus?: "disconnected" | "connecting" | "qrcode" | "connected";
+  setActiveTab?: (tab: any) => void;
 }
-
-const DEFAULT_SERVICES: LaundryService[] = [
-  { id: "srv-1", name: "Cuci Komplit Reguler", unit: "kg", price: 8000 },
-  { id: "srv-2", name: "Cuci Setrika Express", unit: "kg", price: 12000 },
-  { id: "srv-3", name: "Setrika Saja", unit: "kg", price: 6000 },
-  { id: "srv-4", name: "Bedcover King", unit: "pcs", price: 35000 },
-  { id: "srv-5", name: "Bedcover Single", unit: "pcs", price: 25000 },
-  { id: "srv-6", name: "Cuci Sepatu", unit: "pasang", price: 25000 },
-  { id: "srv-7", name: "Cuci Karpet", unit: "meter", price: 15000 },
-  { id: "srv-8", name: "Cuci Selimut", unit: "pcs", price: 20000 },
-];
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   tenant,
@@ -51,29 +46,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onUpdateUser,
   onOpenWhatsAppModal,
   waStatus = "disconnected",
+  setActiveTab,
 }) => {
   const toast = useToast();
   const [ownerName, setOwnerName] = useState(currentUser?.name || "");
   const [outletName, setOutletName] = useState(tenant?.outletName || "");
   const [phone, setPhone] = useState(tenant?.phone || "");
   const [address, setAddress] = useState(tenant?.address || "");
-  const [services, setServices] = useState<LaundryService[]>(
-    tenant?.services && tenant.services.length > 0 ? tenant.services : DEFAULT_SERVICES
-  );
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingServices, setSavingServices] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
+  // Cashier shift enable/disable state
+  const [enableShift, setEnableShift] = useState<boolean>(
+    tenant?.enableCashierShift !== "false" && tenant?.enableCashierShift !== false
+  );
+  const [updatingShift, setUpdatingShift] = useState(false);
 
   useEffect(() => {
     if (tenant) {
       setOutletName(tenant.outletName || "");
       setPhone(tenant.phone || "");
       setAddress(tenant.address || "");
-      if (tenant.services && tenant.services.length > 0) {
-        setServices(tenant.services);
-      } else {
-        setServices(DEFAULT_SERVICES);
-      }
+      setEnableShift(tenant.enableCashierShift !== "false" && tenant.enableCashierShift !== false);
     }
   }, [tenant]);
 
@@ -108,67 +102,33 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  // Handle Services Modifications
-  const handleServiceChange = (
-    index: number,
-    field: keyof LaundryService,
-    value: string | number
-  ) => {
-    const updated = [...services];
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-    };
-    setServices(updated);
-  };
-
-  const handleAddService = () => {
-    const newService: LaundryService = {
-      id: `srv-${Date.now()}-${services.length + 1}`,
-      name: "Layanan Baru",
-      unit: "kg",
-      price: 10000,
-    };
-    setServices([...services, newService]);
-  };
-
-  const handleDeleteService = (index: number) => {
-    if (services.length <= 1) {
-      toast.warning("Layanan Minimal Satu", "Outlet harus memiliki minimal 1 layanan aktif!");
-      return;
-    }
-    setServices(services.filter((_, i) => i !== index));
-  };
-
-  const handleResetDefaultServices = () => {
-    setServices(DEFAULT_SERVICES);
-    toast.info("Tarif Standar", "Daftar layanan dikembalikan ke preset standar.");
-  };
-
-  const handleSaveServices = async () => {
-    if (!tenant) return;
-    // Validate services
-    for (const s of services) {
-      if (!s.name.trim()) {
-        toast.warning("Nama Layanan", "Nama layanan tidak boleh kosong!");
-        return;
-      }
-      if (s.price < 0) {
-        toast.warning("Tarif Layanan", "Tarif harga tidak boleh bernilai negatif!");
-        return;
-      }
-    }
-
-    setSavingServices(true);
+  // Handle Toggle Cashier Shift Feature
+  const handleToggleShift = async () => {
+    if (!tenant || updatingShift) return;
+    const nextVal = !enableShift;
+    setUpdatingShift(true);
     try {
       const ok = await onUpdateTenant(tenant.id, {
-        services,
+        enableCashierShift: String(nextVal),
       });
       if (ok) {
-        toast.success("Layanan Disimpan", "Daftar layanan dan tarif cabang berhasil diperbarui.");
+        setEnableShift(nextVal);
+        if (nextVal) {
+          toast.success(
+            "Sistem Shift Diaktifkan",
+            "Kasir kini wajib input kas awal dan rekonsiliasi laci saat tutup shift."
+          );
+        } else {
+          toast.info(
+            "Sistem Shift Dinonaktifkan",
+            "Kasir dapat langsung memproses transaksi tanpa perlu buka/tutup shift laci."
+          );
+        }
       }
+    } catch (err: any) {
+      toast.error("Gagal Mengubah Pengaturan", err.message);
     } finally {
-      setSavingServices(false);
+      setUpdatingShift(false);
     }
   };
 
@@ -186,7 +146,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           Pengaturan
         </h1>
         <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-          Kelola profil cabang, tarif layanan, dan masa aktif outlet laundry.
+          Kelola profil cabang, fitur operasional kasir, dan masa aktif langganan outlet laundry.
         </p>
       </div>
 
@@ -250,99 +210,105 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                placeholder="081234567890"
-                className="w-full px-3 py-2 text-xs font-mono border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-zinc-50/50 hover:bg-white focus:bg-white"
+                placeholder="Contoh: 081234567890"
+                className="w-full px-3 py-2 text-xs font-medium border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-zinc-50/50 hover:bg-white focus:bg-white"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                Alamat Cabang
+                Alamat Outlet
               </label>
               <textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                rows={2}
                 required
-                placeholder="Alamat lengkap lokasi outlet laundry..."
-                className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-zinc-50/50 hover:bg-white focus:bg-white"
+                rows={3}
+                placeholder="Contoh: Jl. Melati Raya No. 45, Jakarta Selatan"
+                className="w-full px-3 py-2 text-xs font-medium border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-zinc-50/50 hover:bg-white focus:bg-white resize-none"
               />
             </div>
-          </div>
 
-          <div className="pt-2 flex items-center justify-between border-t border-zinc-100">
-            <span className="text-[11px] text-zinc-400">
-              Data tertera pada struk nota transaksi
-            </span>
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition disabled:opacity-50 cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{savingProfile ? "Menyimpan..." : "Simpan Profil"}</span>
-            </button>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{savingProfile ? "Menyimpan..." : "Simpan Profil Cabang"}</span>
+              </button>
+            </div>
           </div>
         </form>
 
-        {/* Kolom Kanan: Masa Aktif, Profil Pemilik & WhatsApp (5 cols) */}
+        {/* Kolom Kanan: Masa Aktif Langganan & Integrasi WhatsApp (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Card: Masa Aktif (Hero Light Blue Spotlight) */}
-          <div className="relative overflow-hidden rounded-xl border-2 border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/80 to-indigo-50/40 p-4 shadow-xs ring-2 ring-sky-500/10">
-            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between pb-2 border-b border-sky-200/60">
+          {/* Card Masa Aktif Langganan */}
+          <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-sky-500 text-white flex items-center justify-center shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sky-950 text-xs">Masa Aktif</h3>
+                <div>
+                  <h3 className="font-bold text-zinc-900 text-sm">Status Langganan SaaS</h3>
+                  <p className="text-[11px] text-zinc-500">Masa aktif lisensi sistem outlet</p>
+                </div>
               </div>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 border whitespace-nowrap shrink-0 ${
+                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                   isExpired
-                    ? "bg-rose-50 text-rose-800 border-rose-200"
-                    : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                    : diffDays <= 7
+                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                    : "bg-emerald-50 text-emerald-800 border border-emerald-200"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isExpired ? "bg-rose-500" : "bg-emerald-500 animate-pulse"}`} />
-                <span className="whitespace-nowrap">{isExpired ? "Kedaluwarsa" : "Aktif"}</span>
+                {isExpired ? "Habis" : diffDays <= 7 ? "Kritis" : "Aktif"}
               </span>
             </div>
 
-            <div className="mt-2.5 flex items-baseline justify-between">
-              <div>
-                <div className="text-[11px] font-medium text-sky-700">Sisa Operasional:</div>
-                <div className="text-2xl font-black text-sky-950 font-mono tracking-tight">
-                  {isExpired ? "0 Hari" : `${diffDays} Hari`}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] text-sky-700 font-medium">Berlaku Sampai:</div>
-                <div className="text-xs font-bold text-sky-950 font-mono">
-                  {new Intl.DateTimeFormat("id-ID", {
+            <div className="p-3.5 rounded-lg bg-zinc-50/70 border border-zinc-200/80 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-zinc-500">Berlaku Hingga</span>
+                <span className="font-bold text-zinc-900 font-mono">
+                  {expDate.toLocaleDateString("id-ID", {
                     day: "numeric",
-                    month: "short",
+                    month: "long",
                     year: "numeric",
-                  }).format(expDate)}
-                </div>
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-zinc-500">Sisa Waktu</span>
+                <span
+                  className={`font-bold ${
+                    isExpired
+                      ? "text-rose-600"
+                      : diffDays <= 7
+                      ? "text-amber-600"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  {isExpired ? "Sudah Berakhir" : `${diffDays} Hari Lagi`}
+                </span>
               </div>
             </div>
 
-            <p className="text-[10.5px] text-sky-800/80 font-medium pt-2 border-t border-sky-200/60 mt-2.5 leading-relaxed">
-              Perpanjangan masa aktif dikelola oleh Admin Pusat Orchid.
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              Hubungi Super Admin platform SaaS jika ingin memperpanjang masa aktif langganan toko Anda.
             </p>
           </div>
 
-          {/* Card: Profil Pemilik & WhatsApp Bisnis (Kompak & Rapi) */}
+          {/* Quick Cards: Profil Akun & WhatsApp */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Profil Pemilik */}
+            {/* Profil Akun */}
             <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-3.5 space-y-2">
               <div className="flex items-center justify-between text-zinc-900 pb-1.5 border-b border-zinc-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded bg-zinc-900 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
-                    {ownerName ? ownerName.slice(0, 2).toUpperCase() : "BS"}
-                  </div>
-                  <span className="font-bold text-xs">Profil Pemilik</span>
+                <div className="flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-zinc-600" />
+                  <span className="font-bold text-xs">Akun Anda</span>
                 </div>
                 <button
                   type="button"
@@ -403,150 +369,121 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       </div>
 
-      {/* Bagian 2: Layanan Cabang & Tarif (Full Width 12 cols, Rapi Bergaya POS Table) */}
-      <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
-        {/* Header Layanan Cabang */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 pb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shadow-2xs">
-              <Tag className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-zinc-900 text-sm">Layanan Cabang</h2>
-              <p className="text-xs text-zinc-500">
-                Atur nama layanan, satuan, dan tarif harga khusus outlet ini.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={handleResetDefaultServices}
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
-              title="Kembalikan preset awal 8 layanan standar"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Reset Standar</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleAddService}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Layanan</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Table Header Row (Desktop) */}
-        <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-3.5 py-2 bg-zinc-100/70 border border-zinc-200/80 rounded-lg text-[11px] font-bold text-zinc-600 uppercase tracking-wider">
-          <div className="sm:col-span-6">Nama Layanan</div>
-          <div className="sm:col-span-2">Satuan</div>
-          <div className="sm:col-span-3">Tarif (Rp)</div>
-          <div className="sm:col-span-1 text-center">Aksi</div>
-        </div>
-
-        {/* List of Services */}
-        <div className="space-y-2">
-          {services.map((item, idx) => (
-            <div
-              key={item.id || idx}
-              className="p-3 sm:p-2 rounded-lg border border-zinc-200/80 bg-white hover:border-blue-300 hover:bg-blue-50/15 transition grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center shadow-2xs"
-            >
-              {/* Service Name Input */}
-              <div className="sm:col-span-6">
-                <label className="block text-[10px] font-semibold text-zinc-500 mb-1 sm:hidden">
-                  Nama Layanan
-                </label>
-                <input
-                  type="text"
-                  value={item.name}
-                  onChange={(e) => handleServiceChange(idx, "name", e.target.value)}
-                  placeholder="Contoh: Cuci Komplit Reguler"
-                  className="w-full text-xs font-semibold text-zinc-900 px-3 py-1.5 bg-zinc-50/60 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
-                />
-              </div>
-
-              {/* Unit Selector */}
-              <div className="sm:col-span-2">
-                <label className="block text-[10px] font-semibold text-zinc-500 mb-1 sm:hidden">
-                  Satuan
-                </label>
-                <select
-                  value={item.unit}
-                  onChange={(e) => handleServiceChange(idx, "unit", e.target.value)}
-                  className="w-full text-xs font-semibold text-zinc-700 px-2.5 py-1.5 bg-zinc-50/60 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer transition"
-                >
-                  <option value="kg">kg (Kilogram)</option>
-                  <option value="pcs">pcs (Satuan)</option>
-                  <option value="pasang">pasang (Sepatu)</option>
-                  <option value="meter">meter (Karpet)</option>
-                  <option value="lembar">lembar (Gorden)</option>
-                </select>
-              </div>
-
-              {/* Price Input */}
-              <div className="sm:col-span-3">
-                <label className="block text-[10px] font-semibold text-zinc-500 mb-1 sm:hidden">
-                  Tarif (Rp)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1.5 text-zinc-400 text-xs font-mono font-bold">
-                    Rp
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="500"
-                    value={item.price}
-                    onChange={(e) =>
-                      handleServiceChange(idx, "price", parseInt(e.target.value) || 0)
-                    }
-                    className="w-full text-xs font-black font-mono text-zinc-900 pl-8 pr-2.5 py-1.5 bg-zinc-50/60 border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
-                  />
+      {/* Bagian 2: Fitur Operasional Kasir & Info Menu Layanan Terpusat */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        {/* Card 1: Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
+        <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs">
+                  <Calculator className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-zinc-900 text-sm">Fitur Shift Kerja Kasir</h3>
+                  <p className="text-[11px] text-zinc-500">Manajemen kas laci & pertanggungjawaban kasir</p>
                 </div>
               </div>
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  enableShift
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                }`}
+              >
+                {enableShift ? "Aktif" : "Nonaktif"}
+              </span>
+            </div>
 
-              {/* Delete Button */}
-              <div className="sm:col-span-1 flex justify-end sm:justify-center">
-                <button
-                  type="button"
-                  onClick={() => handleDeleteService(idx)}
-                  disabled={services.length <= 1}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer disabled:opacity-30 disabled:hover:text-zinc-400 disabled:hover:bg-transparent disabled:hover:border-transparent"
-                  title="Hapus Layanan"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+            <div className="mt-3.5 space-y-2">
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                {enableShift
+                  ? "Sistem shift saat ini AKTIF. Kasir wajib memasukkan modal kas awal saat mulai bertugas dan melakukan rekonsiliasi uang fisik laci saat tutup shift."
+                  : "Sistem shift saat ini NONAKTIF. Kasir dapat langsung melayani transaksi cucian tanpa tombol buka/tutup shift laci kasir."}
+              </p>
+
+              <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200/70 text-[11px] text-zinc-500 space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-zinc-700">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    {enableShift
+                      ? "Cocok jika outlet memiliki staf bergantian jam kerja (shift pagi / sore)."
+                      : "Cocok jika kasir dijaga oleh pemilik sendiri atau staf tunggal seharian."}
+                  </span>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Footer Bar: Service Count & Save Button */}
-        <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-zinc-100">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md">
-              {services.length} Paket Layanan Aktif
-            </span>
-            <span className="text-[11px] text-zinc-400">
-              Tarif langsung terhubung ke kasir pesanan
-            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveServices}
-            disabled={savingServices}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition disabled:opacity-50 cursor-pointer"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{savingServices ? "Menyimpan..." : "Simpan Layanan"}</span>
-          </button>
+          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
+            <span className="text-xs font-semibold text-zinc-700">
+              Ubah Status Fitur:
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleShift}
+              disabled={updatingShift}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs ${
+                enableShift
+                  ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              <span>{updatingShift ? "Menyimpan..." : enableShift ? "Nonaktifkan Shift" : "Aktifkan Shift"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 2: Pengalihan Layanan Terpusat */}
+        <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shadow-2xs">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-zinc-900 text-sm">Katalog Tarif & Layanan</h3>
+                  <p className="text-[11px] text-zinc-500">Dikelola terpusat di menu Layanan</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3.5 space-y-2.5 text-xs text-zinc-600 leading-relaxed">
+              <p>
+                Semua pengaturan harga per satuan, minimum order, durasi pengerjaan SLA, dan status aktif paket cucian dikelola secara terpusat di menu <strong>Layanan</strong> pada bilah navigasi samping.
+              </p>
+              <div className="p-3 rounded-lg bg-blue-50/50 border border-blue-200/70 text-[11px] text-blue-900 space-y-1">
+                <div className="font-semibold">💡 Pengelolaan Lebih Lengkap:</div>
+                <p className="text-blue-800">
+                  Menu Layanan dilengkapi dengan indikator durasi SLA (jam/hari), pencarian, dan pagination untuk kenyamanan operasional.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {setActiveTab && (
+            <div className="pt-2 border-t border-zinc-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveTab("services")}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+              >
+                <span>Buka Menu Layanan</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Seksi Manajemen Kasir / Staff Cabang */}
+      {tenant?.id && (
+        <StaffManagementSection
+          tenantId={tenant.id}
+          tenantName={tenant.outletName}
+        />
+      )}
 
       {/* Edit Profile Modal */}
       <EditProfileModal

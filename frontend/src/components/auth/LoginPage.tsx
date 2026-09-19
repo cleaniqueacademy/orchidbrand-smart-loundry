@@ -199,7 +199,55 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </button>
           </form>
 
+          {/* Demo Login Buttons */}
+          <div className="mt-6 pt-5 border-t border-zinc-100">
+            <span className="block text-[11px] font-semibold text-zinc-400 mb-2.5 text-center uppercase tracking-wider">
+              Akses Cepat Akun Demo (1-Klik)
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@orchidbrand.com");
+                  setPassword("admin123");
+                  executeLogin("admin@orchidbrand.com", "admin123");
+                }}
+                disabled={loading}
+                className="p-2 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200 text-violet-900 text-center transition cursor-pointer"
+              >
+                <div className="text-[11px] font-bold">Super Admin</div>
+                <div className="text-[9.5px] text-violet-600 font-mono">admin123</div>
+              </button>
 
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("budi@laundrymelati.com");
+                  setPassword("budi123");
+                  executeLogin("budi@laundrymelati.com", "budi123");
+                }}
+                disabled={loading}
+                className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 text-center transition cursor-pointer"
+              >
+                <div className="text-[11px] font-bold">Owner Toko</div>
+                <div className="text-[9.5px] text-sky-600 font-mono">budi123</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("kasir@laundrymelati.com");
+                  setPassword("kasir123");
+                  executeLogin("kasir@laundrymelati.com", "kasir123");
+                }}
+                disabled={loading}
+                className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 text-center transition cursor-pointer"
+              >
+                <div className="text-[11px] font-bold">Staff Kasir</div>
+                <div className="text-[9.5px] text-emerald-600 font-mono">kasir123</div>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Footer Notice */}

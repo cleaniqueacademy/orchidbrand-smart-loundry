@@ -31,6 +31,7 @@ export async function initPostgresTables() {
     `;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';`;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS tenants (
@@ -48,6 +49,7 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_until TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS wa_mode TEXT NOT NULL DEFAULT 'manual';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS services TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS enable_cashier_shift TEXT NOT NULL DEFAULT 'true';`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (
@@ -76,13 +78,12 @@ export async function initPostgresTables() {
         payment_status TEXT NOT NULL DEFAULT 'unpaid',
         payment_method TEXT DEFAULT 'cash',
         notes TEXT,
-        rack_number TEXT,
         items TEXT,
         created_at TEXT NOT NULL,
         completed_at TEXT
       );
     `;
-    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rack_number TEXT;`;
+    await client`ALTER TABLE orders DROP COLUMN IF EXISTS rack_number;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items TEXT;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_completion_at TEXT;`;
 
@@ -112,6 +113,38 @@ export async function initPostgresTables() {
       );
     `;
     await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'expense';`;
+
+    await client`
+      CREATE TABLE IF NOT EXISTS shifts (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        user_id TEXT NOT NULL REFERENCES users(id),
+        opened_at TEXT NOT NULL,
+        closed_at TEXT,
+        starting_cash DOUBLE PRECISION NOT NULL DEFAULT 0,
+        system_cash_total DOUBLE PRECISION NOT NULL DEFAULT 0,
+        actual_cash_total DOUBLE PRECISION,
+        discrepancy DOUBLE PRECISION DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'open',
+        notes TEXT,
+        created_at TEXT NOT NULL
+      );
+    `;
+
+    await client`
+      CREATE TABLE IF NOT EXISTS wa_logs (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        order_id TEXT REFERENCES orders(id),
+        recipient_phone TEXT NOT NULL,
+        recipient_name TEXT,
+        message_preview TEXT,
+        status TEXT NOT NULL DEFAULT 'sent',
+        mode TEXT NOT NULL DEFAULT 'baileys',
+        error_message TEXT,
+        created_at TEXT NOT NULL
+      );
+    `;
 
     console.log("✅ PostgreSQL tables verified/initialized successfully");
   } catch (err: any) {

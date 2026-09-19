@@ -6,7 +6,16 @@ import {
   ShoppingBag,
   Plus,
   ArrowRight,
+  Clock,
+  AlertTriangle,
+  Activity,
+  Calculator,
+  Server,
+  Database,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
+import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { CashflowStats, Order, Tenant, User, TabType } from "../../../types";
 
 interface AdminOverviewTabProps {
@@ -29,17 +38,28 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   onOpenUserModal,
   setActiveTab,
 }) => {
-  // Sort tenants by total omset descending
+  // Sort tenants by total omset descending and apply limit break of top 5 for dashboard
   const sortedTenants = [...tenants].sort((a, b) => (b.totalOmset || 0) - (a.totalOmset || 0));
-
-  // 6 latest orders across all branches
-  const recentOrders = orders.slice(0, 6);
+  const topTenants = sortedTenants.slice(0, 5);
 
   // User role counts
   const ownerCount = users.filter((u) => u.role === "tenant_owner").length;
   const staffCount = users.filter((u) => u.role === "staff").length;
   const adminCount = users.filter((u) => u.role === "superadmin").length;
-  const activeUsersCount = users.filter((u) => u.status === "active" || !u.status).length;
+
+  const now = new Date();
+  const activeTenantsCount = tenants.filter((t) => {
+    if (t.status === "inactive") return false;
+    if (!t.subscriptionUntil) return true;
+    return new Date(t.subscriptionUntil).getTime() >= now.getTime();
+  }).length;
+
+  const expiringTenantsCount = tenants.filter((t) => {
+    if (t.status === "inactive") return true;
+    if (!t.subscriptionUntil) return false;
+    const diff = new Date(t.subscriptionUntil).getTime() - now.getTime();
+    return diff <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -47,10 +67,10 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-            Dashboard
+            Dashboard Platform
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Ringkasan data operasional dan omset seluruh cabang.
+            Ringkasan data jaringan cabang toko laundry dan status langganan SaaS platform.
           </p>
         </div>
 
@@ -72,42 +92,58 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
         </div>
       </div>
 
-      {/* 4 Multi-Branch KPI Cards */}
+      {/* 4 SaaS Platform KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* Total Omset */}
-        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
-          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-            <span>Total Omset</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            Rp {stats.totalIncome.toLocaleString("id-ID")}
-          </div>
-          <div className="text-[11px] text-emerald-700/90 font-medium mt-1">
-            Transaksi lunas
-          </div>
-        </div>
-
-        {/* Total Cabang - Highlighted Light Blue Card */}
-        <div className="bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-sky-300 shadow-sm relative overflow-hidden group hover:border-sky-400 transition">
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-sky-400/20 rounded-full blur-xl pointer-events-none" />
-          <div className="flex items-center justify-between text-xs text-sky-800 font-bold">
-            <span>Total Cabang</span>
-            <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+        {/* Total Cabang - Highlighted Blue Card */}
+        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-sm relative overflow-hidden group hover:border-blue-400 transition">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-400/20 rounded-full blur-xl pointer-events-none" />
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Total Cabang Toko</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <Building2 className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            {tenants.length} <span className="text-xs font-semibold text-sky-700">Cabang</span>
+            {tenants.length} <span className="text-xs font-semibold text-blue-700">Toko</span>
           </div>
-          <div className="text-[11px] text-sky-700 font-medium mt-1 truncate">
-            Rata-rata Rp {Math.round(stats.totalIncome / Math.max(1, tenants.length)).toLocaleString("id-ID")}
+          <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+            Terdaftar di platform SaaS
           </div>
         </div>
 
-        {/* Total Pengguna */}
+        {/* Toko Aktif Berlangganan */}
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Langganan Aktif</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-emerald-900 mt-2.5 tracking-tight">
+            {activeTenantsCount} <span className="text-xs font-semibold text-emerald-700">Toko</span>
+          </div>
+          <div className="text-[11px] text-emerald-700/90 font-medium mt-1">
+            Status akun aktif
+          </div>
+        </div>
+
+        {/* Perlu Perpanjangan / Expired */}
+        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Perlu Perpanjangan</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
+            {expiringTenantsCount} <span className="text-xs font-semibold text-amber-700">Toko</span>
+          </div>
+          <div className="text-[11px] text-amber-700/90 font-medium mt-1">
+            Masa aktif ≤ 7 hari / habis
+          </div>
+        </div>
+
+        {/* Total Pengguna Platform */}
         <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
           <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
             <span>Total Pengguna</span>
@@ -119,23 +155,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             {users.length} <span className="text-xs font-semibold text-indigo-700">Akun</span>
           </div>
           <div className="text-[11px] text-indigo-700/90 font-medium mt-1">
-            {activeUsersCount} pengguna aktif
-          </div>
-        </div>
-
-        {/* Total Pesanan */}
-        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
-          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
-            <span>Total Pesanan</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            {stats.totalOrdersCount} <span className="text-xs font-semibold text-amber-700">Pesanan</span>
-          </div>
-          <div className="text-[11px] text-amber-700/90 font-medium mt-1">
-            {stats.activeOrdersCount} sedang diproses
+            {ownerCount} Owner • {staffCount} Staff
           </div>
         </div>
       </div>
@@ -168,187 +188,330 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                 <th className="py-2.5 px-5 font-medium">Pemilik</th>
                 <th className="py-2.5 px-5 text-center font-medium">Total Pesanan</th>
                 <th className="py-2.5 px-5 text-right font-medium">Total Omset</th>
-                <th className="py-2.5 px-5 text-center font-medium">Status</th>
+                <th className="py-2.5 px-5 text-center font-medium">Status Langganan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {sortedTenants.map((t) => (
-                <tr key={t.id} className="hover:bg-zinc-50/60 transition-colors">
-                  <td className="py-3 px-5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center shrink-0">
-                        <Building2 className="w-4 h-4" />
+              {topTenants.map((t) => {
+                const isInactive = t.status === "inactive";
+                const isExpired = t.subscriptionUntil && new Date(t.subscriptionUntil).getTime() < now.getTime();
+                const daysLeft = t.subscriptionUntil
+                  ? Math.ceil((new Date(t.subscriptionUntil).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                  : 999;
+                const isExpiringSoon = daysLeft <= 7 && daysLeft >= 0;
+
+                return (
+                  <tr key={t.id} className="hover:bg-zinc-50/60 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-zinc-900 text-xs">{t.outletName}</div>
+                          <div className="text-[11px] text-zinc-400 mt-0.5">{t.address}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-zinc-900 text-xs">{t.outletName}</div>
-                        <div className="text-[11px] text-zinc-400 mt-0.5">{t.address}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-5">
-                    <div className="font-medium text-zinc-700">{t.owner?.name || "Budi Santoso"}</div>
-                    <div className="text-[11px] text-zinc-400 font-mono">{t.phone}</div>
-                  </td>
-                  <td className="py-3 px-5 text-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-900 border border-sky-200/80">
-                      {t.totalOrders || 0} Order
-                    </span>
-                  </td>
-                  <td className="py-3 px-5 text-right font-bold text-emerald-700 text-xs whitespace-nowrap">
-                    Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
-                  </td>
-                  <td className="py-3 px-5 text-center">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Aktif
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 px-5">
+                      <div className="font-medium text-zinc-700">{t.owner?.name || "Budi Santoso"}</div>
+                      <div className="text-[11px] text-zinc-400 font-mono">{t.phone}</div>
+                    </td>
+                    <td className="py-3 px-5 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-900 border border-sky-200/80">
+                        {t.totalOrders || 0} Order
+                      </span>
+                    </td>
+                    <td className="py-3 px-5 text-right font-bold text-emerald-700 text-xs whitespace-nowrap">
+                      Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="py-3 px-5 text-center">
+                      {isInactive || isExpired ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                          {isInactive ? "Nonaktif" : "Kedaluwarsa"}
+                        </span>
+                      ) : isExpiringSoon ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          Kritis ({daysLeft}h)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          Aktif
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* Limit Break Footer Bar */}
+        <div className="flex items-center justify-between px-5 py-2.5 bg-zinc-50/70 border-t border-zinc-100 text-xs text-zinc-500">
+          <div>
+            Menampilkan <span className="font-semibold text-zinc-800">{topTenants.length}</span> dari{" "}
+            <span className="font-semibold text-zinc-800">{sortedTenants.length}</span> total cabang
+          </div>
+          <button
+            onClick={() => setActiveTab("tenants")}
+            className="text-xs font-semibold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 transition cursor-pointer"
+          >
+            <span>Buka Tabel Lengkap dengan Pagination</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
-      {/* 2-Column Section: Latest Cross-Branch Orders & SaaS User Breakdown */}
+      {/* 2-Column Section: Technical Support Hub & System Health + User Roles */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Recent Cross-Branch Orders (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-blue-50/30 via-sky-50/20 to-transparent flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-zinc-900 text-sm">
-                Pesanan Terbaru
-              </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Aliran pesanan terbaru dari seluruh cabang
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveTab("orders")}
-              className="text-xs font-medium text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 transition cursor-pointer"
-            >
-              <span>Semua Pesanan</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="p-4 space-y-2">
-            {recentOrders.length === 0 ? (
-              <div className="py-8 text-center text-zinc-400 text-xs">
-                Belum ada transaksi di seluruh cabang
+        {/* Left Column: Technical Support & Error Investigation Hub (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-blue-50/40 via-sky-50/20 to-transparent flex items-center justify-between">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-100/70 text-blue-950 font-bold text-[10px] mb-1">
+                  <Activity className="w-3 h-3 text-blue-700" />
+                  <span>Dukungan Teknis & Error Support</span>
+                </div>
+                <h3 className="font-semibold text-zinc-900 text-sm">
+                  Pusat Investigasi & Bantuan Kendala Cabang
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Akses cepat audit data jika toko/kasir mengalami error transaksi, nota hilang, atau kendala teknis.
+                </p>
               </div>
-            ) : (
-              recentOrders.map((ord) => {
-                const tenantOfOrder = tenants.find((t) => t.id === ord.tenantId);
-                return (
-                  <div
-                    key={ord.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-zinc-50/60 border border-zinc-100 gap-2 hover:border-blue-200/80 hover:bg-blue-50/30 transition"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200/80">
-                          {tenantOfOrder?.outletName || "Cabang"}
-                        </span>
-                        <span className="font-mono text-zinc-500 text-xs font-semibold">
-                          {ord.invoiceNo}
-                        </span>
-                        <span className="text-xs text-zinc-700 font-medium">
-                          {ord.customer?.name || "Pelanggan Umum"}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        {ord.serviceType} ({ord.weightOrQty} {ord.unit}) ·{" "}
-                        <span>
-                          {new Date(ord.createdAt).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </p>
-                    </div>
+            </div>
 
-                    <div className="flex items-center gap-2.5 self-end sm:self-auto">
-                      <span
-                        className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                          ord.paymentStatus === "paid"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
-                            : "bg-amber-50 text-amber-700 border border-amber-200/80"
-                        }`}
-                      >
-                        {ord.paymentStatus === "paid" ? "Lunas" : "Belum Lunas"}
-                      </span>
-                      <span className="font-bold text-zinc-900 text-xs whitespace-nowrap">
-                        Rp {ord.totalAmount.toLocaleString("id-ID")}
+            <div className="p-4 space-y-3">
+              {/* Tool 1: Inspeksi Data Order */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 hover:border-blue-300 hover:bg-blue-50/30 transition gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <ShoppingBag className="w-4 h-4 text-blue-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-zinc-900 text-xs sm:text-sm">
+                        Inspeksi Data Order Seluruh Cabang
+                      </h4>
+                      <span className="text-[10px] font-bold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                        {orders.length} Transaksi
                       </span>
                     </div>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Cari nomor invoice, verifikasi data pelanggan, cek status pembayaran, atau cetak ulang struk saat kasir meminta bantuan.
+                    </p>
                   </div>
-                );
-              })
-            )}
+                </div>
+                <button
+                  onClick={() => setActiveTab("orders")}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer shrink-0 self-end sm:self-center"
+                >
+                  <span>Buka Data Order</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Tool 2: Log Notifikasi WhatsApp */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-zinc-900 text-xs sm:text-sm">
+                        Audit & Log Pengiriman WhatsApp
+                      </h4>
+                      <span className="text-[10px] font-bold text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        Log Riwayat WA
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Periksa status pengiriman notifikasi nota (terkirim/gagal), investigasi nomor HP salah, dan telusuri log error gateway Baileys.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("logs")}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer shrink-0 self-end sm:self-center"
+                >
+                  <span>Periksa Log WA</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Tool 3: Log Shift & Rekonsiliasi Kasir */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 hover:border-purple-300 hover:bg-purple-50/30 transition gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Calculator className="w-4 h-4 text-purple-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-zinc-900 text-xs sm:text-sm">
+                        Audit Shift & Selisih Kas Laci (Discrepancy)
+                      </h4>
+                      <span className="text-[10px] font-bold text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                        Rekonsiliasi Kasir
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Investigasi modal awal buka shift, total penerimaan kas, dan catatan selisih uang fisik kasir vs hitungan sistem.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("logs")}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold shadow-2xs transition cursor-pointer shrink-0 self-end sm:self-center"
+                >
+                  <span>Lihat Log Shift</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Warning Banner Jika Ada Cabang Expired/Kritis */}
+          {expiringTenantsCount > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-xs font-bold text-amber-900">
+                  Perhatian: {expiringTenantsCount} Cabang Membutuhkan Perpanjangan
+                </h4>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Terdapat cabang yang masa aktif langganannya kurang dari 7 hari atau telah kedaluwarsa.
+                </p>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab("users")}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                  >
+                    <span>Perpanjang Langganan di Menu Pengguna</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Users Breakdown Panel (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-transparent flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-zinc-900 text-sm">
-                Peran Pengguna
-              </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Distribusi akun pengguna sistem
-              </p>
+        {/* Right Column: Platform Connectivity & User Roles (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          {/* Card Status Kesehatan Sistem Platform */}
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-emerald-50/40 via-teal-50/20 to-transparent flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-zinc-900 text-sm">
+                  Status Konektivitas Platform
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Kesehatan server dan database backend SaaS
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Sistem Normal
+              </span>
             </div>
-            <button
-              onClick={() => setActiveTab("users")}
-              className="text-xs font-medium text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1 transition cursor-pointer"
-            >
-              <span>Kelola Pengguna</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
+
+            <div className="p-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+                <div className="flex items-center gap-2.5">
+                  <Server className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-zinc-800">Bun + Hono API Backend</span>
+                </div>
+                <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px]">
+                  Online (3001)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+                <div className="flex items-center gap-2.5">
+                  <Database className="w-4 h-4 text-indigo-600" />
+                  <span className="font-medium text-zinc-800">PostgreSQL + Drizzle ORM</span>
+                </div>
+                <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px]">
+                  Terhubung
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 border border-zinc-100">
+                <div className="flex items-center gap-2.5">
+                  <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium text-zinc-800">WhatsApp Gateway (Baileys)</span>
+                </div>
+                <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px]">
+                  Siaga Multi-Outlet
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="p-4 space-y-2.5">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-violet-200/80 hover:bg-violet-50/20 transition">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  SA
-                </div>
-                <div>
-                  <div className="font-semibold text-zinc-900 text-xs">Super Admin</div>
-                  <div className="text-[10px] text-zinc-400">Akses penuh seluruh sistem</div>
-                </div>
+          {/* Users Breakdown Panel */}
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-transparent flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-zinc-900 text-sm">
+                  Distribusi Peran Pengguna
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Hierarki akun pengguna sistem
+                </p>
               </div>
-              <span className="text-xs font-bold text-violet-900 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-md font-mono">{adminCount} Akun</span>
+              <button
+                onClick={() => setActiveTab("users")}
+                className="text-xs font-medium text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1 transition cursor-pointer"
+              >
+                <span>Kelola Pengguna</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-sky-200/80 hover:bg-sky-50/20 transition">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  TO
+            <div className="p-4 space-y-2.5">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-violet-200/80 hover:bg-violet-50/20 transition">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-700 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                    SA
+                  </div>
+                  <div>
+                    <div className="font-semibold text-zinc-900 text-xs">Super Admin</div>
+                    <div className="text-[10px] text-zinc-400">Penyedia platform SaaS</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-zinc-900 text-xs">Tenant Owner</div>
-                  <div className="text-[10px] text-zinc-400">Pemilik pengelola cabang</div>
-                </div>
+                <span className="text-xs font-bold text-violet-900 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-md font-mono">{adminCount} Akun</span>
               </div>
-              <span className="text-xs font-bold text-sky-900 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md font-mono">{ownerCount} Akun</span>
-            </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-emerald-200/80 hover:bg-emerald-50/20 transition">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                  KS
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-sky-200/80 hover:bg-sky-50/20 transition">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                    TO
+                  </div>
+                  <div>
+                    <div className="font-semibold text-zinc-900 text-xs">Tenant Owner</div>
+                    <div className="text-[10px] text-zinc-400">Pemilik pengelola cabang</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-zinc-900 text-xs">Kasir</div>
-                  <div className="text-[10px] text-zinc-400">Petugas kasir dan pencucian</div>
-                </div>
+                <span className="text-xs font-bold text-sky-900 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md font-mono">{ownerCount} Akun</span>
               </div>
-              <span className="text-xs font-bold text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">{staffCount} Akun</span>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-emerald-200/80 hover:bg-emerald-50/20 transition">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                    ST
+                  </div>
+                  <div>
+                    <div className="font-semibold text-zinc-900 text-xs">Staff</div>
+                    <div className="text-[10px] text-zinc-400">Petugas operasional kasir & cuci</div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">{staffCount} Akun</span>
+              </div>
             </div>
           </div>
         </div>

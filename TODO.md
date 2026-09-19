@@ -16,7 +16,9 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - **Portal Publik Cek Resi Mandiri:** 100% Selesai (Prioritas P0 - `/track/:invoiceNo` + QR Code)
 - **Master Layanan & Pelacakan SLA Pengerjaan:** 100% Selesai (Prioritas P0 - Tabel `services` + SLA warning)
 - **Keamanan Kredensial (Hash Password Bcrypt):** 100% Selesai (Prioritas P0 - Native Bun bcrypt + auto-upgrade)
-- **Manajemen Shift Kasir & Rekonsiliasi Kas:** Direncanakan (Prioritas P1)
+- **Multi-Staff / Akun Kasir per Outlet & RBAC:** 100% Selesai (Prioritas P1 - Role `staff` terisolasi)
+- **Manajemen Shift Kasir & Rekonsiliasi Kas Laci:** 100% Selesai (Prioritas P1 - Buka/Tutup Shift & Selisih Kas)
+- **Log Riwayat Pengiriman WhatsApp (`wa_logs`):** 100% Selesai (Prioritas P1 - Audit trail notifikasi)
 - **Manajemen Bahan Baku / Stok Deterjen:** Ditunda / Parkir Sesuai Arahan (Prioritas P2)
 
 ---
@@ -30,10 +32,10 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] Dockerization lengkap: Dockerfile backend, frontend (Nginx), dan `docker-compose.yml` persisten PostgreSQL.
 
 ### 2. Backend & Basis Data (Bun + Hono + Drizzle + PostgreSQL)
-- [x] Skema database relasional PostgreSQL: `users`, `tenants`, `customers`, `orders`, `expenses`, `services`.
+- [x] Skema database relasional PostgreSQL: `users`, `tenants`, `customers`, `orders`, `expenses`, `services`, `shifts`, `wa_logs`.
 - [x] Auto-seed data demo saat startup pertama (`seed.ts` & default master services).
 - [x] Auto-migration skema database terintegrasi (`initPostgresTables` dengan DDL idempotent).
-- [x] REST API CRUD lengkap: Orders, Customers, Expenses, Users, Tenants, Services, Cashflow Stats.
+- [x] REST API CRUD lengkap: Orders, Customers, Expenses, Users, Tenants, Services, Cashflow Stats, Staff Accounts, Cashier Shifts, WhatsApp Logs.
 - [x] Validasi status langganan tenant & kontrol status aktif/nonaktif.
 - [x] **Keamanan Password:** Native Bun bcrypt hashing (`Bun.password.hash`) saat register/buat user & tenant, login verify (`Bun.password.verify`), auto-upgrade password plaintext lama ke bcrypt hash saat login pertama.
 
@@ -77,22 +79,40 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] Ekspor laporan buku besar format **CSV (UTF-8 BOM)** langsung kompatibel Microsoft Excel.
 - [x] Cetak dokumen resmi ber-kop surat outlet ke format **PDF**.
 
----
+### 8. Arsitektur 3-Tier Multi-Tenant SaaS & RBAC (P1)
+- [x] **Super Admin (Platform SaaS Provider)**:
+  - Mengelola ekosistem platform: Dashboard Platform, CRUD Cabang Toko (`tenants`), Manajemen Pengguna (`users`), Data Order (`orders`), Data Log (`logs`), dan Laporan Platform (`reports`).
+  - **Dashboard SaaS Bersih**: Menghilangkan feed pesanan cucian kiloan kasir dari dashboard overview Super Admin, digantikan dengan:
+    - **Pusat Diagnostik & Investigasi Masalah (Tech Support Hub)**: Akses cepat jika cabang/kasir meminta bantuan error aplikasi, nota hilang, nomor WA gagal kirim, atau selisih uang laci.
+    - **Status Konektivitas Platform**: Indikator real-time Bun + Hono API backend, PostgreSQL database, dan WhatsApp Gateway.
+    - **Monitoring Masa Aktif Langganan**: Alert otomatis untuk cabang dengan masa aktif kritis (≤ 7 hari) atau kedaluwarsa.
+  - **Menu Data Order (Inspeksi Seluruh Cabang)**: Kemampuan mencari nomor invoice, verifikasi pelanggan, memeriksa status pesanan, dan cetak ulang nota bagi cabang yang membutuhkan bantuan teknis.
+  - **Menu Data Log (Audit Log Sistem)**: Tab audit komprehensif untuk log WhatsApp (`wa_logs`), riwayat rekonsiliasi shift kasir (`shifts`), dan diagnosa server.
+  - Mengontrol masa aktif langganan toko (`subscription_until`), perpanjangan paket, dan blokir/aktivasi akun.
+  - Laporan Super Admin berfokus pada status langganan tenant (Aktif, Segera Berakhir, Expired) dan ekspor CSV data lisensi, **bukan** buku kas cucian toko.
+- [x] **Tenant Owner (Pemilik Outlet Laundry)**:
+  - Memiliki dan mengelola bisnis laundry-nya sendiri secara penuh.
+  - Akses penuh: POS Kasir, Master Layanan & SLA, Buku Kas & Keuangan Toko, Laba Bersih, Pelanggan, Laporan Toko (Export CSV/PDF), dan Pengaturan Toko.
+  - Mengelola staf kasir tokonya sendiri di tab Pengaturan (`StaffManagementSection`).
+  - Setup WhatsApp Notifikasi Gateway via Baileys QR Scan untuk cabangnya.
+- [x] **Staff (Operator & Kasir Toko)**:
+  - Karyawan toko dengan hak akses terbatas (*restricted access*).
+  - Hanya dapat mengakses menu Kasir (`orders`) dan Pelanggan (`customers`).
+  - Fitur kasir: Entri pesanan, pelunasan pembayaran, cetak struk thermal, Buka Shift (kas modal awal) & Tutup Shift (rekonsiliasi uang fisik laci).
+  - **Akses diblokir**: Buku Kas / Laba Toko disembunyikan, penghapusan pesanan ditolak backend (`403 Forbidden`), tidak bisa ubah tarif layanan atau pengaturan platform.
 
-### 🟡 Prioritas Menengah (P1 - Enhancement & Operasional)
+### 9. Manajemen Shift Kasir & Rekonsiliasi Kas Laci (P1)
+- [x] **Buka Shift Kasir (`OpenShiftModal`)**: Input modal awal kas laci (kembalian) dengan tombol nominal cepat (50k, 100k, 150k, 200k, 300k).
+- [x] **Tutup Shift Kasir (`CloseShiftModal`)**: Input uang fisik laci aktual, perhitungan otomatis uang tunai sistem vs fisik secara real-time.
+- [x] **Laporan Selisih Kas (*Cash Discrepancy*)**: Deteksi otomatis selisih kas (🟢 Pas, 🟡 Kas Lebih, 🔴 Kas Kurang).
+- [x] **Indikator Shift Aktif di Header**: Menampilkan status shift berjalan, nama kasir, jam buka, dan tombol cepat Buka/Tutup shift.
+- [x] **Tab Riwayat Shift & Rekonsiliasi**: Sub-view switcher di tab Arus Kas untuk mengaudit seluruh catatan shift kasir.
 
-#### 4. Multi-Staff / Akun Kasir per Outlet
-- [ ] Tenant Owner dapat membuat akun Kasir/Staff tambahan di cabangnya.
-- [ ] Role `staff` hanya memiliki akses ke kasir order dan update status pengerjaan, tidak dapat melihat total laba bersih toko atau menghapus pesanan.
-
-#### 5. Shift Kasir & Rekonsiliasi Uang Fisik Laci
-- [ ] Modal Buka Shift Kasir (input kas modal awal uang kembalian).
-- [ ] Modal Tutup Shift Kasir (hitung total uang fisik di laci vs uang masuk cash sistem).
-- [ ] Riwayat selisih kas kasir (*cash discrepancy report*).
-
-#### 6. Log Riwayat Pengiriman WhatsApp
-- [ ] Tabel `wa_logs` untuk mencatat riwayat pesan (No. Tujuan, Waktu, Status Terkirim/Gagal).
-- [ ] Indikator status notifikasi di tabel pesanan.
+### 10. Log Riwayat Pengiriman WhatsApp (`wa_logs`) (P1)
+- [x] Tabel `wa_logs` mencatat riwayat notifikasi (No. Tujuan, timestamp, pesan, status sent/failed, mode baileys/manual).
+- [x] Auto-logging otomatis saat status pesanan diubah ke `ready` (Siap Diambil).
+- [x] Badge hijau status **WA Terkirim** pada kolom no invoice pesanan di tabel kasir.
+- [x] Modal audit detail log WhatsApp (`WhatsAppLogsModal`) untuk melihat pesan, waktu kirim, dan error log jika gagal.
 
 ---
 

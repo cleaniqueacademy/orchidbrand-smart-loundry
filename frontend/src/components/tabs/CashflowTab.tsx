@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Store, CheckCircle2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Store, CheckCircle2, Calculator } from "lucide-react";
 import { CashflowStats, Expense, Order, DateFilterPreset, Role, Tenant } from "../../types";
 import {
   ShadcnDataTable,
@@ -7,6 +7,7 @@ import {
   filterByDatePreset,
 } from "../common/ShadcnDataTable";
 import { formatCurrency, formatSignedCurrency } from "../../utils/formatUtils";
+import { ShiftHistorySection } from "./ShiftHistorySection";
 
 interface CashflowTabProps {
   stats: CashflowStats;
@@ -14,6 +15,8 @@ interface CashflowTabProps {
   orders?: Order[];
   tenants?: Tenant[];
   currentUserRole?: Role;
+  tenantId?: string;
+  enableCashierShift?: boolean;
   onOpenExpenseModal: (defaultType?: "income" | "expense") => void;
   onDeleteExpense: (id: string) => void;
 }
@@ -36,11 +39,14 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
   orders = [],
   tenants = [],
   currentUserRole = "staff",
+  tenantId,
+  enableCashierShift = true,
   onOpenExpenseModal,
   onDeleteExpense,
 }) => {
   const isSuperAdmin = currentUserRole === "superadmin";
 
+  const [activeSubView, setActiveSubView] = useState<"transactions" | "shifts">("transactions");
   const [searchQuery, setSearchQuery] = useState("");
   const [datePreset, setDatePreset] = useState<DateFilterPreset>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
@@ -267,8 +273,41 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
         )}
       </div>
 
-      {/* 3 Metric Cards dengan Palet Warna Berani & Spotlight Light Blue */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Sub-view switcher (Tampil jika superadmin atau fitur shift aktif) */}
+      {(isSuperAdmin || enableCashierShift !== false) && (
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveSubView("transactions")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubView === "transactions"
+                ? "bg-white text-zinc-900 shadow-2xs border border-zinc-200/60"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            Buku Kas & Transaksi
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubView("shifts")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeSubView === "shifts"
+                ? "bg-white text-zinc-900 shadow-2xs border border-zinc-200/60"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Calculator className="w-3.5 h-3.5 text-zinc-600" />
+            <span>Riwayat Shift & Rekonsiliasi Kasir</span>
+          </button>
+        </div>
+      )}
+
+      {activeSubView === "shifts" && (isSuperAdmin || enableCashierShift !== false) ? (
+        <ShiftHistorySection tenantId={tenantFilter !== "all" ? tenantFilter : tenantId || "all"} />
+      ) : (
+        <>
+          {/* 3 Metric Cards dengan Palet Warna Berani & Spotlight Light Blue */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Pemasukan - Mint Emerald */}
         <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -409,6 +448,8 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
           initialPageSize={10}
         />
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 };

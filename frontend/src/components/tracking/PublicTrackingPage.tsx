@@ -228,28 +228,6 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
                 </div>
               </div>
 
-              {/* Ready Rack Banner */}
-              {order.status === "ready" && order.rackNumber && (
-                <div className="mt-4 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold">
-                      📍
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-emerald-300 font-medium">
-                        Lokasi Rak / Keranjang Pengambilan:
-                      </p>
-                      <p className="text-base font-black text-white font-mono tracking-wide">
-                        {order.rackNumber}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-900/60 px-2 py-1 rounded font-semibold">
-                    Siap Diserahkan
-                  </span>
-                </div>
-              )}
-
               {/* Stepper Progress Bar */}
               {!isCancelled && (
                 <div className="mt-6 pt-2">
