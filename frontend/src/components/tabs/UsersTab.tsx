@@ -54,6 +54,11 @@ const roleBadgeConfig: Record<Role, { label: string; className: string; desc: st
     className: "bg-zinc-100 text-zinc-700 border-zinc-200",
     desc: "Staf operasional kasir & cuci. Input pesanan, serah terima cucian, dan shift kasir.",
   },
+  marketing: {
+    label: "Affiliate Marketing",
+    className: "bg-indigo-50 text-indigo-800 border-indigo-200",
+    desc: "Mitra promosi affiliate. Mengelola kode kupon promosi dan komisi pendaftaran outlet baru.",
+  },
 };
 
 export const UsersTab: React.FC<UsersTabProps> = ({

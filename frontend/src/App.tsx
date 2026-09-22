@@ -14,8 +14,18 @@ import { SettingsTab } from "./components/tabs/SettingsTab";
 import { OrderFormTab } from "./components/tabs/OrderFormTab";
 import { ServicesTab } from "./components/tabs/ServicesTab";
 import { SystemLogsTab } from "./components/tabs/SystemLogsTab";
+import { ReferralCodesTab } from "./components/tabs/admin/ReferralCodesTab";
+import { MarketingTab } from "./components/tabs/admin/MarketingTab";
+import { SubscriptionTab } from "./components/tabs/subscription/SubscriptionTab";
+import { PlansTab } from "./components/tabs/admin/PlansTab";
+import { SignupsTab } from "./components/tabs/admin/SignupsTab";
+import { SubscriptionInvoicesTab } from "./components/tabs/admin/SubscriptionInvoicesTab";
+import { PlatformSettingsTab } from "./components/tabs/admin/PlatformSettingsTab";
 import { PublicTrackingPage } from "./components/tracking/PublicTrackingPage";
+import { RegisterPage } from "./components/public/RegisterPage";
+import { RegisterSuccessPage } from "./components/public/RegisterSuccessPage";
 import { LoginPage } from "./components/auth/LoginPage";
+import { getPublicRoute } from "./utils/routeUtils";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
 import { InactiveAccountModal } from "./components/modals/InactiveAccountModal";
@@ -35,6 +45,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Public Route State (/register, /register-success, etc.)
+  const [publicRoute, setPublicRoute] = useState<string | null>(() => getPublicRoute());
+
   // Public Tracking Page State (URL /track/:invoiceNo or ?track=... or ?invoice=...)
   const [trackingInvoice, setTrackingInvoice] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -46,6 +59,7 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
+      setPublicRoute(getPublicRoute());
       const match = window.location.pathname.match(/\/track\/([^/?#]+)/);
       if (match && match[1]) {
         setTrackingInvoice(decodeURIComponent(match[1]));
@@ -103,24 +117,63 @@ export default function App() {
     refreshUserSession,
   } = useAuthSession();
 
-  // Route Guard berdasarkan 3 Role:
-  // 1. Super Admin: Platform SaaS & Troubleshooting Hub (overview, tenants, users, orders, logs, reports)
-  // 2. Staff: Khusus Operasional Kasir (orders, customers, create-order, edit-order)
-  // 3. Tenant Owner: Seluruh Operasional Toko miliknya (overview, orders, services, cashflow, customers, reports, settings)
+  // Route Guard berdasarkan Role:
+  // 1. Super Admin: Platform SaaS & Troubleshooting Hub
+  // 2. Marketing: Khusus Dashboard Affiliate & Kode Referral
+  // 3. Staff: Khusus Operasional Kasir
+  // 4. Tenant Owner: Seluruh Operasional Toko miliknya
   useEffect(() => {
     if (currentUserRole === "superadmin") {
-      const allowedAdminTabs: TabType[] = ["overview", "tenants", "users", "orders", "logs", "reports"];
+      const allowedAdminTabs: TabType[] = [
+        "overview",
+        "tenants",
+        "users",
+        "orders",
+        "logs",
+        "reports",
+        "marketing",
+        "referral_codes",
+        "subscription",
+        "plans",
+        "signups",
+        "invoices",
+        "settings_platform",
+        "wa_numbers",
+        "ai",
+      ];
       if (!allowedAdminTabs.includes(activeTab)) {
         setActiveTab("overview");
       }
+    } else if (currentUserRole === "marketing") {
+      const allowedMarketingTabs: TabType[] = ["marketing", "referral_codes", "ai"];
+      if (!allowedMarketingTabs.includes(activeTab)) {
+        setActiveTab("marketing");
+      }
     } else if (currentUserRole === "staff") {
-      const allowedStaffTabs: TabType[] = ["overview", "orders", "customers", "create-order", "edit-order"];
+      const allowedStaffTabs: TabType[] = [
+        "overview",
+        "orders",
+        "customers",
+        "create-order",
+        "edit-order",
+        "ai",
+      ];
       if (!allowedStaffTabs.includes(activeTab)) {
         setActiveTab("overview");
       }
     } else {
-      // Tenant Owner tidak boleh membuka tab khusus Super Admin
-      if (activeTab === "tenants" || activeTab === "users" || activeTab === "logs") {
+      // Tenant Owner tidak boleh membuka tab khusus Super Admin & Marketing
+      const forbiddenTabs: TabType[] = [
+        "tenants",
+        "users",
+        "logs",
+        "marketing",
+        "plans",
+        "signups",
+        "invoices",
+        "settings_platform",
+      ];
+      if (forbiddenTabs.includes(activeTab)) {
         setActiveTab("overview");
       }
     }
@@ -251,6 +304,14 @@ export default function App() {
     }
   };
 
+  // Public registration & success pages
+  if (publicRoute === "register") {
+    return <RegisterPage />;
+  }
+  if (publicRoute === "register-success") {
+    return <RegisterSuccessPage />;
+  }
+
   // Public tracking page view (takes priority over login / app shell)
   if (trackingInvoice !== null) {
     return (
@@ -335,6 +396,7 @@ export default function App() {
       >
         <Header
           activeTab={activeTab}
+          setActiveTab={setActiveTab}
           currentUserRole={currentUserRole}
           currentUser={currentUser}
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
@@ -509,6 +571,34 @@ export default function App() {
                   currentUserRole={currentUserRole}
                   users={users}
                 />
+              )}
+
+              {activeTab === "referral_codes" && (
+                <ReferralCodesTab currentUser={currentUser || undefined} />
+              )}
+
+              {activeTab === "marketing" && (
+                <MarketingTab currentUser={currentUser || undefined} />
+              )}
+
+              {activeTab === "subscription" && (
+                <SubscriptionTab tenantId={effectiveTenantId} />
+              )}
+
+              {activeTab === "plans" && currentUserRole === "superadmin" && (
+                <PlansTab />
+              )}
+
+              {activeTab === "signups" && currentUserRole === "superadmin" && (
+                <SignupsTab />
+              )}
+
+              {activeTab === "invoices" && currentUserRole === "superadmin" && (
+                <SubscriptionInvoicesTab />
+              )}
+
+              {activeTab === "settings_platform" && currentUserRole === "superadmin" && (
+                <PlatformSettingsTab />
               )}
 
               {activeTab === "settings" && (

@@ -3,9 +3,12 @@ import { Menu, RefreshCw, ShieldCheck, ChevronRight, DollarSign } from "lucide-r
 import { TabType, Role, User, CashierShift } from "../../types";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
+import { TrialBanner } from "../tabs/subscription/TrialBanner";
+import { checkUserActiveStatus } from "../../utils/subscriptionUtils";
 
 interface HeaderProps {
   activeTab: TabType;
+  setActiveTab?: (tab: TabType) => void;
   currentUserRole: Role;
   currentUser?: User | null;
   onOpenMobileMenu: () => void;
@@ -33,10 +36,20 @@ const tabBreadcrumbs: Record<TabType, string> = {
   settings: "Pengaturan",
   "create-order": "Buat Pesanan",
   "edit-order": "Edit Pesanan",
+  marketing: "Mitra Marketing",
+  referral_codes: "Kode Referral",
+  subscription: "Langganan",
+  plans: "Paket Harga",
+  signups: "Pendaftar Baru",
+  invoices: "Invoice Tagihan",
+  settings_platform: "Pengaturan Platform",
+  wa_numbers: "Nomor WhatsApp",
+  ai: "Asisten AI",
 };
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
+  setActiveTab,
   currentUserRole,
   currentUser,
   onOpenMobileMenu,
@@ -50,6 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShiftModal,
   onCloseShiftModal,
 }) => {
+  const activeStatus = checkUserActiveStatus(currentUser);
+
   const currentTabName =
     activeTab === "reports"
       ? currentUserRole === "superadmin"
@@ -70,8 +85,17 @@ export const Header: React.FC<HeaderProps> = ({
       : tabBreadcrumbs[activeTab] || "Dashboard";
 
   return (
-    <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-8 py-2.5 no-print">
-      <div className="flex items-center justify-between gap-4">
+    <div className="sticky top-0 z-20 no-print">
+      {currentUserRole !== "superadmin" && currentUser && (
+        <TrialBanner
+          isTrial={Boolean(currentUser.isTrial)}
+          daysRemaining={activeStatus.daysRemaining}
+          subscriptionUntil={currentUser.subscriptionUntil}
+          setActiveTab={setActiveTab || (() => {})}
+        />
+      )}
+      <header className="bg-white/90 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-8 py-2.5">
+        <div className="flex items-center justify-between gap-4">
         {/* Left Breadcrumb & Mobile Menu Toggle */}
         <div className="flex items-center gap-3 min-w-0">
           <button
@@ -184,5 +208,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
+    </div>
   );
 };

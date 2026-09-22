@@ -51,6 +51,18 @@ services:
     networks:
       - orchid_net
 
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile.prod
+    container_name: orchid_landing
+    restart: always
+    ports:
+      # Landing page publieksite; dashboard tetap memakai APP_PORT.
+      - "${LANDING_PORT:-4174}:80"
+    networks:
+      - orchid_net
+
 volumes:
   orchid_postgres_data:
     driver: local

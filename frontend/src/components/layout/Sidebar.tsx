@@ -15,6 +15,12 @@ import {
   ChevronRight,
   Tag,
   Activity,
+  UserCheck,
+  CreditCard,
+  UserPlus,
+  Clock,
+  Layers,
+  Sliders,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TabType, Role, Tenant, User } from "../../types";
@@ -139,15 +145,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isSuperAdmin = currentUserRole === "superadmin";
   const isStaff = currentUserRole === "staff";
+  const isMarketing = currentUserRole === "marketing";
 
   // Menu Super Admin: Platform SaaS + Audit & Troubleshooting Data
   const superAdminNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Building2 },
     { id: "tenants" as TabType, label: "Cabang", icon: Store },
     { id: "users" as TabType, label: "Pengguna", icon: ShieldCheck },
+    { id: "signups" as TabType, label: "Pendaftar Mandiri", icon: UserPlus },
+    { id: "plans" as TabType, label: "Paket & Harga", icon: Layers },
+    { id: "invoices" as TabType, label: "Verifikasi Tagihan", icon: CreditCard },
+    { id: "marketing" as TabType, label: "Mitra Marketing", icon: UserCheck },
+    { id: "referral_codes" as TabType, label: "Kode Referral", icon: Tag },
+    { id: "settings_platform" as TabType, label: "Setting Platform", icon: Sliders },
     { id: "orders" as TabType, label: "Data Order", icon: ShoppingBag },
     { id: "logs" as TabType, label: "Data Log", icon: Activity },
     { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
+  ];
+
+  // Menu Marketing: Dashboard Affiliate & Kode Referral
+  const marketingNav = [
+    { id: "marketing" as TabType, label: "Dashboard Affiliate", icon: DollarSign },
+    { id: "referral_codes" as TabType, label: "Kode Referral", icon: Tag },
   ];
 
   // Menu Staff: Meja Kerja Kasir & Operasional
@@ -176,6 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "services" as TabType, label: "Layanan", icon: Tag },
     { id: "cashflow" as TabType, label: "Buku Kas", icon: DollarSign },
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
+    { id: "subscription" as TabType, label: "Langganan", icon: Clock },
     { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
     { id: "settings" as TabType, label: "Pengaturan", icon: Settings },
   ];
@@ -330,6 +350,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {renderNavButtons(superAdminNav)}
             </div>
+          ) : isMarketing ? (
+            /* Grup Khusus Marketing Affiliate */
+            <div>
+              {isCollapsed ? (
+                <div className="h-px bg-zinc-100 my-2 mx-1" />
+              ) : (
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
+                  Menu Affiliate
+                </div>
+              )}
+              {renderNavButtons(marketingNav)}
+            </div>
           ) : isStaff ? (
             /* Grup Operasional untuk Staff */
             <div>
@@ -357,7 +389,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* Grup Notifikasi / Integrasi (Khusus Tenant Owner) */}
-          {!isStaff && !isSuperAdmin && (
+          {!isStaff && !isSuperAdmin && !isMarketing && (
             <div>
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />

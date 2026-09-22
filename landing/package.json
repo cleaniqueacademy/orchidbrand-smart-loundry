@@ -1,0 +1,20 @@
+{
+  "name": "orchidbrand-landing",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4174",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4174"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  },
+  "devDependencies": {}
+}

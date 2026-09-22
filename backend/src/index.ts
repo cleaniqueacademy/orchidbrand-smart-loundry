@@ -5,7 +5,17 @@ import { db, initPostgresTables } from "./db/index";
 import { users, tenants, customers, orders, expenses, services, shifts, waLogs } from "./db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
+import referralRoutes from "./routes/referralCodes";
+import marketingRoutes from "./routes/marketing";
+import signupRoutes from "./routes/signup";
+import planRoutes from "./routes/plans";
+import platformSettingsRoutes from "./routes/platformSettings";
+import subscriptionRoutes from "./routes/subscription";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
+import { DEFAULT_PRESET_SERVICES } from "./constants/services";
+import { signToken, authMiddleware, getUser } from "./middleware/auth";
+import { requireRole, requireTenantAccess } from "./middleware/rbac";
+import { rateLimit } from "./middleware/rateLimit";
 
 const app = new Hono();
 
@@ -29,6 +39,19 @@ initPostgresTables()
 
 // WhatsApp Gateway Routes
 app.route("/api/whatsapp", whatsappRoutes);
+// Referral & Marketing Routes
+app.route("/api/referral-codes", referralRoutes);
+app.route("/api/public/referral", referralRoutes);
+app.route("/api/marketing", marketingRoutes);
+// Self-Signup & Public Routes
+app.route("/api/signup", signupRoutes);
+app.route("/api/public/signup", signupRoutes);
+// Plans & Pricing Routes
+app.route("/api/plans", planRoutes);
+// Platform Settings Routes
+app.route("/api/platform-settings", platformSettingsRoutes);
+// Subscription & Invoices Routes
+app.route("/api/subscription", subscriptionRoutes);
 
 // 1. Health check
 app.get("/api/health", (c) => {
@@ -121,19 +144,7 @@ app.get("/api/track/:invoiceNo", async (c) => {
   }
 });
 
-// 3. Master Services CRUD per Tenant
-const DEFAULT_PRESET_SERVICES = [
-  { name: "Cuci Komplit Reguler", unit: "kg", pricePerUnit: 8000, minOrder: 3, durationHours: 48 },
-  { name: "Cuci Komplit Kilat", unit: "kg", pricePerUnit: 12000, minOrder: 2, durationHours: 24 },
-  { name: "Cuci Komplit Express", unit: "kg", pricePerUnit: 16000, minOrder: 1, durationHours: 6 },
-  { name: "Cuci Kering Saja", unit: "kg", pricePerUnit: 6000, minOrder: 2, durationHours: 24 },
-  { name: "Setrika Uap Saja", unit: "kg", pricePerUnit: 6000, minOrder: 2, durationHours: 24 },
-  { name: "Cuci Bedcover King", unit: "pcs", pricePerUnit: 35000, minOrder: 1, durationHours: 48 },
-  { name: "Cuci Bedcover Single", unit: "pcs", pricePerUnit: 25000, minOrder: 1, durationHours: 48 },
-  { name: "Cuci Sepatu Premium", unit: "pasang", pricePerUnit: 25000, minOrder: 1, durationHours: 48 },
-  { name: "Cuci Karpet", unit: "meter", pricePerUnit: 15000, minOrder: 1, durationHours: 72 },
-  { name: "Cuci Selimut", unit: "pcs", pricePerUnit: 20000, minOrder: 1, durationHours: 48 },
-];
+// 3. Master Services CRUD per Tenant (DEFAULT_PRESET_SERVICES imported from ./constants/services)
 
 app.get("/api/services", async (c) => {
   try {
@@ -476,15 +487,13 @@ app.post("/api/auth/login", async (c) => {
       }
     }
 
-    // Generate session token
-    const token = Buffer.from(
-      JSON.stringify({
-        userId: foundUser.id,
-        role: foundUser.role,
-        tenantId: userSummary.tenantId,
-        exp: Date.now() + 7 * 24 * 3600 * 1000,
-      })
-    ).toString("base64");
+    // Generate session token (HMAC-SHA256)
+    const token = await signToken({
+      userId: foundUser.id,
+      role: foundUser.role,
+      tenantId: userSummary.tenantId,
+      exp: Date.now() + 7 * 24 * 3600 * 1000,
+    });
 
     return c.json({
       success: true,

@@ -1,8 +1,34 @@
-import { db } from "./index";
-import { users, tenants, customers, orders, expenses, services, shifts, waLogs } from "./schema";
+import { db, initPostgresTables } from "./index";
+import {
+  users,
+  tenants,
+  customers,
+  orders,
+  expenses,
+  services,
+  shifts,
+  waLogs,
+  marketingProfiles,
+  referralCodes,
+  referralCodeTenants,
+  referralEvents,
+  plans,
+  platformSettings,
+  signupRequests,
+  subscriptionInvoices,
+  marketingCommissions,
+  subscriptionEvents,
+  waNumbers,
+  waMessages,
+  aiConversations,
+  aiMessages,
+  aiUsageDaily,
+} from "./schema";
 
 export async function seedInitialData(force = true) {
   try {
+    await initPostgresTables();
+
     if (!force) {
       const existingUsers = await db.select().from(users);
       if (existingUsers.length > 0) {
@@ -13,8 +39,23 @@ export async function seedInitialData(force = true) {
 
     console.log("🌱 Menjalankan Seeding data awal lengkap Orchid Brand Smart Laundry (PostgreSQL)...");
 
-    // Bersihkan data lama dengan urutan foreign key
+    // Bersihkan data lama dengan urutan foreign key aman
     try {
+      await db.delete(waMessages);
+      await db.delete(waNumbers);
+      await db.delete(aiMessages);
+      await db.delete(aiConversations);
+      await db.delete(aiUsageDaily);
+      await db.delete(subscriptionEvents);
+      await db.delete(marketingCommissions);
+      await db.delete(subscriptionInvoices);
+      await db.delete(signupRequests);
+      await db.delete(referralEvents);
+      await db.delete(referralCodeTenants);
+      await db.delete(referralCodes);
+      await db.delete(marketingProfiles);
+      await db.delete(plans);
+      await db.delete(platformSettings);
       await db.delete(waLogs);
       await db.delete(shifts);
       await db.delete(expenses);
@@ -31,18 +72,92 @@ export async function seedInitialData(force = true) {
     const now = new Date();
     const today = now.toISOString();
 
-    // 1. Users
+    // ----------------------------------------------------
+    // 1. Platform Settings
+    // ----------------------------------------------------
+    await db.insert(platformSettings).values({
+      id: "default",
+      platformName: "Orchid Brand Smart Laundry",
+      bankName: "BCA (Bank Central Asia)",
+      bankAccountNumber: "8830-1928-3341",
+      bankAccountName: "PT ORCHID SISTEM DIGITAL",
+      qrisInfo: "https://orchidbrand.com/qris-official.png",
+      defaultTrialDays: 7,
+      defaultAiDailyQuota: 50,
+      supportPhone: "081299881122",
+      supportEmail: "support@orchidbrand.com",
+      termsUrl: "https://orchidbrand.com/terms",
+      privacyUrl: "https://orchidbrand.com/privacy",
+      updatedAt: today,
+    });
+
+    // ----------------------------------------------------
+    // 2. Subscription Plans
+    // ----------------------------------------------------
+    await db.insert(plans).values([
+      {
+        id: "plan-basic",
+        code: "basic",
+        name: "Paket Starter",
+        description: "Cocok untuk outlet laundry rintisan dan rumahan",
+        durationMonths: 1,
+        pricePerMonth: 99000,
+        features: JSON.stringify([
+          "Semua fitur POS Kasir & Struk",
+          "1 Nomor WhatsApp Notifikasi",
+          "Maksimal 3 Akun Kasir/Staf",
+          "Laporan Keuangan & Pengeluaran",
+          "50 Kuota Asisten AI / Hari",
+        ]),
+        maxWaNumbers: 1,
+        maxStaff: 3,
+        aiTokenQuotaDaily: 50,
+        isTrialAllowed: "true",
+        isActive: "true",
+        sortOrder: 1,
+        createdAt: today,
+      },
+      {
+        id: "plan-pro",
+        code: "pro",
+        name: "Paket Pro Outlet",
+        description: "Pilihan terbaik untuk outlet berkembang dengan volume order tinggi",
+        durationMonths: 1,
+        pricePerMonth: 199000,
+        features: JSON.stringify([
+          "Semua fitur Paket Starter",
+          "Multi-Nomor WhatsApp (Hingga 3 Nomor)",
+          "Maksimal 10 Akun Kasir/Staf",
+          "Laporan Multi-Cabang & Shift Lengkap",
+          "200 Kuota Asisten AI / Hari",
+          "Dukungan Prioritas CS",
+        ]),
+        maxWaNumbers: 3,
+        maxStaff: 10,
+        aiTokenQuotaDaily: 200,
+        isTrialAllowed: "true",
+        isActive: "true",
+        sortOrder: 2,
+        createdAt: today,
+      },
+    ]);
+
+    // ----------------------------------------------------
+    // 3. Users (Superadmin, Owners, Staff, Marketing)
+    // ----------------------------------------------------
     const adminPasswordHash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
     const budiPasswordHash = await Bun.password.hash("budi123", { algorithm: "bcrypt", cost: 10 });
     const rinaPasswordHash = await Bun.password.hash("kasir123", { algorithm: "bcrypt", cost: 10 });
     const dewiPasswordHash = await Bun.password.hash("dewi123", { algorithm: "bcrypt", cost: 10 });
     const bambangPasswordHash = await Bun.password.hash("kasir123", { algorithm: "bcrypt", cost: 10 });
+    const marketingPasswordHash = await Bun.password.hash("marketing123", { algorithm: "bcrypt", cost: 10 });
 
     const adminId = "user-admin-01";
     const ownerId1 = "user-owner-01";
     const staffId1 = "user-staff-01";
     const ownerId2 = "user-owner-02";
     const staffId2 = "user-staff-02";
+    const marketingUserId = "user-marketing-01";
 
     const tenantId1 = "tenant-01";
     const tenantId2 = "tenant-02";
@@ -98,9 +213,82 @@ export async function seedInitialData(force = true) {
         status: "active",
         createdAt: today,
       },
+      {
+        id: marketingUserId,
+        name: "Fajar Pratama (Affiliate)",
+        email: "marketing@orchidbrand.com",
+        passwordHash: marketingPasswordHash,
+        role: "marketing",
+        status: "active",
+        createdAt: today,
+      },
     ]);
 
-    // 2. Tenants
+    // ----------------------------------------------------
+    // 4. Marketing Profile & Referral Codes
+    // ----------------------------------------------------
+    const marketingProfileId = "mkt-prof-01";
+    await db.insert(marketingProfiles).values({
+      id: marketingProfileId,
+      userId: marketingUserId,
+      phone: "082188997766",
+      bankName: "BCA",
+      bankAccountNumber: "5221-0099-88",
+      bankAccountName: "FAJAR PRATAMA",
+      commissionRateDefault: 10, // 10%
+      totalEarned: 150000,
+      totalWithdrawn: 0,
+      notes: "Mitra marketing aktif wilayah Jawa Barat & Jabodetabek",
+      createdAt: today,
+    });
+
+    const refCodeId1 = "ref-01";
+    const refCodeId2 = "ref-02";
+
+    await db.insert(referralCodes).values([
+      {
+        id: refCodeId1,
+        code: "ORCHIDHEMAT",
+        name: "Promo Berkah 10% Off",
+        description: "Diskon 10% untuk langganan baru, komisi 10% untuk affiliate",
+        discountType: "percent",
+        discountValue: 10,
+        commissionType: "percent",
+        commissionValue: 10,
+        maxUsage: 100,
+        currentUsage: 2,
+        validFrom: "2026-01-01",
+        validUntil: "2027-12-31",
+        isActive: "true",
+        appliesToAllTenants: "true",
+        marketingProfileId: marketingProfileId,
+        createdByUserId: adminId,
+        createdAt: today,
+      },
+      {
+        id: refCodeId2,
+        code: "PROMOBARU",
+        name: "Potongan Rp 25.000",
+        description: "Diskon flat Rp25.000 untuk pendaftaran pertama",
+        discountType: "fixed",
+        discountValue: 25000,
+        commissionType: "fixed",
+        commissionValue: 15000,
+        maxUsage: 50,
+        currentUsage: 0,
+        validFrom: "2026-01-01",
+        validUntil: "2027-12-31",
+        isActive: "true",
+        appliesToAllTenants: "true",
+        marketingProfileId: marketingProfileId,
+        createdByUserId: adminId,
+        createdAt: today,
+      },
+    ]);
+
+    // ----------------------------------------------------
+    // 5. Tenants
+    // ----------------------------------------------------
     await db.insert(tenants).values([
       {
         id: tenantId1,
@@ -108,6 +296,7 @@ export async function seedInitialData(force = true) {
         outletName: "Orchid Laundry - Cabang Melati",
         phone: "081234567890",
         address: "Jl. Melati Raya No. 45, Jakarta Selatan",
+        city: "Jakarta Selatan",
         status: "active",
         subscriptionUntil: "2027-01-15",
         waMode: "baileys",
@@ -119,6 +308,7 @@ export async function seedInitialData(force = true) {
         outletName: "Orchid Laundry - Cabang Mawar",
         phone: "081399887766",
         address: "Jl. Mawar Indah No. 12, Surabaya",
+        city: "Surabaya",
         status: "active",
         subscriptionUntil: "2026-11-20",
         waMode: "baileys",
@@ -126,7 +316,39 @@ export async function seedInitialData(force = true) {
       },
     ]);
 
-    // 3. Services
+    // ----------------------------------------------------
+    // 6. WhatsApp Multi-Number Primary Migration
+    // ----------------------------------------------------
+    await db.insert(waNumbers).values([
+      {
+        id: "wanum-01",
+        tenantId: tenantId1,
+        sessionKey: tenantId1, // backward-compatible: uses tenantId1 as primary sessionKey
+        label: "Nomor Kasir Melati (Utama)",
+        phoneNumber: "081234567890",
+        isPrimary: "true",
+        botEnabled: "false",
+        aiEnabled: "false",
+        status: "connected",
+        createdAt: today,
+      },
+      {
+        id: "wanum-02",
+        tenantId: tenantId2,
+        sessionKey: tenantId2, // backward-compatible
+        label: "Nomor Kasir Mawar (Utama)",
+        phoneNumber: "081399887766",
+        isPrimary: "true",
+        botEnabled: "false",
+        aiEnabled: "false",
+        status: "connected",
+        createdAt: today,
+      },
+    ]);
+
+    // ----------------------------------------------------
+    // 7. Services
+    // ----------------------------------------------------
     await db.insert(services).values([
       {
         id: "srv-01",
@@ -207,7 +429,9 @@ export async function seedInitialData(force = true) {
       },
     ]);
 
-    // 4. Customers
+    // ----------------------------------------------------
+    // 8. Customers
+    // ----------------------------------------------------
     const custId1 = "cust-01";
     const custId2 = "cust-02";
     const custId3 = "cust-03";
@@ -262,7 +486,9 @@ export async function seedInitialData(force = true) {
       },
     ]);
 
-    // 5. Orders
+    // ----------------------------------------------------
+    // 9. Orders
+    // ----------------------------------------------------
     await db.insert(orders).values([
       {
         id: "ord-001",
@@ -274,7 +500,7 @@ export async function seedInitialData(force = true) {
         unit: "kg",
         pricePerUnit: 8000,
         totalAmount: 36000,
-        status: "ready", // Siap diambil!
+        status: "ready",
         paymentStatus: "paid",
         paymentMethod: "qris",
         notes: "Pewangi Sakura",
@@ -291,7 +517,7 @@ export async function seedInitialData(force = true) {
         unit: "kg",
         pricePerUnit: 14000,
         totalAmount: 42000,
-        status: "ready", // Siap diambil!
+        status: "ready",
         paymentStatus: "paid",
         paymentMethod: "cash",
         notes: "Express 1 hari selesai",
@@ -308,7 +534,7 @@ export async function seedInitialData(force = true) {
         unit: "pcs",
         pricePerUnit: 35000,
         totalAmount: 35000,
-        status: "process", // Sedang dicuci
+        status: "process",
         paymentStatus: "unpaid",
         paymentMethod: "cash",
         notes: "Warna putih polos, hati-hati noda",
@@ -325,7 +551,7 @@ export async function seedInitialData(force = true) {
         unit: "pasang",
         pricePerUnit: 25000,
         totalAmount: 50000,
-        status: "drying_ironing", // Pengeringan
+        status: "drying_ironing",
         paymentStatus: "paid",
         paymentMethod: "transfer",
         notes: "Sneakers canvas putih dan suede",
@@ -366,7 +592,9 @@ export async function seedInitialData(force = true) {
       },
     ]);
 
-    // 6. Expenses
+    // ----------------------------------------------------
+    // 10. Expenses & Shifts
+    // ----------------------------------------------------
     await db.insert(expenses).values([
       {
         id: "exp-001",
@@ -386,18 +614,8 @@ export async function seedInitialData(force = true) {
         expenseDate: today.slice(0, 10),
         createdAt: today,
       },
-      {
-        id: "exp-003",
-        tenantId: tenantId1,
-        category: "Plastik & Kemasan",
-        amount: 25000,
-        notes: "Plastik jinjing laundry 1 pak isi 100",
-        expenseDate: today.slice(0, 10),
-        createdAt: today,
-      },
     ]);
 
-    // 7. Shifts (Shift aktif kasir Rina di Cabang Melati)
     await db.insert(shifts).values([
       {
         id: "shift-01",
@@ -412,7 +630,9 @@ export async function seedInitialData(force = true) {
       },
     ]);
 
-    // 8. WhatsApp Logs
+    // ----------------------------------------------------
+    // 11. WhatsApp Logs
+    // ----------------------------------------------------
     await db.insert(waLogs).values([
       {
         id: "walog-01",
@@ -425,39 +645,18 @@ export async function seedInitialData(force = true) {
         mode: "baileys",
         createdAt: today,
       },
-      {
-        id: "walog-02",
-        tenantId: tenantId1,
-        orderId: "ord-002",
-        recipientPhone: "085678901234",
-        recipientName: "Ahmad Fauzi",
-        messagePreview: "Halo Kak Ahmad Fauzi, cucian Anda INV-202609-002 sudah SIAP DIAMBIL (Rak: B-03).",
-        status: "sent",
-        mode: "manual",
-        createdAt: today,
-      },
-      {
-        id: "walog-03",
-        tenantId: tenantId1,
-        recipientPhone: "089999999999",
-        recipientName: "Nomor Uji Gagal",
-        messagePreview: "Pengingat pengambilan cucian.",
-        status: "failed",
-        mode: "baileys",
-        errorMessage: "Nomor WhatsApp tujuan tidak terdaftar di server WhatsApp.",
-        createdAt: today,
-      },
     ]);
 
     console.log("✅ Seeding PostgreSQL Orchid Brand berhasil 100%!");
     console.log("=================================================");
     console.log("🔑 AKUN DEMO SIAP DIGUNAKAN:");
-    console.log("1. Super Admin  : admin@orchidbrand.com  / admin123");
-    console.log("2. Tenant Owner : budi@laundrymelati.com / budi123");
-    console.log("3. Staff Kasir  : kasir@laundrymelati.com / kasir123");
+    console.log("1. Super Admin  : admin@orchidbrand.com     / admin123");
+    console.log("2. Tenant Owner : budi@laundrymelati.com    / budi123");
+    console.log("3. Staff Kasir  : kasir@laundrymelati.com   / kasir123");
+    console.log("4. Marketing    : marketing@orchidbrand.com / marketing123");
     console.log("=================================================");
   } catch (err: any) {
-    console.error("❌ Seed error:", err.message);
+    console.error("❌ Seed error:", err);
   }
 }
 

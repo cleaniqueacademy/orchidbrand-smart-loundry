@@ -61,6 +61,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         return;
       }
 
+      if (data.token) {
+        localStorage.setItem("orchid_token", data.token);
+      }
+
       setSuccessMessage("Login berhasil! Mengalihkan ke dashboard...");
       setTimeout(() => {
         onLoginSuccess(data.user);
@@ -197,6 +201,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </>
               )}
             </button>
+
+            {/* Link Pendaftaran Mandiri */}
+            <div className="pt-4 border-t border-zinc-100 text-center">
+              <span className="text-xs text-zinc-500">Belum memiliki akun outlet? </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const search = window.location.search;
+                  window.history.pushState({}, "", `/register${search}`);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition underline cursor-pointer"
+              >
+                Daftar Gratis 7 Hari &rarr;
+              </button>
+            </div>
           </form>
 
           {/* Demo Login Buttons */}
@@ -246,8 +266,32 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <div className="text-[11px] font-bold">Staff Kasir</div>
                 <div className="text-[9.5px] text-emerald-600 font-mono">kasir123</div>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("marketing@orchidbrand.com");
+                  setPassword("marketing123");
+                  executeLogin("marketing@orchidbrand.com", "marketing123");
+                }}
+                disabled={loading}
+                className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-center transition cursor-pointer"
+              >
+                <div className="text-[11px] font-bold">Marketing</div>
+                <div className="text-[9.5px] text-amber-600 font-mono">marketing123</div>
+              </button>
             </div>
           </div>
+        </div>
+
+        {/* Link Pendaftaran Trial */}
+        <div className="mt-4 text-center">
+          <a
+            href={`/register${typeof window !== "undefined" ? window.location.search : ""}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-200 hover:text-white transition cursor-pointer"
+          >
+            Belum punya outlet? <span className="font-semibold underline">Daftar gratis trial 7 hari &rarr;</span>
+          </a>
         </div>
 
         {/* Footer Notice */}

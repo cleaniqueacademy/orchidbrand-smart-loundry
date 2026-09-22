@@ -63,6 +63,22 @@ services:
     profiles:
       - full-stack
 
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+    container_name: orchid_laundry_landing
+    restart: unless-stopped
+    ports:
+      - "${LANDING_PORT:-4174}:4174"
+    volumes:
+      - ./landing/src:/app/src
+      - ./landing/index.html:/app/index.html
+    networks:
+      - orchid-network
+    profiles:
+      - full-stack
+
 volumes:
   orchid_postgres_data:
     driver: local

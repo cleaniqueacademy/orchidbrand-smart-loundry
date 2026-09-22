@@ -3,12 +3,14 @@
   "private": true,
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "landing"
   ],
   "scripts": {
     "dev": "bun --filter '*' dev",
     "dev:backend": "bun --filter orchidbrand-backend dev",
     "dev:frontend": "bun --filter orchidbrand-frontend dev",
+    "dev:landing": "bun --filter orchidbrand-landing dev",
     "build": "bun --filter '*' build",
     "db:push": "bun --filter orchidbrand-backend db:push",
     "db:push:force": "bun --filter orchidbrand-backend db:push:force",
