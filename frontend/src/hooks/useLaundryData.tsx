@@ -595,9 +595,15 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     outletName: string;
     phone: string;
     address: string;
+    city?: string;
     ownerName: string;
     ownerEmail: string;
     password?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountName?: string;
+    qrisInfo?: string;
+    openingHours?: string;
   }) => {
     try {
       const res = await fetch(`${API_BASE}/tenants`, {
@@ -625,7 +631,18 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     outletName?: string;
     phone?: string;
     address?: string;
+    city?: string;
+    ownerName?: string;
     services?: LaundryService[];
+    status?: string;
+    subscriptionUntil?: string;
+    enableCashierShift?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountName?: string;
+    qrisInfo?: string;
+    openingHours?: string;
+    [key: string]: unknown;
   }) => {
     try {
       const res = await fetch(`${API_BASE}/tenants/${id}`, {
@@ -636,10 +653,6 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success(
-          "Pengaturan Disimpan",
-          "Informasi cabang berhasil diperbarui."
-        );
         return true;
       } else {
         toast.error("Gagal Menyimpan", data.message || "Terjadi kesalahan pada server");

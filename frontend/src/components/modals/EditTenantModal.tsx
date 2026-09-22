@@ -1,64 +1,91 @@
-import React, { useState } from "react";
-import { X, Building2, CreditCard, Clock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Building2, CreditCard, Clock, Save } from "lucide-react";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
+import { Tenant } from "../../types";
 
 const BANK_OPTIONS = ["BCA", "Mandiri", "BRI", "BNI", "BSI", "CIMB Niaga", "Permata", "Danamon", "Mega", "BTN", "Lainnya"];
 
-interface CreateTenantModalProps {
+interface EditTenantModalProps {
   isOpen: boolean;
+  tenant: Tenant | null;
   onClose: () => void;
-  onSubmit: (tenantData: {
+  onSubmit: (tenantId: string, data: Partial<{
     outletName: string;
     phone: string;
     address: string;
-    city?: string;
+    city: string;
     ownerName: string;
-    ownerEmail: string;
-    password?: string;
-    bankName?: string;
-    bankAccountNumber?: string;
-    bankAccountName?: string;
-    qrisInfo?: string;
-    openingHours?: string;
-  }) => Promise<void>;
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
+    qrisInfo: string;
+    openingHours: string;
+    subscriptionUntil: string;
+    status: string;
+    enableCashierShift: string;
+  }>) => Promise<boolean>;
 }
 
-export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
+function parseOpeningHours(raw?: string | null) {
+  try {
+    if (!raw) return { weekdays: "08:00 - 16:00", saturday: "08:00 - 13:00", sunday: "Tutup" };
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return {
+      weekdays: parsed.weekdays || "08:00 - 16:00",
+      saturday: parsed.saturday || "08:00 - 13:00",
+      sunday: parsed.sunday || "Tutup",
+    };
+  } catch {
+    return { weekdays: "08:00 - 16:00", saturday: "08:00 - 13:00", sunday: "Tutup" };
+  }
+}
+
+export const EditTenantModal: React.FC<EditTenantModalProps> = ({
   isOpen,
+  tenant,
   onClose,
   onSubmit,
 }) => {
   const toast = useToast();
+
   const [outletName, setOutletName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [ownerName, setOwnerName] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // Bank fields
   const [bankName, setBankName] = useState("");
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankAccountName, setBankAccountName] = useState("");
   const [qrisInfo, setQrisInfo] = useState("");
-  // Opening hours
   const [hoursWeekdays, setHoursWeekdays] = useState("08:00 - 16:00");
   const [hoursSaturday, setHoursSaturday] = useState("08:00 - 13:00");
   const [hoursSunday, setHoursSunday] = useState("Tutup");
   const [submitting, setSubmitting] = useState(false);
 
-  const resetForm = () => {
-    setOutletName(""); setPhone(""); setAddress(""); setCity("");
-    setOwnerName(""); setOwnerEmail(""); setPassword("");
-    setBankName(""); setBankAccountNumber(""); setBankAccountName(""); setQrisInfo("");
-    setHoursWeekdays("08:00 - 16:00"); setHoursSaturday("08:00 - 13:00"); setHoursSunday("Tutup");
-  };
+  // Populate form saat tenant berubah
+  useEffect(() => {
+    if (!tenant || !isOpen) return;
+    setOutletName(tenant.outletName || "");
+    setPhone(tenant.phone || "");
+    setAddress(tenant.address || "");
+    setCity(tenant.city || "");
+    setOwnerName(tenant.owner?.name || "");
+    setBankName(tenant.bankName || "");
+    setBankAccountNumber(tenant.bankAccountNumber || "");
+    setBankAccountName(tenant.bankAccountName || "");
+    setQrisInfo(tenant.qrisInfo || "");
+    const hours = parseOpeningHours(tenant.openingHours);
+    setHoursWeekdays(hours.weekdays);
+    setHoursSaturday(hours.saturday);
+    setHoursSunday(hours.sunday);
+  }, [tenant, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!outletName.trim() || !ownerName.trim() || !ownerEmail.trim()) {
-      toast.warning("Form Belum Lengkap", "Nama outlet, nama pemilik, dan email wajib diisi!");
+    if (!tenant) return;
+    if (!outletName.trim()) {
+      toast.warning("Form Belum Lengkap", "Nama outlet wajib diisi!");
       return;
     }
     try {
@@ -68,22 +95,22 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
         saturday: hoursSaturday.trim() || "08:00 - 13:00",
         sunday: hoursSunday.trim() || "Tutup",
       };
-      await onSubmit({
-        outletName,
-        phone,
-        address,
-        city: city.trim() || undefined,
-        ownerName,
-        ownerEmail,
-        password: password || "123456",
-        bankName: bankName || undefined,
-        bankAccountNumber: bankAccountNumber || undefined,
-        bankAccountName: bankAccountName || undefined,
-        qrisInfo: qrisInfo || undefined,
+      const ok = await onSubmit(tenant.id, {
+        outletName: outletName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        ownerName: ownerName.trim(),
+        bankName: bankName.trim(),
+        bankAccountNumber: bankAccountNumber.trim(),
+        bankAccountName: bankAccountName.trim(),
+        qrisInfo: qrisInfo.trim(),
         openingHours: JSON.stringify(openingHoursObj),
       });
-      resetForm();
-      onClose();
+      if (ok) {
+        toast.success("Berhasil", "Data cabang berhasil diperbarui.");
+        onClose();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -91,22 +118,22 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
   const inputClass = "w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 outline-none font-medium transition";
 
+  if (!tenant) return null;
+
   return (
     <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
       <div className="bg-white rounded-3xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-sky-100 text-blue-950 flex items-center justify-center border border-sky-200">
-              <Building2 className="w-5 h-5 text-sky-700" />
+            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-200">
+              <Building2 className="w-5 h-5 text-amber-600" />
             </div>
             <div>
               <h3 className="font-extrabold text-base sm:text-lg text-slate-950">
-                Tambah Cabang
+                Edit Cabang
               </h3>
-              <p className="text-xs text-slate-500">
-                Daftarkan cabang dan akun pemilik baru.
-              </p>
+              <p className="text-xs text-slate-500 font-mono">{tenant.id}</p>
             </div>
           </div>
           <button
@@ -129,7 +156,6 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Contoh: Orchid Laundry - Cabang Mawar"
                 value={outletName}
                 onChange={(e) => setOutletName(e.target.value)}
                 className={inputClass}
@@ -138,22 +164,16 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Nomor Telepon <span className="text-sky-600">*</span>
-                </label>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Nomor Telepon</label>
                 <input
                   type="tel"
-                  required
-                  placeholder="08123456789"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className={`${inputClass} font-mono`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Kota / Kecamatan
-                </label>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Kota / Kecamatan</label>
                 <input
                   type="text"
                   placeholder="Bandung Selatan"
@@ -168,56 +188,19 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
               <label className="block text-xs font-bold text-slate-800 mb-1">Alamat Lengkap</label>
               <input
                 type="text"
-                required
-                placeholder="Jl. Mawar Raya No. 10"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className={inputClass}
               />
             </div>
-          </div>
-
-          {/* === Informasi Pemilik === */}
-          <div className="space-y-3 pt-3 border-t border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Akun Pemilik</p>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Nama Pemilik <span className="text-sky-600">*</span>
-              </label>
+              <label className="block text-xs font-bold text-slate-800 mb-1">Nama Pemilik</label>
               <input
                 type="text"
-                required
-                placeholder="Nama Lengkap Pemilik"
+                placeholder="Nama pemilik cabang"
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Email Pemilik <span className="text-sky-600">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                placeholder="owner@laundry.com"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                className={`${inputClass} font-mono`}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Kata Sandi
-              </label>
-              <input
-                type="password"
-                placeholder="Default: 123456"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
               />
             </div>
@@ -269,7 +252,9 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">Info QRIS <span className="text-slate-400 font-normal">(opsional)</span></label>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Info QRIS <span className="text-slate-400 font-normal">(opsional)</span>
+              </label>
               <input
                 type="text"
                 placeholder="Nomor QRIS atau keterangan"
@@ -292,7 +277,6 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Senin – Jumat</label>
                 <input
                   type="text"
-                  placeholder="08:00 - 16:00"
                   value={hoursWeekdays}
                   onChange={(e) => setHoursWeekdays(e.target.value)}
                   className={`${inputClass} text-center font-mono`}
@@ -302,7 +286,6 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Sabtu</label>
                 <input
                   type="text"
-                  placeholder="08:00 - 13:00"
                   value={hoursSaturday}
                   onChange={(e) => setHoursSaturday(e.target.value)}
                   className={`${inputClass} text-center font-mono`}
@@ -312,7 +295,6 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Minggu</label>
                 <input
                   type="text"
-                  placeholder="Tutup"
                   value={hoursSunday}
                   onChange={(e) => setHoursSunday(e.target.value)}
                   className={`${inputClass} text-center font-mono`}
@@ -333,9 +315,10 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="w-1/2 py-2.5 rounded-xl bg-blue-900 hover:bg-black text-white font-bold text-xs sm:text-sm shadow-md transition disabled:opacity-50"
+              className="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {submitting ? "Mendaftarkan..." : "Daftarkan Tenant"}
+              <Save className="w-3.5 h-3.5" />
+              {submitting ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
           </div>
         </form>

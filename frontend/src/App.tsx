@@ -475,6 +475,7 @@ export default function App() {
                   users={users}
                   onResetPassword={handleResetPassword}
                   onOpenTenantModal={() => setShowTenantModal(true)}
+                  onUpdateTenant={handleUpdateTenant}
                 />
               )}
 

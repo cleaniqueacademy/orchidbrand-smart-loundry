@@ -18,11 +18,18 @@ export const tenants = pgTable("tenants", {
   outletName: text("outlet_name").notNull(),
   phone: text("phone").notNull(),
   address: text("address").notNull(),
+  city: text("city"), // Kota/Kecamatan cabang
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
   subscriptionUntil: text("subscription_until"),
   waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
   services: text("services"), // JSON stringified array of LaundryService
   enableCashierShift: text("enable_cashier_shift").notNull().default("true"), // 'true' | 'false'
+  // Informasi Rekening Bank & Pembayaran
+  bankName: text("bank_name"), // Nama bank: BCA, Mandiri, BRI, BNI, BSI, dll.
+  bankAccountNumber: text("bank_account_number"), // Nomor rekening
+  bankAccountName: text("bank_account_name"), // Atas nama pemilik rekening
+  qrisInfo: text("qris_info"), // Nomor QRIS / link QRIS (opsional)
+  openingHours: text("opening_hours"), // JSON: { weekdays: "08:00-16:00", saturday: "08:00-13:00", sunday: "Tutup" }
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

@@ -132,6 +132,7 @@ export interface Tenant {
   outletName: string;
   phone: string;
   address: string;
+  city?: string | null;
   status: "active" | "inactive";
   subscriptionUntil?: string | null;
   services?: LaundryService[];
@@ -139,6 +140,12 @@ export interface Tenant {
   owner?: { id: string; name: string; email: string; role: string } | null;
   totalOrders: number;
   totalOmset: number;
+  // Informasi rekening bank & pembayaran
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  qrisInfo?: string | null;
+  openingHours?: string | null; // JSON: { weekdays, saturday, sunday }
 }
 
 export type Role = "superadmin" | "tenant_owner" | "staff";

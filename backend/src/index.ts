@@ -287,7 +287,10 @@ app.get("/api/tenants", async (c) => {
 app.post("/api/tenants", async (c) => {
   try {
     const body = await c.req.json();
-    const { ownerName, ownerEmail, password, outletName, phone, address, services } = body;
+    const {
+      ownerName, ownerEmail, password, outletName, phone, address, services,
+      city, bankName, bankAccountNumber, bankAccountName, qrisInfo, openingHours
+    } = body;
 
     const newUserId = `user-${Date.now()}`;
     const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
@@ -306,7 +309,13 @@ app.post("/api/tenants", async (c) => {
       outletName,
       phone,
       address,
+      city: city || null,
       services: services ? (typeof services === "string" ? services : JSON.stringify(services)) : null,
+      bankName: bankName || null,
+      bankAccountNumber: bankAccountNumber || null,
+      bankAccountName: bankAccountName || null,
+      qrisInfo: qrisInfo || null,
+      openingHours: openingHours ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours)) : null,
     });
 
     return c.json({
@@ -323,12 +332,16 @@ app.put("/api/tenants/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { outletName, phone, address, status, subscriptionUntil, services, ownerName, enableCashierShift } = body;
+    const {
+      outletName, phone, address, status, subscriptionUntil, services, ownerName, enableCashierShift,
+      city, bankName, bankAccountNumber, bankAccountName, qrisInfo, openingHours
+    } = body;
 
     const updateData: any = {};
     if (outletName !== undefined) updateData.outletName = outletName;
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
+    if (city !== undefined) updateData.city = city || null;
     if (status !== undefined) updateData.status = status;
     if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
     if (services !== undefined) {
@@ -336,6 +349,16 @@ app.put("/api/tenants/:id", async (c) => {
     }
     if (enableCashierShift !== undefined) {
       updateData.enableCashierShift = String(enableCashierShift);
+    }
+    // Informasi rekening bank
+    if (bankName !== undefined) updateData.bankName = bankName || null;
+    if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
+    if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName || null;
+    if (qrisInfo !== undefined) updateData.qrisInfo = qrisInfo || null;
+    if (openingHours !== undefined) {
+      updateData.openingHours = openingHours
+        ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours))
+        : null;
     }
 
     await db.update(tenants).set(updateData).where(eq(tenants.id, id));

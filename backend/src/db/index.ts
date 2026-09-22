@@ -50,6 +50,13 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS wa_mode TEXT NOT NULL DEFAULT 'manual';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS services TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS enable_cashier_shift TEXT NOT NULL DEFAULT 'true';`;
+    // Informasi tambahan & rekening bank
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS city TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_name TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_account_number TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_account_name TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS qris_info TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS opening_hours TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (

@@ -29,8 +29,15 @@ interface SettingsTabProps {
       outletName?: string;
       phone?: string;
       address?: string;
+      city?: string;
       ownerName?: string;
-      enableCashierShift?: string | boolean;
+      enableCashierShift?: string;
+      bankName?: string;
+      bankAccountNumber?: string;
+      bankAccountName?: string;
+      qrisInfo?: string;
+      openingHours?: string;
+      [key: string]: unknown;
     }
   ) => Promise<boolean>;
   onUpdateUser?: (id: string, userData: { name?: string; password?: string }) => Promise<boolean>;
