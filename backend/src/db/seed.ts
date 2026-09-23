@@ -37,7 +37,7 @@ export async function seedInitialData(force = true) {
       }
     }
 
-    console.log("🌱 Menjalankan Seeding data awal lengkap Orchid Brand Smart Laundry (PostgreSQL)...");
+    console.log("🌱 Menjalankan Seeding data awal lengkap Laundry Cleanique (PostgreSQL)...");
 
     // Bersihkan data lama dengan urutan foreign key aman
     try {
@@ -77,17 +77,17 @@ export async function seedInitialData(force = true) {
     // ----------------------------------------------------
     await db.insert(platformSettings).values({
       id: "default",
-      platformName: "Orchid Brand Smart Laundry",
+      platformName: "Laundry Cleanique",
       bankName: "BCA (Bank Central Asia)",
       bankAccountNumber: "8830-1928-3341",
-      bankAccountName: "PT ORCHID SISTEM DIGITAL",
-      qrisInfo: "https://orchidbrand.com/qris-official.png",
+      bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
+      qrisInfo: "https://cleaniquelaundry.com/qris-official.png",
       defaultTrialDays: 7,
       defaultAiDailyQuota: 50,
       supportPhone: "081299881122",
-      supportEmail: "support@orchidbrand.com",
-      termsUrl: "https://orchidbrand.com/terms",
-      privacyUrl: "https://orchidbrand.com/privacy",
+      supportEmail: "support@cleaniquelaundry.com",
+      termsUrl: "https://cleaniquelaundry.com/terms",
+      privacyUrl: "https://cleaniquelaundry.com/privacy",
       updatedAt: today,
     });
 
@@ -165,8 +165,8 @@ export async function seedInitialData(force = true) {
     await db.insert(users).values([
       {
         id: adminId,
-        name: "Admin Pusat Orchid",
-        email: "admin@orchidbrand.com",
+        name: "Admin Pusat Cleanique",
+        email: "admin@cleaniquelaundry.com",
         passwordHash: adminPasswordHash,
         role: "superadmin",
         status: "active",
@@ -216,7 +216,7 @@ export async function seedInitialData(force = true) {
       {
         id: marketingUserId,
         name: "Fajar Pratama (Affiliate)",
-        email: "marketing@orchidbrand.com",
+        email: "marketing@cleaniquelaundry.com",
         passwordHash: marketingPasswordHash,
         role: "marketing",
         status: "active",
@@ -248,7 +248,7 @@ export async function seedInitialData(force = true) {
     await db.insert(referralCodes).values([
       {
         id: refCodeId1,
-        code: "ORCHIDHEMAT",
+        code: "CLEANHEMAT",
         name: "Promo Berkah 10% Off",
         description: "Diskon 10% untuk langganan baru, komisi 10% untuk affiliate",
         discountType: "percent",
@@ -293,7 +293,7 @@ export async function seedInitialData(force = true) {
       {
         id: tenantId1,
         userId: ownerId1,
-        outletName: "Orchid Laundry - Cabang Melati",
+        outletName: "Laundry Cleanique - Cabang Melati",
         phone: "081234567890",
         address: "Jl. Melati Raya No. 45, Jakarta Selatan",
         city: "Jakarta Selatan",
@@ -305,7 +305,7 @@ export async function seedInitialData(force = true) {
       {
         id: tenantId2,
         userId: ownerId2,
-        outletName: "Orchid Laundry - Cabang Mawar",
+        outletName: "Laundry Cleanique - Cabang Mawar",
         phone: "081399887766",
         address: "Jl. Mawar Indah No. 12, Surabaya",
         city: "Surabaya",
@@ -601,7 +601,7 @@ export async function seedInitialData(force = true) {
         tenantId: tenantId1,
         category: "Deterjen & Pewangi",
         amount: 65000,
-        notes: "Beli Deterjen Cair Orchid 5 Liter",
+        notes: "Beli Deterjen Cair Cleanique 5 Liter",
         expenseDate: today.slice(0, 10),
         createdAt: today,
       },
@@ -640,20 +640,20 @@ export async function seedInitialData(force = true) {
         orderId: "ord-001",
         recipientPhone: "081987654321",
         recipientName: "Siti Rahma",
-        messagePreview: "Halo Kak Siti Rahma, cucian Anda INV-202609-001 di Orchid Laundry sudah SIAP DIAMBIL (Rak: A-01).",
+        messagePreview: "Halo Kak Siti Rahma, cucian Anda INV-202609-001 di Laundry Cleanique sudah SIAP DIAMBIL (Rak: A-01).",
         status: "sent",
         mode: "baileys",
         createdAt: today,
       },
     ]);
 
-    console.log("✅ Seeding PostgreSQL Orchid Brand berhasil 100%!");
+    console.log("✅ Seeding PostgreSQL Laundry Cleanique berhasil 100%!");
     console.log("=================================================");
     console.log("🔑 AKUN DEMO SIAP DIGUNAKAN:");
-    console.log("1. Super Admin  : admin@orchidbrand.com     / admin123");
-    console.log("2. Tenant Owner : budi@laundrymelati.com    / budi123");
-    console.log("3. Staff Kasir  : kasir@laundrymelati.com   / kasir123");
-    console.log("4. Marketing    : marketing@orchidbrand.com / marketing123");
+    console.log("1. Super Admin  : admin@cleaniquelaundry.com     / admin123");
+    console.log("2. Tenant Owner : budi@laundrymelati.com         / budi123");
+    console.log("3. Staff Kasir  : kasir@laundrymelati.com        / kasir123");
+    console.log("4. Marketing    : marketing@cleaniquelaundry.com / marketing123");
     console.log("=================================================");
   } catch (err: any) {
     console.error("❌ Seed error:", err);

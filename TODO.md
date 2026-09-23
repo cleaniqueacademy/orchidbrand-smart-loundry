@@ -1,5 +1,5 @@
-# Project Roadmap & TODO List
-# Orchid Brand Smart Laundry v2.0
+﻿# Project Roadmap & TODO List
+# Laundry Cleanique v2.0
 
 Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)** dan apa saja yang **SEDANG / AKAN DIKERJAKAN (Backlog & Roadmap)**.
 
@@ -10,14 +10,14 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - **Status Dasar & Setup Monorepo:** 100% Selesai
 - **Core Dashboard & Operasional Kasir:** 100% Selesai (termasuk Edit, Batal, & Hapus Pesanan)
 - **Cetak Struk Nota Kasir Thermal:** 100% Selesai (58mm/80mm + QR Code Tracking + Layout Presisi)
-- **Engine Notifikasi WhatsApp:** 100% Selesai (Hanya terkirim saat status **Siap Diambil** + Jam Buka Outlet)
-- **Sistem Arus Kas & Laporan Keuangan:** 100% Selesai (Buku Kas, Export CSV Excel, & PDF Cetak)
+- **Engine Notifikasi WhatsApp:** 100% Selesai (Struk Digital saat Order Dibuat + Notifikasi saat **Siap Diambil** + Jam Buka Outlet)
+- **Sistem Arus Kas & Laporan Keuangan:** 100% Selesai (Buku Kas, Rekonsiliasi Kas Shift, Export CSV Excel, & PDF Cetak)
 - **Multi-Tenant Dashboard:** 100% Selesai (Konsolidasi HQ Superadmin & Dashboard Cabang Owner)
 - **Portal Publik Cek Resi Mandiri:** 100% Selesai (Prioritas P0 - `/track/:invoiceNo` + QR Code)
 - **Master Layanan & Pelacakan SLA Pengerjaan:** 100% Selesai (Prioritas P0 - Tabel `services` + SLA warning)
 - **Keamanan Kredensial (Hash Password Bcrypt):** 100% Selesai (Prioritas P0 - Native Bun bcrypt + auto-upgrade)
 - **Multi-Staff / Akun Kasir per Outlet & RBAC:** 100% Selesai (Prioritas P1 - Role `staff` terisolasi)
-- **Manajemen Shift Kasir & Rekonsiliasi Kas Laci:** 100% Selesai (Prioritas P1 - Buka/Tutup Shift & Selisih Kas)
+- **Manajemen Shift Kasir & Rekonsiliasi Kas Laci:** 100% Selesai (Prioritas P1 - Buka/Tutup Shift, `paid_shift_id`, & Akurasi Kas 100%)
 - **Log Riwayat Pengiriman WhatsApp (`wa_logs`):** 100% Selesai (Prioritas P1 - Audit trail notifikasi)
 - **Manajemen Bahan Baku / Stok Deterjen:** Ditunda / Parkir Sesuai Arahan (Prioritas P2)
 
@@ -32,7 +32,7 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] Dockerization lengkap: Dockerfile backend, frontend (Nginx), dan `docker-compose.yml` persisten PostgreSQL.
 
 ### 2. Backend & Basis Data (Bun + Hono + Drizzle + PostgreSQL)
-- [x] Skema database relasional PostgreSQL: `users`, `tenants`, `customers`, `orders`, `expenses`, `services`, `shifts`, `wa_logs`.
+- [x] Skema database relasional PostgreSQL: `users`, `tenants`, `customers`, `orders` (dengan `paid_at` & `paid_shift_id`), `expenses`, `services`, `shifts`, `wa_logs`.
 - [x] Auto-seed data demo saat startup pertama (`seed.ts` & default master services).
 - [x] Auto-migration skema database terintegrasi (`initPostgresTables` dengan DDL idempotent).
 - [x] REST API CRUD lengkap: Orders, Customers, Expenses, Users, Tenants, Services, Cashflow Stats, Staff Accounts, Cashier Shifts, WhatsApp Logs.
@@ -41,16 +41,16 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 
 ### 3. Kasir POS & Operasional Toko
 - [x] **Pencatatan Order Fleksibel & Cepat**: Dukungan kiloan, satuan (Bedcover, Jas, Sepatu), dan item jamak.
-- [x] **Nomor Rak / Keranjang (`rackNumber`)**: Input lokasi rak cucian tersimpan di DB, tabel kasir, struk thermal, dan notifikasi WA.
+- [x] **Pelacakan Berbasis Invoice & QR Code**: Identifikasi pakaian murni menggunakan nomor nota unik (`invoiceNo`) & QR Code tanpa nomor rak fisik.
 - [x] **Pendaftaran Pelanggan Instan (Inline Rapid Customer)**: Tambah pelanggan langsung di modal pesanan.
 - [x] **Siklus 6 Tahap Status Cucian**: `pending` ➔ `washing` ➔ `drying_ironing` ➔ `ready` ➔ `completed` / `cancelled`.
 - [x] **Koreksi & Pembatalan Pesanan Kasir**: Modal `EditOrderModal`, tombol Batalkan, dan Hapus Pesanan permanen.
-- [x] **Pelunasan Cepat Kasir (Quick Pay)**: Popover 1-klik lunas dengan Tunai, QRIS, atau Transfer.
+- [x] **Pelunasan Cepat Kasir (Quick Pay)**: Popover 1-klik lunas dengan Tunai, QRIS, atau Transfer (tercatat di `paid_shift_id`).
 - [x] **Deteksi & Filter "Cucian Menginap" (>3 Hari)**: Badge peringatan otomatis di dasbor kasir.
 - [x] **Pelacakan SLA & Peringatan Telat SLA (*Late SLA Warning*)**: Estimasi jam target pengerjaan dihitung otomatis dari durasi layanan (`estimated_completion_at`), badge merah telat, dan filter kasir "Telat SLA ⚠️".
 
 ### 4. Engine Notifikasi WhatsApp Cerdas (Baileys & Manual)
-- [x] **Aturan Pengiriman Terkontrol:** WhatsApp otomatis **hanya dikirimkan saat status cucian diubah ke Siap Diambil (`ready`)**.
+- [x] **Aturan Pengiriman Terkontrol:** WhatsApp otomatis dikirim pada 2 event kunci: **Struk Digital saat Order Dibuat** dan **Notifikasi saat Cucian Siap Diambil (`ready`)**.
 - [x] **Pemberitahuan Jam Buka Outlet:** Format pesan WhatsApp mencantumkan informasi jam operasional:
   - *Senin - Jumat : 08.00 - 16.00*
   - *Sabtu : 08.00 - 13.00*

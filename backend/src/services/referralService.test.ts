@@ -63,9 +63,9 @@ describe("referralService - validateCode", () => {
   });
 
   it("menerima kode valid dari database yang sudah di-seed (case insensitive)", async () => {
-    const res = await validateCode("orchidhemat");
+    const res = await validateCode("cleanhemat");
     expect(res.valid).toBe(true);
-    expect(res.code?.code).toBe("ORCHIDHEMAT");
+    expect(res.code?.code).toBe("CLEANHEMAT");
     expect(res.discountType).toBe("percent");
     expect(res.discountValue).toBe(10);
   });
@@ -280,11 +280,11 @@ describe("referralService - recordClick & recordSignup", () => {
 
 describe("referralService - recordCommission", () => {
   it("menghitung dan mencatat komisi jika kode memiliki marketingProfileId", async () => {
-    // Gunakan kode ORCHIDHEMAT yang sudah di-seed dengan marketingProfileId
+    // Gunakan kode CLEANHEMAT yang sudah di-seed dengan marketingProfileId
     const [seedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "ORCHIDHEMAT"));
+      .where(eq(referralCodes.code, "CLEANHEMAT"));
 
     expect(seedCode).toBeDefined();
     expect(seedCode.marketingProfileId).toBeDefined();
@@ -300,7 +300,7 @@ describe("referralService - recordCommission", () => {
 
     expect(res).not.toBeNull();
     expect(res?.commissionId).toBeDefined();
-    // ORCHIDHEMAT: komisi 10% dari 150.000 = 15.000
+    // CLEANHEMAT: komisi 10% dari 150.000 = 15.000
     expect(res?.commissionAmount).toBe(15000);
 
     // Verifikasi di database marketingCommissions

@@ -19,6 +19,7 @@ import {
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Tenant, WhatsAppLog } from "../../types";
 import { ShiftHistorySection } from "./ShiftHistorySection";
+import { authHeaders } from "../../utils/api";
 
 interface SystemLogsTabProps {
   tenants: Tenant[];
@@ -38,7 +39,9 @@ export const SystemLogsTab: React.FC<SystemLogsTabProps> = ({
   const fetchWaLogs = async () => {
     setLoadingWa(true);
     try {
-      const res = await fetch(`/api/tenants/${selectedTenant}/wa-logs`);
+      const res = await fetch(`/api/tenants/${selectedTenant}/wa-logs`, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setWaLogs(json.data || []);

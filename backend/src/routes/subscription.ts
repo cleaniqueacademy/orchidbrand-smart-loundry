@@ -115,8 +115,15 @@ subscriptionRoutes.post("/invoices", async (c) => {
  */
 subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     if (!id) return c.json({ success: false, message: "ID invoice diperlukan" }, 400);
+
+    // Superadmin may operate across tenants; tenant users are restricted to their
+    // own tenant. The service repeats this predicate to keep the write fail-closed.
+    if (user.role !== "superadmin" && !user.tenantId) {
+      return c.json({ success: false, message: "Tenant pengguna tidak ditemukan" }, 403);
+    }
 
     const body = await c.req.json();
     const { proofUrl } = body;
@@ -125,7 +132,18 @@ subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
       return c.json({ success: false, message: "Bukti transfer (proofUrl) wajib disertakan" }, 400);
     }
 
-    const updated = await uploadPaymentProof(id, proofUrl);
+    const [invoice] = await db
+      .select({ tenantId: subscriptionInvoices.tenantId })
+      .from(subscriptionInvoices)
+      .where(eq(subscriptionInvoices.id, id));
+    if (!invoice) {
+      return c.json({ success: false, message: "Invoice tidak ditemukan" }, 404);
+    }
+    if (user.role !== "superadmin" && invoice.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: invoice bukan milik outlet Anda" }, 403);
+    }
+
+    const updated = await uploadPaymentProof(id, proofUrl, invoice.tenantId);
     return c.json({
       success: true,
       message: "Bukti pembayaran berhasil diunggah dan sedang menunggu verifikasi admin.",

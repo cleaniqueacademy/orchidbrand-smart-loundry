@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "../components/common/ToastContext";
+import { authHeaders } from "../utils/api";
 
 const API_BASE = "/api";
 
@@ -31,7 +32,9 @@ export function useWhatsAppGateway(tenantId: string) {
   const fetchStatus = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const res = await fetch(`${API_BASE}/whatsapp/status?tenantId=${tenantId}`);
+      const res = await fetch(`${API_BASE}/whatsapp/status?tenantId=${tenantId}`, {
+        headers: authHeaders(),
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -70,7 +73,7 @@ export function useWhatsAppGateway(tenantId: string) {
       toast.info("Menghubungkan Baileys...", "Sedang menyiapkan sesi WhatsApp Baileys...");
       const res = await fetch(`${API_BASE}/whatsapp/connect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ tenantId, forceRefresh }),
       });
       const json = await res.json();
@@ -92,7 +95,7 @@ export function useWhatsAppGateway(tenantId: string) {
       setLoading(true);
       const res = await fetch(`${API_BASE}/whatsapp/disconnect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();
@@ -115,7 +118,7 @@ export function useWhatsAppGateway(tenantId: string) {
       setLoading(true);
       const res = await fetch(`${API_BASE}/whatsapp/mode`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ tenantId, waMode: newMode }),
       });
       const json = await res.json();
@@ -146,7 +149,7 @@ export function useWhatsAppGateway(tenantId: string) {
     try {
       const res = await fetch(`${API_BASE}/whatsapp/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ tenantId, phone, message, ...meta }),
       });
       const json = await res.json();

@@ -6,6 +6,7 @@ import { rateLimit } from "../middleware/rateLimit";
 import { authMiddleware, getUser } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
 import { registerNewTenant, isEmailAvailable, isPhoneAvailable } from "../services/signupService";
+import { validateCode } from "../services/referralService";
 
 const signupRoutes = new Hono();
 
@@ -81,6 +82,30 @@ signupRoutes.get("/check-phone", rateLimit({ max: 60, windowMs: 60 * 1000 }), as
       success: true,
       available,
       message: available ? "Nomor telepon tersedia" : "Nomor telepon sudah terdaftar",
+    });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+/**
+ * 4. GET /api/signup/check-referral
+ * Cek validitas kode referral secara realtime
+ */
+signupRoutes.get("/check-referral", rateLimit({ max: 60, windowMs: 60 * 1000 }), async (c) => {
+  try {
+    const code = c.req.query("code");
+    if (!code) {
+      return c.json({ success: false, message: "Kode referral diperlukan" }, 400);
+    }
+
+    const valRes = await validateCode(code);
+    return c.json({
+      success: true,
+      valid: valRes.valid,
+      message: valRes.message || (valRes.valid ? "Kode referral valid!" : "Kode referral tidak valid atau kedaluwarsa"),
+      discountType: valRes.discountType,
+      discountValue: valRes.discountValue,
     });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);

@@ -73,6 +73,8 @@ export const orders = pgTable("orders", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   estimatedCompletionAt: text("estimated_completion_at"),
   completedAt: text("completed_at"),
+  paidAt: text("paid_at"), // ISO timestamp when payment was received
+  paidShiftId: text("paid_shift_id"), // Cashier shift ID during which payment was accepted
 });
 
 export const services = pgTable("services", {
@@ -147,7 +149,7 @@ export const marketingProfiles = pgTable("marketing_profiles", {
 
 export const referralCodes = pgTable("referral_codes", {
   id: text("id").primaryKey(),
-  code: text("code").notNull().unique(), // e.g. "DISKON50", "ORCHIDBERKAH"
+  code: text("code").notNull().unique(), // e.g. "DISKON50", "CLEANBERKAH"
   name: text("name").notNull(),
   description: text("description"),
   discountType: text("discount_type").notNull().default("percent"), // 'percent' | 'fixed'
@@ -207,7 +209,7 @@ export const plans = pgTable("plans", {
 
 export const platformSettings = pgTable("platform_settings", {
   id: text("id").primaryKey(), // 'default'
-  platformName: text("platform_name").notNull().default("Orchid Brand Smart Laundry"),
+  platformName: text("platform_name").notNull().default("Laundry Cleanique"),
   platformLogo: text("platform_logo"),
   bankName: text("bank_name"),
   bankAccountNumber: text("bank_account_number"),

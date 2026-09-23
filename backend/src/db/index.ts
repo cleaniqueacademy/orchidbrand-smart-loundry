@@ -114,10 +114,13 @@ export async function initPostgresTables() {
         items TEXT,
         estimated_completion_at TEXT,
         completed_at TEXT,
+        paid_at TEXT,
+        paid_shift_id TEXT,
         created_at TEXT NOT NULL
       );
     `;
-    await client`ALTER TABLE orders DROP COLUMN IF EXISTS rack_number;`;
+    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TEXT;`;
+    await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_shift_id TEXT;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items TEXT;`;
     await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_completion_at TEXT;`;
 
@@ -271,7 +274,7 @@ export async function initPostgresTables() {
     await client`
       CREATE TABLE IF NOT EXISTS platform_settings (
         id TEXT PRIMARY KEY,
-        platform_name TEXT NOT NULL DEFAULT 'Orchid Brand Smart Laundry',
+        platform_name TEXT NOT NULL DEFAULT 'Laundry Cleanique',
         platform_logo TEXT,
         bank_name TEXT,
         bank_account_number TEXT,

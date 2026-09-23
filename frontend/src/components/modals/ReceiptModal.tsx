@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { X, Printer, Copy, Check, QrCode as QrIcon, FileText, RefreshCw, ExternalLink } from "lucide-react";
 import QRCode from "qrcode";
 import WhatsAppIcon from "../common/WhatsAppIcon";
@@ -33,7 +33,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const activeTenant = tenant || {
     id: "tenant-01",
-    outletName: "Orchid Laundry - Cabang Melati",
+    outletName: "Laundry Cleanique - Cabang Melati",
     phone: "081234567890",
     address: "Jl. Melati Raya No. 45, Jakarta",
   };
@@ -105,7 +105,7 @@ ${trackingUrl}
 • Senin - Jumat : 08.00 - 16.00
 • Sabtu : 08.00 - 13.00
 ----------------------------------------
-Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
+Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
 
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -439,7 +439,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Orchid Laundry!`;
                 <p className="font-bold text-zinc-700 pt-0.5">
                   *** TERIMA KASIH ATAS KUNJUNGAN ANDA ***
                 </p>
-                <p className="text-[8px] text-zinc-400">Powered by Orchid Brand Smart Laundry</p>
+                <p className="text-[8px] text-zinc-400">Powered by Laundry Cleanique</p>
               </div>
             </div>
           </div>

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { User, Role, Tenant } from "../types";
 import { useToast } from "../components/common/ToastContext";
 import { useConfirm } from "../components/common/ConfirmContext";
+import { authHeaders } from "../utils/api";
 
-const AUTH_KEY = "orchid_auth_user";
+const AUTH_KEY = "cleanique_auth_user";
 const API_BASE = "/api";
 
 function readSavedUser(): User | null {
@@ -76,7 +77,7 @@ export function useAuthSession() {
     const confirmed = await confirm({
       title: "Keluar dari Sistem?",
       description:
-        "Apakah Anda yakin ingin keluar dari akun Orchid Smart Laundry? Anda perlu login kembali untuk mengakses data operasional.",
+        "Apakah Anda yakin ingin keluar dari akun Laundry Cleanique? Anda perlu login kembali untuk mengakses data operasional.",
       confirmText: "Ya, Keluar",
       cancelText: "Tetap Masuk",
       variant: "warning",
@@ -86,14 +87,17 @@ export function useAuthSession() {
 
     toast.info("Mengeluarkan Akun...", "Sesi Anda telah diakhiri.");
     try {
-      await fetch(`${API_BASE}/auth/logout`, { method: "POST" });
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
     } catch {}
     // Clear localStorage
     try {
       localStorage.removeItem(AUTH_KEY);
-      localStorage.removeItem("orchid_auth_tenant");
+      localStorage.removeItem("cleanique_auth_tenant");
       Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("orchid_")) localStorage.removeItem(key);
+        if (key.startsWith("cleanique_")) localStorage.removeItem(key);
       });
     } catch (e) {
       console.error(e);
@@ -118,7 +122,9 @@ export function useAuthSession() {
   const refreshUserSession = async (): Promise<boolean> => {
     if (!currentUser) return false;
     try {
-      const res = await fetch(`${API_BASE}/auth/status?userId=${currentUser.id}`);
+      const res = await fetch(`${API_BASE}/auth/status?userId=${currentUser.id}`, {
+        headers: authHeaders(),
+      });
       const data = await res.json();
       if (res.ok && data.success && data.user) {
         setCurrentUser(data.user);

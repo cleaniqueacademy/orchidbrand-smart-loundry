@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Store,
@@ -41,7 +41,7 @@ export const RegisterSuccessPage: React.FC = () => {
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Orchid Brand
+                Laundry Cleanique
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 block -mt-1 font-medium">
                 Smart Laundry System
@@ -68,7 +68,7 @@ export const RegisterSuccessPage: React.FC = () => {
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-          Selamat Datang di Orchid Brand!
+          Selamat Datang di Laundry Cleanique!
         </h1>
         <p className="text-slate-600 dark:text-slate-300 mt-2 text-sm sm:text-base max-w-lg">
           Outlet Anda telah berhasil didaftarkan. Nikmati kemudahan pengelolaan kasir laundry cerdas dan WhatsApp notifikasi secara gratis.
@@ -161,7 +161,7 @@ export const RegisterSuccessPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="w-full py-6 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-800/60">
-        © 2026 Orchid Brand Smart Laundry System. Seluruh hak cipta dilindungi.
+        © 2026 Laundry Cleanique System. Seluruh hak cipta dilindungi.
       </footer>
     </div>
   );

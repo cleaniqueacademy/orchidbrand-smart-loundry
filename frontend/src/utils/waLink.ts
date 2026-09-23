@@ -7,7 +7,7 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
   if (!order.customer?.phone) return { phone: "", text: "" };
   const cleanPhone = order.customer.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
   const activeTenant = tenants.find((t) => t.id === order.tenantId);
-  const outletName = activeTenant ? activeTenant.outletName : "Orchid Smart Laundry";
+  const outletName = activeTenant ? activeTenant.outletName : "Laundry Cleanique";
   const custName = order.customer?.name || "Pelanggan";
   const paymentText =
     order.paymentStatus === "paid"

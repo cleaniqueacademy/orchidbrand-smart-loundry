@@ -50,9 +50,9 @@ export const ReferralBadge: React.FC<ReferralBadgeProps> = ({
 
   if (valid === false && message) {
     return (
-      <div className="flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-800">
-        <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-        <span>{message}</span>
+      <div className="flex items-center gap-2 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800">
+        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        <span>{message} — Pendaftaran tetap dapat dilanjutkan dengan akun reguler.</span>
       </div>
     );
   }

@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const targetWidth = isCollapsed ? 256 : 68;
     setSidebarWidth(targetWidth);
     try {
-      localStorage.setItem("orchid_sidebar_width", String(targetWidth));
+      localStorage.setItem("cleanique_sidebar_width", String(targetWidth));
     } catch {
       // ignore
     }
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
       setSidebarWidth(newWidth);
       try {
-        localStorage.setItem("orchid_sidebar_width", String(newWidth));
+        localStorage.setItem("cleanique_sidebar_width", String(newWidth));
       } catch {
         // ignore
       }
@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const currentTenant = tenants.find((t) => t.id === tenantId) || tenants[0] || {
     id: "tenant-01",
-    outletName: "Orchid Laundry - Cabang Melati",
+    outletName: "Laundry Cleanique - Cabang Melati",
     address: "Jakarta",
   };
 
@@ -318,7 +318,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-bold text-zinc-900 truncate">
-                  {isSuperAdmin ? "Orchid Pusat" : currentTenant?.outletName || "Cabang Laundry"}
+                  {isSuperAdmin ? "Cleanique Pusat" : currentTenant?.outletName || "Cabang Laundry"}
                 </div>
                 <div className="text-[11px] text-zinc-400 font-medium truncate">
                   {isSuperAdmin ? "Super Admin" : "Owner Cabang"}

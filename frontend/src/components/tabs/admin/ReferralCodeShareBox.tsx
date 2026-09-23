@@ -19,7 +19,7 @@ export const ReferralCodeShareBox: React.FC<ReferralCodeShareBoxProps> = ({
 
   if (!isOpen || !code) return null;
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://orchidbrand.com";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
   const shareUrl = `${origin}/register?ref=${code.code}`;
 
   const discountText =
@@ -27,7 +27,7 @@ export const ReferralCodeShareBox: React.FC<ReferralCodeShareBoxProps> = ({
       ? `Diskon ${code.discountValue}%`
       : `Potongan Rp ${code.discountValue.toLocaleString("id-ID")}`;
 
-  const shareText = `Halo! Gunakan kode referral "${code.code}" saat mendaftar di Orchid Brand Smart Laundry dan dapatkan ${discountText} serta GRATIS uji coba 7 hari!\n\nDaftar sekarang melalui link berikut:\n${shareUrl}`;
+  const shareText = `Halo! Gunakan kode referral "${code.code}" saat mendaftar di Laundry Cleanique dan dapatkan ${discountText} serta GRATIS uji coba 7 hari!\n\nDaftar sekarang melalui link berikut:\n${shareUrl}`;
 
   // Generate QR Code
   useEffect(() => {

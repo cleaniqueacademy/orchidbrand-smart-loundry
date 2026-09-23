@@ -1,4 +1,4 @@
-# Orchid Brand - Smart Laundry 🧺
+﻿# Laundry Cleanique - Smart Laundry 🧺
 ### Platform Multi-Tenant SaaS Manajemen Operasional & Kasir Laundry Modern
 
 Platform Multi-Tenant SaaS berbasis **Bun**, dirancang khusus untuk memenuhi kebutuhan nyata bisnis laundry perumahan dan multi-cabang modern. Dibangun dengan arsitektur terpisah yang bersih: **Frontend SPA (Vite + React 18 + TypeScript + Tailwind CSS)** dan **Backend REST API (Bun + Hono.js + Drizzle ORM + PostgreSQL + Baileys WhatsApp Gateway)**.
@@ -21,8 +21,8 @@ Platform Multi-Tenant SaaS berbasis **Bun**, dirancang khusus untuk memenuhi keb
 ## 🚀 Fitur Unggulan Sistem
 
 ### 1. Engine Notifikasi WhatsApp Cerdas & Terkontrol
-- **Hanya Terkirim Saat Siap Diambil:** WhatsApp otomatis **hanya dikirimkan saat status cucian diubah ke Siap Diambil (`ready`)**, mencegah spam pesan yang tidak perlu kepada pelanggan.
-- **Pencantuman Jam Buka Outlet Otomatis:** Setiap pesan siap diambil memuat nomor nota, rincian layanan, status pembayaran, nomor rak, serta jam operasional:
+- **Notifikasi di Momen Kunci:** WhatsApp otomatis dikirim saat pesanan baru dibuat (Struk Digital awal) dan saat cucian Siap Diambil (`ready`), lengkap dengan tautan cek resi online.
+- **Pencantuman Jam Buka Outlet Otomatis:** Setiap pesan memuat nomor nota, rincian layanan, status pembayaran, serta jam operasional:
   ```text
   ⏰ Jam Buka Outlet:
   • Senin - Jumat : 08.00 - 16.00
@@ -30,11 +30,11 @@ Platform Multi-Tenant SaaS berbasis **Bun**, dirancang khusus untuk memenuhi keb
   ```
 - **Mode Fleksibel:** Pilihan pengiriman otomatis langsung via server (**Baileys Gateway**) atau manual melalui tautan browser (**wa.me**).
 
-### 2. Manajemen Order Kasir Cepat (POS) & Rak Cucian
+### 2. Manajemen Order Kasir Cepat (POS)
 - **Pencatatan Cepat & Fleksibel:** Mendukung pesanan kiloan, satuan (Bedcover, Jas, Sepatu, Karpet), multi-layanan, dan pendaftaran pelanggan baru instan (*inline*).
-- **Nomor Rak / Keranjang Penyimpanan (`rackNumber`):** Memastikan posisi rak pakaian tercatat di sistem, struk thermal, dan pesan WhatsApp untuk mencegah pakaian tertukar antar pelanggan.
+- **Pelacakan Berbasis Nota & QR:** Memastikan setiap pakaian teridentifikasi akurat via nomor invoice unik dan kode QR struk fisik.
 - **Siklus 6 Tahap Status Cucian:** `Antrian (pending)` ➔ `Sedang Dicuci (washing)` ➔ `Pengeringan & Setrika (drying_ironing)` ➔ `Siap Diambil (ready)` ➔ `Selesai Diambil (completed)` / `Dibatalkan (cancelled)`.
-- **Koreksi Pesanan Kasir:** Modal `EditOrderModal` untuk koreksi berat, tarif, paket layanan, no. rak, dan catatan.
+- **Koreksi Pesanan Kasir:** Modal `EditOrderModal` untuk koreksi berat, tarif, paket layanan, dan catatan.
 - **Deteksi "Cucian Menginap" (>3 Hari):** Badge peringatan otomatis untuk mem-follow up cucian yang belum diambil pelanggan lebih dari 3 hari.
 - **Pelunasan Cepat (Quick Pay):** Popover 1-klik lunas dengan Tunai (Cash), QRIS, atau Transfer Bank.
 
@@ -64,7 +64,7 @@ Platform Multi-Tenant SaaS berbasis **Bun**, dirancang khusus untuk memenuhi keb
 ## 📂 Struktur Direktori Proyek
 
 ```plaintext
-orchidbrand-smart-loundry/
+cleanique-smart-laundry/
 ├── backend/                  # REST API Server (Bun + Hono + Drizzle + PostgreSQL)
 │   ├── src/
 │   │   ├── db/              # Skema Drizzle pg-core, koneksi & migration otomatis

@@ -19,6 +19,7 @@ import {
 import { Service, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { useConfirm } from "../common/ConfirmContext";
+import { authHeaders } from "../../utils/api";
 
 interface ServicesTabProps {
   tenantId: string;
@@ -56,7 +57,9 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
     if (!tenantId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/services?tenantId=${tenantId}`);
+      const res = await fetch(`/api/services?tenantId=${tenantId}`, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setServicesList(json.data);
@@ -111,7 +114,7 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
         // Update
         const res = await fetch(`/api/services/${editingService.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify(formData),
         });
         const json = await res.json();
@@ -126,7 +129,7 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
         // Create
         const res = await fetch("/api/services", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({
             tenantId,
             ...formData,
@@ -165,7 +168,10 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/services/${service.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/services/${service.id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         toast.info("Layanan Dihapus", `Paket ${service.name} telah dihapus.`);

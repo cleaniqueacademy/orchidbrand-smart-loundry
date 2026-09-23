@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   AlertTriangle,
   MessageCircle,
@@ -142,7 +142,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                 <span>Cabang:</span>
               </div>
               <span className="font-semibold text-zinc-900">
-                {user.tenantName || "Orchid Laundry"}
+                {user.tenantName || "Laundry Cleanique"}
               </span>
             </div>
 
@@ -232,7 +232,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
 
         {/* Footer Support Info */}
         <div className="bg-zinc-50 border-t border-zinc-100 px-6 py-3 text-center text-[11px] text-zinc-400">
-          Orchid Brand Smart Laundry • Layanan Berlangganan Kasir Multi-Cabang
+          Laundry Cleanique • Layanan Berlangganan Kasir Multi-Cabang
         </div>
       </div>
     </ModalWrapper>

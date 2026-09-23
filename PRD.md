@@ -1,5 +1,5 @@
-# Product Requirements Document (PRD)
-# Orchid Brand Smart Laundry v2.0
+﻿# Product Requirements Document (PRD)
+# Laundry Cleanique v2.0
 ## Sistem Manajemen Laundry Multi-Tenant Cloud & Kasir Operasional
 
 - **Versi Dokumen:** 2.0.0
@@ -14,16 +14,16 @@
 
 ### 1.1 Latar Belakang & Masalah Operasional
 Bisnis laundry kiloan & satuan modern menghadapi serangkaian kendala operasional harian:
-1. **Pakaian Tertukar / Salah Rak:** Di perumahan padat, pakaian antar tetangga rawan tertukar jika tidak ada penandaan nomor rak/keranjang yang jelas.
+1. **Identifikasi Pakaian & Nota:** Di perumahan padat, pakaian antar pelanggan memerlukan sistem penomoran nota digital dan kode QR pelacakan yang akurat agar tidak tertukar.
 2. **Pelanggan Berulang Kali Menanyakan Status:** Pelanggan sering menelepon atau mengirim pesan menanyakan kapan cucian mereka selesai karena tidak adanya estimasi pengerjaan (SLA) dan sarana cek status mandiri.
-3. **Notifikasi WhatsApp yang Mengganggu / Tidak Tepat Waktu:** Pengiriman notifikasi yang terlalu sering di setiap tahap justru membingungkan pelanggan; notifikasi yang paling bernilai adalah **saat cucian benar-benar selesai dan siap diambil**, lengkap dengan jam operasional toko.
+3. **Notifikasi WhatsApp yang Transparan & Tepat Waktu:** Pengiriman notifikasi WhatsApp otomatis di saat krusial: **saat nota dibuat (struk digital awal)** dan **saat cucian benar-benar selesai dan siap diambil (`ready`)**, lengkap dengan jam operasional toko.
 4. **Selisih Uang Kasir (Cash Drawer Discrepancy):** Pergantian shift kasir tanpa pencatatan kas modal awal dan rekonsiliasi uang fisik rentan menimbulkan selisih kas.
 5. **Kebocoran Akses Data (Multi-Tenant Isolation):** Pemilik franchise/cabang membutuhkan isolasi data absolut antar outlet dengan pembagian peran yang ketat antara Superadmin, Pemilik Outlet, dan Kasir Staff.
 
 ### 1.2 Solusi Produk (Product Vision)
-**Orchid Brand Smart Laundry v2.0** adalah platform *SaaS Multi-Tenant Cloud* yang mengintegrasikan:
-- **Kasir POS Cepat & Ramah Seluler:** Dukungan kalkulasi kiloan/satuan, nomor rak, cetak struk thermal 58mm/80mm ber-QR Code.
-- **Engine Notifikasi WhatsApp Presisi:** WhatsApp **hanya terkirim secara otomatis saat status cucian Siap Diambil (`ready`)**, dilengkapi lokasi rak dan informasi jam operasional outlet.
+**Laundry Cleanique v2.0** adalah platform *SaaS Multi-Tenant Cloud* yang mengintegrasikan:
+- **Kasir POS Cepat & Ramah Seluler:** Dukungan kalkulasi kiloan/satuan, item jamak, cetak struk thermal 58mm/80mm ber-QR Code.
+- **Engine Notifikasi WhatsApp Presisi:** WhatsApp terkirim otomatis saat pesanan dibuat (struk digital) dan saat status cucian Siap Diambil (`ready`), dilengkapi informasi jam operasional outlet.
 - **Portal Publik Cek Resi Mandiri:** Pelanggan cukup memindai QR Code di struk kertas untuk memantau progres cucian secara real-time tanpa perlu login.
 - **Pencatatan Finansial & Shift Kasir:** Buku kas otomatis (Uang Masuk Lunas vs Pengeluaran Toko), pembukuan laba bersih, ekspor CSV Excel, cetak laporan PDF resmi, dan rekonsiliasi shift kasir.
 
@@ -67,13 +67,14 @@ Bisnis laundry kiloan & satuan modern menghadapi serangkaian kendala operasional
   4. `ready`: **Selesai & Siap Diambil** (Notifikasi WhatsApp terkirim di tahap ini)
   5. `completed`: Selesai diambil oleh pelanggan
   6. `cancelled`: Dibatalkan (dikeluarkan dari omset aktif)
-- **FR-2.5 (Nomor Rak / Keranjang Penyimpanan):** Input nomor rak (`rackNumber`) wajib atau sangat dianjurkan saat status diubah ke `ready` agar mempermudah pengambilan pakaian pelanggan.
+- **FR-2.5 (Pelacakan Berbasis Invoice & QR Code):** Pelacakan dan identifikasi cucian menggunakan nomor nota unik (`invoiceNo`) serta QR Code yang tercetak di struk, tanpa memerlukan sistem penomoran rak fisik.
 - **FR-2.6 (Deteksi Cucian Menginap >3 Hari):** Filter otomatis dan badge penanda untuk cucian berstatus `ready` yang belum diambil lebih dari 3 hari.
 
 ### EPIC 3: Engine Notifikasi WhatsApp Cerdas & Baileys Gateway
-- **FR-3.1 (Aturan Pengiriman Tunggal - HANYA Siap Diambil):**
-  - Notifikasi otomatis WhatsApp **HANYA dikirimkan saat status cucian diubah menjadi `ready` (Siap Diambil)**.
-  - Saat status diubah ke `process`, `completed`, `cancelled`, dll., sistem **TIDAK** mengirim pesan otomatis.
+- **FR-3.1 (Aturan Pengiriman Notifikasi WhatsApp Otomatis):**
+  - Notifikasi otomatis WhatsApp dikirim pada dua momen kunci:
+    1. **Saat Order Dibuat:** Mengirimkan nota/struk digital awal berisi rincian cucian, total biaya, status pembayaran, dan link cek resi online.
+    2. **Saat Status Cucian `ready` (Siap Diambil):** Mengabari pelanggan bahwa cucian sudah selesai dikerjakan, bersih, wangi, dan siap diambil, disertai jam buka outlet.
 - **FR-3.2 (Pencantuman Informasi Jam Buka Outlet):**
   - Setiap pesan status siap diambil dan nota digital wajib mencantumkan jam operasional outlet:
     ```text
@@ -92,7 +93,7 @@ Bisnis laundry kiloan & satuan modern menghadapi serangkaian kendala operasional
 - **FR-4.3 (Informasi Pelacakan Publik):**
   - Progres pengerjaan cucian (Diterima ➔ Cuci ➔ Kering/Setrika ➔ Siap Diambil).
   - Status pembayaran (Lunas / Belum Lunas).
-  - Lokasi nomor rak (hanya tampil jika sudah siap diambil).
+  - Rincian layanan dan estimasi selesai (tanpa dependensi nomor rak).
   - Alamat cabang, nomor telepon, dan jam buka outlet.
 
 ### EPIC 5: Cetak Struk Kasir Thermal Authentic
@@ -183,9 +184,10 @@ erDiagram
         text status "pending | washing | drying_ironing | ready | completed | cancelled"
         text payment_status "unpaid | paid"
         text payment_method "cash | qris | transfer"
-        text rack_number
         text notes
         text items "JSON OrderItem[]"
+        text paid_at
+        text paid_shift_id
         text created_at
         text estimated_completion_at
         text completed_at

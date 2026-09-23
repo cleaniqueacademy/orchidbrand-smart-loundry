@@ -63,26 +63,31 @@ export const RegisterPage: React.FC = () => {
     try {
       const res = await api.get<{
         success: boolean;
+        valid?: boolean;
         message?: string;
+        discountType?: "percent" | "fixed";
+        discountValue?: number;
         data?: {
           code: string;
           name: string;
           discountType: "percent" | "fixed";
           discountValue: number;
         };
-      }>(`/api/public/referral/validate?code=${encodeURIComponent(clean)}`);
+      }>(`/api/signup/check-referral?code=${encodeURIComponent(clean)}`);
 
-      if (res.success && res.data) {
+      if (res.success && (res.valid || res.data)) {
+        const discountType = res.discountType || res.data?.discountType;
+        const discountValue = res.discountValue ?? res.data?.discountValue ?? 0;
         setRefStatus({
           valid: true,
-          codeName: res.data.code,
-          discountType: res.data.discountType,
-          discountValue: res.data.discountValue,
+          codeName: clean,
+          discountType,
+          discountValue,
         });
       } else {
         setRefStatus({
           valid: false,
-          message: res.message || "Kode referral tidak valid",
+          message: res.message || "Kode referral tidak valid atau sudah kedaluwarsa",
         });
       }
     } catch (err: any) {
@@ -152,7 +157,7 @@ export const RegisterPage: React.FC = () => {
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Orchid Brand
+                Laundry Cleanique
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 block -mt-1 font-medium">
                 Smart Laundry System
@@ -210,7 +215,7 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="Contoh: Orchid Clean Rungkut"
+                      placeholder="Contoh: Cleanique Rungkut"
                       value={formData.outletName}
                       onChange={(e) => setFormData({ ...formData, outletName: e.target.value })}
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
@@ -333,7 +338,7 @@ export const RegisterPage: React.FC = () => {
                   <Tag className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Contoh: ORCHIDHEMAT"
+                    placeholder="Contoh: CLEANHEMAT"
                     value={formData.referralCode}
                     onChange={handleReferralChange}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-sm uppercase tracking-wider font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
@@ -374,7 +379,7 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2">
-                Dengan mendaftar, Anda menyetujui Ketentuan Layanan & Kebijakan Privasi Orchid Brand.
+                Dengan mendaftar, Anda menyetujui Ketentuan Layanan & Kebijakan Privasi Laundry Cleanique.
               </p>
             </form>
           </div>
@@ -408,7 +413,7 @@ export const RegisterPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="w-full py-6 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-800/60">
-        © 2026 Orchid Brand Smart Laundry System. Seluruh hak cipta dilindungi.
+        © 2026 Laundry Cleanique System. Seluruh hak cipta dilindungi.
       </footer>
     </div>
   );

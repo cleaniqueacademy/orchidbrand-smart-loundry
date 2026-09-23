@@ -1,10 +1,10 @@
-import { defineConfig } from "drizzle-kit";
+mport { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgrespassword@localhost:5433/orchid_laundry",
+    url: process.env.DATABASE_URL || "postgresql://postgres:postgrespassword@localhost:5433/cleanique_laundry",
   },
 });

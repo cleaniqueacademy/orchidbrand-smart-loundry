@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -69,7 +69,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
     tenants.find((t) => t.id === tenantId) ||
     tenants[0] || {
       id: "tenant-01",
-      outletName: "Orchid Laundry - Cabang Melati",
+      outletName: "Laundry Cleanique - Cabang Melati",
       phone: "081234567890",
       address: "Jl. Melati Raya No. 45, Jakarta",
       status: "active" as const,

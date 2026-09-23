@@ -1,5 +1,5 @@
 {
-  "name": "orchidbrand-smart-loundry",
+  "name": "cleanique-smart-laundry",
   "private": true,
   "workspaces": [
     "backend",
@@ -8,13 +8,13 @@
   ],
   "scripts": {
     "dev": "bun --filter '*' dev",
-    "dev:backend": "bun --filter orchidbrand-backend dev",
-    "dev:frontend": "bun --filter orchidbrand-frontend dev",
-    "dev:landing": "bun --filter orchidbrand-landing dev",
+    "dev:backend": "bun --filter cleanique-backend dev",
+    "dev:frontend": "bun --filter cleanique-frontend dev",
+    "dev:landing": "bun --filter cleanique-landing dev",
     "build": "bun --filter '*' build",
-    "db:push": "bun --filter orchidbrand-backend db:push",
-    "db:push:force": "bun --filter orchidbrand-backend db:push:force",
-    "db:seed": "bun --filter orchidbrand-backend db:seed",
+    "db:push": "bun --filter cleanique-backend db:push",
+    "db:push:force": "bun --filter cleanique-backend db:push:force",
+    "db:seed": "bun --filter cleanique-backend db:seed",
     "docker:db": "docker compose up -d postgres",
     "docker:db:down": "docker compose stop postgres",
     "docker:up": "docker compose --profile full-stack up --build -d",

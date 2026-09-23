@@ -56,7 +56,7 @@ describe("subscriptionService integration tests", () => {
       phone: `0811${Date.now().toString().slice(-8)}`,
       email: `sub_test_${Date.now()}@test.com`,
       password: "password123",
-      referralCode: "ORCHIDHEMAT",
+      referralCode: "CLEANHEMAT",
     });
 
     expect(res.success).toBe(true);
@@ -71,13 +71,13 @@ describe("subscriptionService integration tests", () => {
     expect(summary?.isTrial).toBe(true);
     expect(summary?.isActive).toBe(true);
     expect(summary?.daysRemaining).toBeGreaterThanOrEqual(6);
-    expect(summary?.referralCodeUsed).toBe("ORCHIDHEMAT");
+    expect(summary?.referralCodeUsed).toBe("CLEANHEMAT");
   });
 
   it("getApplicablePrice menghitung harga dan diskon referral", async () => {
     const calc = await getApplicablePrice(testTenantId);
     expect(calc.basePrice).toBeGreaterThan(0);
-    // ORCHIDHEMAT memberikan diskon 10%
+    // CLEANHEMAT memberikan diskon 10%
     expect(calc.discountAmount).toBe(calc.basePrice * 0.1);
     expect(calc.finalPrice).toBe(calc.basePrice - calc.discountAmount);
   });
@@ -96,7 +96,7 @@ describe("subscriptionService integration tests", () => {
   });
 
   it("uploadPaymentProof memperbarui status invoice ke pending_verification", async () => {
-    const updated = await uploadPaymentProof(testInvoiceId, "https://example.com/bukti.jpg");
+    const updated = await uploadPaymentProof(testInvoiceId, "https://example.com/bukti.jpg", testTenantId);
     expect(updated.status).toBe("pending_verification");
     expect(updated.paymentProofUrl).toBe("https://example.com/bukti.jpg");
   });
@@ -118,7 +118,7 @@ describe("subscriptionService integration tests", () => {
     const [updatedTenant] = await db.select().from(tenants).where(eq(tenants.id, testTenantId));
     expect(updatedTenant.isTrial).toBe("false");
 
-    // Verifikasi komisi marketing dicatat (karena invoice memakai referral ORCHIDHEMAT)
+    // Verifikasi komisi marketing dicatat (karena invoice memakai referral CLEANHEMAT)
     const commissions = await db
       .select()
       .from(marketingCommissions)

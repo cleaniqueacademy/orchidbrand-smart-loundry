@@ -1,10 +1,10 @@
-# Rencana Kerja (Plan & TODO)
+﻿# Rencana Kerja (Plan & TODO)
 # Modul Referral Marketing, Registrasi Mandiri, Langganan Berbayar & Asisten AI
-## Orchid Brand Smart Laundry v2.0
+## Laundry Cleanique v2.0
 
 - **Versi Dokumen:** 1.0.0
 - **Status:** DRAFT — Menunggu Persetujuan
-- **Basis Kode:** `orchidbrand-smart-loundry` (commit saat ini)
+- **Basis Kode:** `cleanique-smart-laundry` (commit saat ini)
 - **Stack Aktual:** Bun + Hono + Drizzle ORM + PostgreSQL (backend), React 18 + Vite + Tailwind + Framer Motion (frontend), Baileys WA Gateway (multi-session per tenant)
 
 ---

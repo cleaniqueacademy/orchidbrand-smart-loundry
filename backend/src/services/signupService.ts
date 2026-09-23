@@ -110,21 +110,20 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
     };
   }
 
-  // 2. Validasi kode referral jika diisi
+  // 2. Validasi kode referral jika diisi (Safe fallback: jika tidak valid/kedaluwarsa, tetap izinkan daftar tanpa error 400)
   let validReferralCodeId: string | null = null;
   let marketingUserId: string | null = null;
+  let referralNotice: string | null = null;
   if (referralCode && referralCode.trim()) {
     const valRes = await validateCode(referralCode.trim());
-    if (!valRes.valid || !valRes.code) {
-      return {
-        success: false,
-        message: valRes.message || "Kode referral tidak valid atau sudah kedaluwarsa.",
-      };
-    }
-    validReferralCodeId = valRes.code.id;
-    // Jika kode terhubung ke marketing profile, ambil marketing user id
-    if (valRes.code.marketingProfileId) {
-      marketingUserId = valRes.code.marketingProfileId;
+    if (valRes.valid && valRes.code) {
+      validReferralCodeId = valRes.code.id;
+      // Jika kode terhubung ke marketing profile, ambil marketing user id
+      if (valRes.code.marketingProfileId) {
+        marketingUserId = valRes.code.marketingProfileId;
+      }
+    } else {
+      referralNotice = valRes.message || "Kode referral tidak valid atau sudah kedaluwarsa. Pendaftaran dilanjutkan dengan akun reguler.";
     }
   }
 
@@ -260,7 +259,9 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
 
   return {
     success: true,
-    message: `Pendaftaran berhasil! Akun Anda aktif dengan masa trial gratis ${trialDays} hari.`,
+    message: referralNotice
+      ? `Pendaftaran berhasil! Akun Anda aktif dengan masa trial gratis ${trialDays} hari. (${referralNotice})`
+      : `Pendaftaran berhasil! Akun Anda aktif dengan masa trial gratis ${trialDays} hari.`,
     data: {
       userId,
       tenantId,
@@ -270,7 +271,8 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
       phone: cleanPhone,
       trialDays,
       subscriptionUntil,
-      referralCode: referralCode || null,
+      referralCode: validReferralCodeId ? (referralCode?.trim().toUpperCase() || null) : null,
+      referralNotice,
     },
   };
 }

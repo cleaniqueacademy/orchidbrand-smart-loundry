@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Users, Plus, Trash2, Mail, ShieldCheck, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { User } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { authHeaders } from "../../utils/api";
 
 interface StaffManagementSectionProps {
   tenantId: string;
@@ -27,7 +28,9 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
     if (!tenantId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/tenants/${tenantId}/staff`);
+      const res = await fetch(`/api/tenants/${tenantId}/staff`, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setStaffList(json.data || []);
@@ -54,7 +57,7 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
     try {
       const res = await fetch(`/api/tenants/${tenantId}/staff`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ name, email, password }),
       });
       const json = await res.json();
@@ -78,7 +81,10 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
   const handleDeleteStaff = async (staffId: string, staffName: string) => {
     if (!confirm(`Hapus akun staf kasir "${staffName}"?`)) return;
     try {
-      const res = await fetch(`/api/staff/${staffId}`, { method: "DELETE" });
+      const res = await fetch(`/api/staff/${staffId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         toast.success("Berhasil", "Akun staf kasir berhasil dihapus");
@@ -207,7 +213,7 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Contoh: kasir.melati@orchid.id"
+                  placeholder="Contoh: kasir.melati@cleaniquelaundry.id"
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
                 />
               </div>

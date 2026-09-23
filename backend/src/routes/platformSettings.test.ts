@@ -49,7 +49,7 @@ describe("platformSettings routes integration tests", () => {
       body: JSON.stringify({
         bankName: "BCA",
         bankAccountNumber: "8888999900",
-        bankAccountName: "PT ORCHID DIGITAL INDONESIA",
+        bankAccountName: "PT CLEANIQUE DIGITAL INDONESIA",
         defaultTrialDays: 7,
       }),
     });

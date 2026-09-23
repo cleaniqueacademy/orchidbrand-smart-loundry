@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { Order, Expense, Tenant } from "../../../types";
 import { useToast } from "../../common/ToastContext";
@@ -82,7 +82,7 @@ export function useReportData({
         id: "all",
         outletName: "Konsolidasi Seluruh Cabang",
         phone: "0812-3456-7890",
-        address: "Jaringan Multi-Cabang Orchid Brand",
+        address: "Jaringan Multi-Cabang Laundry Cleanique",
         status: "active",
         totalOrders: orders.length,
         totalOmset: orders
@@ -95,7 +95,7 @@ export function useReportData({
       tenants.find((t) => t.id === currentTenantId) ||
       tenants[0] || {
         id: "tenant-01",
-        outletName: "Orchid Laundry - Cabang Melati",
+        outletName: "Laundry Cleanique - Cabang Melati",
         phone: "081234567890",
         address: "Jl. Melati Raya No. 45, Jakarta",
         status: "active",
@@ -262,7 +262,7 @@ export function useReportData({
 
       // SHEET 1: Ringkasan Eksekutif & Profil Outlet
       const summaryAoa: any[][] = [
-        ["ORCHID BRAND - SMART LAUNDRY MANAGEMENT SYSTEM"],
+        ["Laundry Cleanique - SMART LAUNDRY MANAGEMENT SYSTEM"],
         [isMultiTenant ? "LAPORAN KEUANGAN KONSOLIDASI SELURUH CABANG" : `LAPORAN KEUANGAN & OPERASIONAL - ${activeTenant.outletName.toUpperCase()}`],
         [],
         ["PROFIL OUTLET / CABANG", ""],

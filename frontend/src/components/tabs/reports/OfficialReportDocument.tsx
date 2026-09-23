@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Tenant, Order } from "../../../types";
 import { ReportMetrics, ServiceBreakdownItem } from "./useReportData";
 
@@ -54,7 +54,7 @@ export const OfficialReportDocument: React.FC<OfficialReportDocumentProps> = ({
           </div>
           <div className="text-right shrink-0">
             <span className="inline-block bg-blue-900 text-white font-bold text-[11px] px-3 py-1 rounded tracking-wide">
-              ORCHID BRAND
+              Laundry Cleanique
             </span>
             <p className="text-[10px] text-zinc-500 mt-1 font-mono">Smart Laundry Management</p>
             <p className="text-[9px] text-zinc-400 font-mono">Dokumen Resmi Sistem</p>

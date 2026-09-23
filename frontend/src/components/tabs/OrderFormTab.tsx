@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Order, Customer, OrderStatus, PaymentStatus, OrderItem, LaundryService, Service } from "../../types";
 import { useToast } from "../common/ToastContext";
+import { authHeaders } from "../../utils/api";
 
 interface OrderFormTabProps {
   mode: "create" | "edit";
@@ -101,7 +102,9 @@ export const OrderFormTab: React.FC<OrderFormTabProps> = ({
   const [customEstimatedDate, setCustomEstimatedDate] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/services")
+    fetch("/api/services", {
+      headers: authHeaders(),
+    })
       .then((res) => res.json())
       .then((json) => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {

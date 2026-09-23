@@ -16,7 +16,7 @@ export function requireRole(allowedRoles: string[]) {
       return c.json(
         {
           success: false,
-          message: `Akses ditolak. Role '${user.role}' tidak diizinkan untuk resource ini.`,
+          message: `Akses ditolak. Role '${user.role === "staff" ? "Staff" : user.role}' tidak diizinkan untuk resource ini.`,
         },
         403
       );

@@ -33,7 +33,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
 
   const handleGenerateRandom = () => {
     const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-    let pwd = "orchid-";
+    let pwd = "cleanique-";
     for (let i = 0; i < 4; i++) {
       pwd += chars.charAt(Math.floor(Math.random() * chars.length));
     }

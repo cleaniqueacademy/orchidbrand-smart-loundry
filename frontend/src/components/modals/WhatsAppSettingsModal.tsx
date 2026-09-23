@@ -58,7 +58,7 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
 
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState(
-    "Halo! Ini adalah pesan uji coba dari sistem Orchid Smart Laundry Gateway. 🧺✨"
+    "Halo! Ini adalah pesan uji coba dari sistem Laundry Cleanique Gateway. 🧺✨"
   );
 
   const currentTenant = tenants.find((t) => t.id === currentTenantId) || tenants[0];

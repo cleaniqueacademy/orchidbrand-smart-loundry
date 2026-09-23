@@ -38,7 +38,7 @@ describe("signupService integration tests", () => {
 
   it("isEmailAvailable mengembalikan true untuk email baru dan false untuk email yang sudah ada", async () => {
     expect(await isEmailAvailable(`email_baru_${Date.now()}@test.com`)).toBe(true);
-    expect(await isEmailAvailable("admin@orchidbrand.com")).toBe(false);
+    expect(await isEmailAvailable("admin@cleaniquelaundry.com")).toBe(false);
   });
 
   it("isPhoneAvailable mengembalikan status ketersediaan telepon", async () => {
@@ -63,7 +63,7 @@ describe("signupService integration tests", () => {
       outletName: "Laundry Budi",
       ownerName: "Budi",
       phone: "0812345678",
-      email: "admin@orchidbrand.com", // Email admin yang sudah ada
+      email: "admin@cleaniquelaundry.com", // Email admin yang sudah ada
       password: "password123",
     });
 
@@ -71,7 +71,7 @@ describe("signupService integration tests", () => {
     expect(res.message).toContain("Email sudah terdaftar");
   });
 
-  it("registerNewTenant menolak jika kode referral tidak valid", async () => {
+  it("registerNewTenant melakukan safe fallback jika kode referral tidak valid (tetap sukses tanpa memblokir pendaftaran)", async () => {
     const res = await registerNewTenant({
       outletName: "Laundry Budi",
       ownerName: "Budi",
@@ -81,8 +81,10 @@ describe("signupService integration tests", () => {
       referralCode: "KODEPALSU123",
     });
 
-    expect(res.success).toBe(false);
-    expect(res.message).toContain("tidak ditemukan");
+    expect(res.success).toBe(true);
+    expect(res.data?.referralCode).toBeNull();
+    expect(res.data?.referralNotice).toBeDefined();
+    expect(res.message).toContain("Pendaftaran berhasil");
   });
 
   it("registerNewTenant berhasil mendaftarkan tenant baru dengan trial 7 hari", async () => {
@@ -90,7 +92,7 @@ describe("signupService integration tests", () => {
     const uniquePhone = `0812${Date.now().toString().slice(-8)}`;
 
     const res = await registerNewTenant({
-      outletName: "Orchid Clean Express",
+      outletName: "Cleanique Express",
       ownerName: "Budi Santoso",
       phone: uniquePhone,
       email: uniqueEmail,
@@ -140,14 +142,14 @@ describe("signupService integration tests", () => {
     expect(subEvent.eventType).toBe("trial_started");
   });
 
-  it("registerNewTenant berhasil dengan kode referral valid (ORCHIDHEMAT)", async () => {
+  it("registerNewTenant berhasil dengan kode referral valid (CLEANHEMAT)", async () => {
     const uniqueEmail = `andi_ref_${Date.now()}@test.com`;
     const uniquePhone = `0813${Date.now().toString().slice(-8)}`;
 
     const [seedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "ORCHIDHEMAT"));
+      .where(eq(referralCodes.code, "CLEANHEMAT"));
 
     const initialUsage = seedCode.currentUsage;
 
@@ -157,11 +159,11 @@ describe("signupService integration tests", () => {
       phone: uniquePhone,
       email: uniqueEmail,
       password: "password123",
-      referralCode: "ORCHIDHEMAT",
+      referralCode: "CLEANHEMAT",
     });
 
     expect(res.success).toBe(true);
-    expect(res.data?.referralCode).toBe("ORCHIDHEMAT");
+    expect(res.data?.referralCode).toBe("CLEANHEMAT");
 
     const { userId, tenantId } = res.data!;
     createdUserIds.push(userId);
@@ -171,7 +173,7 @@ describe("signupService integration tests", () => {
     const [updatedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "ORCHIDHEMAT"));
+      .where(eq(referralCodes.code, "CLEANHEMAT"));
     expect(updatedCode.currentUsage).toBe(initialUsage + 1);
 
     // Verifikasi referralEvent dicatat

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { X, Building2, CreditCard, Clock } from "lucide-react";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
@@ -129,7 +129,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Contoh: Orchid Laundry - Cabang Mawar"
+                placeholder="Contoh: Laundry Cleanique - Cabang Mawar"
                 value={outletName}
                 onChange={(e) => setOutletName(e.target.value)}
                 className={inputClass}

@@ -19,7 +19,7 @@ platformSettingsRoutes.get("/public", async (c) => {
       return c.json({
         success: true,
         data: {
-          platformName: "Orchid Brand Smart Laundry",
+          platformName: "Laundry Cleanique",
           defaultTrialDays: 7,
         },
       });
@@ -65,7 +65,7 @@ platformSettingsRoutes.get("/", requireRole(["superadmin"]), async (c) => {
         .insert(platformSettings)
         .values({
           id: "default",
-          platformName: "Orchid Brand Smart Laundry",
+          platformName: "Laundry Cleanique",
           defaultTrialDays: 7,
           defaultAiDailyQuota: 50,
           updatedAt: new Date().toISOString(),
@@ -120,7 +120,7 @@ platformSettingsRoutes.put("/", requireRole(["superadmin"]), async (c) => {
         .values({
           id: "default",
           ...updates,
-          platformName: updates.platformName || "Orchid Brand Smart Laundry",
+          platformName: updates.platformName || "Laundry Cleanique",
         })
         .returning();
       result = created;

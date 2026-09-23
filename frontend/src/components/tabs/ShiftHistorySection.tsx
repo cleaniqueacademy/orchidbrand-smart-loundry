@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Clock, Calculator, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, User, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { CashierShift } from "../../types";
+import { authHeaders } from "../../utils/api";
 
 interface ShiftHistorySectionProps {
   tenantId: string;
@@ -18,7 +19,9 @@ export const ShiftHistorySection: React.FC<ShiftHistorySectionProps> = ({ tenant
       const url = tenantId && tenantId !== "all"
         ? `/api/shifts/history?tenantId=${encodeURIComponent(tenantId)}`
         : `/api/shifts/history`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setShifts(json.data || []);

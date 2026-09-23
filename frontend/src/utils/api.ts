@@ -1,17 +1,17 @@
-/**
+﻿/**
  * Utility untuk komunikasi API dan autentikasi token Bearer
  */
 
 export function getAuthToken(): string | null {
-  return localStorage.getItem("orchid_token");
+  return localStorage.getItem("cleanique_token");
 }
 
 export function setAuthToken(token: string): void {
-  localStorage.setItem("orchid_token", token);
+  localStorage.setItem("cleanique_token", token);
 }
 
 export function removeAuthToken(): void {
-  localStorage.removeItem("orchid_token");
+  localStorage.removeItem("cleanique_token");
 }
 
 export function authHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Store,
   Save,
@@ -203,7 +203,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={outletName}
                 onChange={(e) => setOutletName(e.target.value)}
                 required
-                placeholder="Contoh: Orchid Laundry - Cabang Melati"
+                placeholder="Contoh: Laundry Cleanique - Cabang Melati"
                 className="w-full px-3 py-2 text-xs font-medium border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-zinc-50/50 hover:bg-white focus:bg-white"
               />
             </div>

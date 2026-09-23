@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckCircle2, AlertCircle, Clock, Smartphone, MessageSquare } from "lucide-react";
 import { WhatsAppLog } from "../../types";
+import { authHeaders } from "../../utils/api";
 
 interface WhatsAppLogsModalProps {
   isOpen: boolean;
@@ -31,7 +32,9 @@ export const WhatsAppLogsModal: React.FC<WhatsAppLogsModalProps> = ({
           ? `/api/tenants/${tenantId}/wa-logs`
           : null;
         if (!url) return;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          headers: authHeaders(),
+        });
         const json = await res.json();
         if (json.success) {
           setLogs(json.data || []);

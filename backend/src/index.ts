@@ -13,7 +13,8 @@ import platformSettingsRoutes from "./routes/platformSettings";
 import subscriptionRoutes from "./routes/subscription";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
 import { DEFAULT_PRESET_SERVICES } from "./constants/services";
-import { signToken, authMiddleware, getUser } from "./middleware/auth";
+import { askLaundryAssistant } from "./services/aiService";
+import { signToken, authMiddleware, getUser, invalidateTenantAuthCache } from "./middleware/auth";
 import { requireRole, requireTenantAccess } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
 
@@ -61,7 +62,7 @@ app.get("/api/health", (c) => {
     framework: "Hono",
     database: "PostgreSQL",
     timestamp: new Date().toISOString(),
-    message: "Orchid Brand Smart Laundry API is running smoothly on PostgreSQL!",
+    message: "Laundry Cleanique API is running smoothly on PostgreSQL!",
   });
 });
 
@@ -124,7 +125,7 @@ app.get("/api/track/:invoiceNo", async (c) => {
           completedAt: order.completedAt,
         },
         outlet: {
-          outletName: tenant?.outletName || "Orchid Smart Laundry",
+          outletName: tenant?.outletName || "Laundry Cleanique",
           phone: tenant?.phone || "",
           address: tenant?.address || "",
           operatingHours: {
@@ -146,25 +147,35 @@ app.get("/api/track/:invoiceNo", async (c) => {
 
 // 3. Master Services CRUD per Tenant (DEFAULT_PRESET_SERVICES imported from ./constants/services)
 
-app.get("/api/services", async (c) => {
+app.get("/api/services", authMiddleware, async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    if (!tenantId || tenantId === "all") {
-      const allServices = await db.select().from(services);
-      return c.json({ success: true, data: allServices });
+    const user = getUser(c);
+    const requestedTenantId = c.req.query("tenantId");
+
+    let targetTenantId = user.tenantId;
+    if (user.role === "superadmin") {
+      if (!requestedTenantId || requestedTenantId === "all") {
+        const allServices = await db.select().from(services);
+        return c.json({ success: true, data: allServices });
+      }
+      targetTenantId = requestedTenantId;
+    }
+
+    if (!targetTenantId) {
+      targetTenantId = "tenant-01";
     }
 
     let existingServices = await db
       .select()
       .from(services)
-      .where(eq(services.tenantId, tenantId));
+      .where(eq(services.tenantId, targetTenantId));
 
     // Auto-seed default services for tenant if none exist yet
     if (existingServices.length === 0) {
       for (const def of DEFAULT_PRESET_SERVICES) {
         await db.insert(services).values({
           id: `srv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          tenantId,
+          tenantId: targetTenantId,
           name: def.name,
           unit: def.unit,
           pricePerUnit: def.pricePerUnit,
@@ -174,7 +185,7 @@ app.get("/api/services", async (c) => {
           createdAt: new Date().toISOString(),
         });
       }
-      existingServices = await db.select().from(services).where(eq(services.tenantId, tenantId));
+      existingServices = await db.select().from(services).where(eq(services.tenantId, targetTenantId));
     }
 
     return c.json({ success: true, data: existingServices });
@@ -183,18 +194,20 @@ app.get("/api/services", async (c) => {
   }
 });
 
-app.post("/api/services", async (c) => {
+app.post("/api/services", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const { tenantId, name, unit, pricePerUnit, minOrder, durationHours, status } = body;
+    const { name, unit, pricePerUnit, minOrder, durationHours, status } = body;
+    const targetTenantId = user.role === "superadmin" && body.tenantId ? body.tenantId : user.tenantId;
 
-    if (!tenantId || !name || pricePerUnit === undefined) {
+    if (!targetTenantId || !name || pricePerUnit === undefined) {
       return c.json({ success: false, message: "Tenant, Nama Layanan, dan Tarif wajib diisi" }, 400);
     }
 
     const newService = {
       id: `srv-${Date.now()}`,
-      tenantId,
+      tenantId: targetTenantId,
       name: String(name).trim(),
       unit: unit || "kg",
       pricePerUnit: Number(pricePerUnit) || 0,
@@ -211,11 +224,19 @@ app.post("/api/services", async (c) => {
   }
 });
 
-app.put("/api/services/:id", async (c) => {
+app.put("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
-    const body = await c.req.json();
+    const [existing] = await db.select().from(services).where(eq(services.id, id));
+    if (!existing) {
+      return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
+    }
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Layanan bukan milik outlet Anda" }, 403);
+    }
 
+    const body = await c.req.json();
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = String(body.name).trim();
     if (body.unit !== undefined) updateData.unit = body.unit;
@@ -231,9 +252,18 @@ app.put("/api/services/:id", async (c) => {
   }
 });
 
-app.delete("/api/services/:id", async (c) => {
+app.delete("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
+    const [existing] = await db.select().from(services).where(eq(services.id, id));
+    if (!existing) {
+      return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
+    }
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Layanan bukan milik outlet Anda" }, 403);
+    }
+
     await db.delete(services).where(eq(services.id, id));
     return c.json({ success: true, message: "Layanan berhasil dihapus" });
   } catch (error: any) {
@@ -242,7 +272,7 @@ app.delete("/api/services/:id", async (c) => {
 });
 
 // 2. Tenants & Users (Superadmin view)
-app.get("/api/tenants", async (c) => {
+app.get("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const allTenants = await db.select().from(tenants);
     const allUsers = await db.select().from(users);
@@ -295,7 +325,7 @@ app.get("/api/tenants", async (c) => {
   }
 });
 
-app.post("/api/tenants", async (c) => {
+app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const body = await c.req.json();
     const {
@@ -339,9 +369,15 @@ app.post("/api/tenants", async (c) => {
   }
 });
 
-app.put("/api/tenants/:id", async (c) => {
+app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
+
+    if (user.role !== "superadmin" && user.tenantId !== id) {
+      return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengelola data outlet Anda sendiri" }, 403);
+    }
+
     const body = await c.req.json();
     const {
       outletName, phone, address, status, subscriptionUntil, services, ownerName, enableCashierShift,
@@ -353,8 +389,6 @@ app.put("/api/tenants/:id", async (c) => {
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
     if (city !== undefined) updateData.city = city || null;
-    if (status !== undefined) updateData.status = status;
-    if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
     if (services !== undefined) {
       updateData.services = typeof services === "string" ? services : JSON.stringify(services);
     }
@@ -372,7 +406,14 @@ app.put("/api/tenants/:id", async (c) => {
         : null;
     }
 
+    // Hanya Super Admin yang boleh mengubah status aktif dan masa langganan secara langsung
+    if (user.role === "superadmin") {
+      if (status !== undefined) updateData.status = status;
+      if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
+    }
+
     await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    invalidateTenantAuthCache(id);
 
     if (ownerName && typeof ownerName === "string" && ownerName.trim()) {
       const tenantRow = (await db.select().from(tenants).where(eq(tenants.id, id)))[0];
@@ -387,7 +428,7 @@ app.put("/api/tenants/:id", async (c) => {
   }
 });
 
-app.patch("/api/tenants/:id/status", async (c) => {
+app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -398,13 +439,14 @@ app.patch("/api/tenants/:id/status", async (c) => {
     if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
 
     await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    invalidateTenantAuthCache(id);
     return c.json({ success: true, message: "Status cabang / langganan berhasil diperbarui" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
 });
 
-app.delete("/api/tenants/:id", async (c) => {
+app.delete("/api/tenants/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
     await db.delete(tenants).where(eq(tenants.id, id));
@@ -461,7 +503,7 @@ app.post("/api/auth/login", async (c) => {
       email: foundUser.email,
       role: foundUser.role,
       status: foundUser.status || "active",
-      subscriptionUntil: foundUser.subscriptionUntil,
+      subscriptionUntil: foundUser.subscriptionUntil || userTenant?.subscriptionUntil || null,
       tenantId: userTenant ? userTenant.id : foundUser.tenantId || null,
       tenantName: userTenant ? userTenant.outletName : null,
     };
@@ -475,15 +517,32 @@ app.post("/api/auth/login", async (c) => {
       }, 403);
     }
 
-    if (foundUser.role !== "superadmin" && foundUser.subscriptionUntil) {
-      const expDate = new Date(`${foundUser.subscriptionUntil}T23:59:59`);
-      if (!isNaN(expDate.getTime()) && expDate < new Date()) {
-        return c.json({
-          success: false,
-          code: "SUBSCRIPTION_EXPIRED",
-          message: `Masa aktif akun Anda telah berakhir pada ${foundUser.subscriptionUntil}. Silakan hubungi Super Admin untuk perpanjangan.`,
-          user: userSummary,
-        }, 403);
+    // Periksa status aktif tenant untuk akun non-superadmin
+    if (userTenant && userTenant.status === "inactive" && foundUser.role !== "superadmin") {
+      return c.json({
+        success: false,
+        code: "ACCOUNT_INACTIVE",
+        message: "Outlet Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi.",
+        user: userSummary,
+      }, 403);
+    }
+
+    // Periksa masa aktif langganan: jika user tidak punya tanggal sendiri (misal kasir), cek tanggal outlet
+    if (foundUser.role !== "superadmin") {
+      let subDate = foundUser.subscriptionUntil;
+      if (!subDate && userTenant?.subscriptionUntil) {
+        subDate = userTenant.subscriptionUntil;
+      }
+      if (subDate) {
+        const expDate = new Date(`${subDate}T23:59:59`);
+        if (!isNaN(expDate.getTime()) && expDate < new Date()) {
+          return c.json({
+            success: false,
+            code: "SUBSCRIPTION_EXPIRED",
+            message: `Masa aktif akun / outlet Anda telah berakhir pada ${subDate}. Silakan hubungi Super Admin untuk perpanjangan.`,
+            user: userSummary,
+          }, 403);
+        }
       }
     }
 
@@ -567,7 +626,7 @@ app.post("/api/auth/logout", async (c) => {
 });
 
 // User Management (Super Admin)
-app.get("/api/users", async (c) => {
+app.get("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const allUsers = await db.select().from(users);
     const allTenants = await db.select().from(tenants);
@@ -595,7 +654,7 @@ app.get("/api/users", async (c) => {
   }
 });
 
-app.post("/api/users", async (c) => {
+app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const body = await c.req.json();
     const { name, email, password, role, tenantId, status, subscriptionUntil } = body;
@@ -636,26 +695,35 @@ app.post("/api/users", async (c) => {
   }
 });
 
-app.put("/api/users/:id", async (c) => {
+app.put("/api/users/:id", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const body = await c.req.json();
     const { name, email, role, password, tenantId, status, subscriptionUntil } = body;
 
+    if (user.role !== "superadmin" && user.userId !== id) {
+      return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengedit akun Anda sendiri" }, 403);
+    }
+
     const updatePayload: any = {};
     if (name !== undefined) updatePayload.name = name;
     if (email !== undefined) updatePayload.email = email;
-    if (role !== undefined) updatePayload.role = role;
     if (password !== undefined && String(password).trim()) {
       updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
     }
-    if (status !== undefined) updatePayload.status = status;
-    if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
-    if (tenantId !== undefined) updatePayload.tenantId = tenantId;
+
+    // Hanya superadmin yang boleh mengubah role, status, masa aktif, atau asosiasi tenant
+    if (user.role === "superadmin") {
+      if (role !== undefined) updatePayload.role = role;
+      if (status !== undefined) updatePayload.status = status;
+      if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
+      if (tenantId !== undefined) updatePayload.tenantId = tenantId;
+    }
 
     await db.update(users).set(updatePayload).where(eq(users.id, id));
 
-    if (tenantId && role === "tenant_owner") {
+    if (user.role === "superadmin" && tenantId && role === "tenant_owner") {
       await db.update(tenants).set({ userId: id }).where(eq(tenants.id, tenantId));
     }
 
@@ -665,7 +733,7 @@ app.put("/api/users/:id", async (c) => {
   }
 });
 
-app.patch("/api/users/:id/status", async (c) => {
+app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -691,8 +759,8 @@ app.patch("/api/users/:id/status", async (c) => {
   }
 });
 
-// Perpanjang masa aktif pengguna (+X hari atau tanggal tertentu)
-app.post("/api/users/:id/extend", async (c) => {
+// Perpanjang masa aktif pengguna (+X hari atau tanggal tertentu) - Khusus Superadmin
+app.post("/api/users/:id/extend", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -741,6 +809,7 @@ app.post("/api/users/:id/extend", async (c) => {
 
     const updatedUser = (await db.select().from(users).where(eq(users.id, id)))[0];
     const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, id)))[0];
+    if (userTenant) invalidateTenantAuthCache(userTenant.id);
 
     return c.json({
       success: true,
@@ -762,7 +831,7 @@ app.post("/api/users/:id/extend", async (c) => {
   }
 });
 
-app.delete("/api/users/:id", async (c) => {
+app.delete("/api/users/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
     await db.delete(users).where(eq(users.id, id));
@@ -772,9 +841,10 @@ app.delete("/api/users/:id", async (c) => {
   }
 });
 
-// Reset Password Pengguna (Khusus Admin atau Pemilik)
-app.post("/api/users/:id/reset-password", async (c) => {
+// Reset Password Pengguna (Khusus Admin atau Pemilik Outlet untuk Stafnya)
+app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const body = await c.req.json();
     const { newPassword } = body;
@@ -790,6 +860,22 @@ app.post("/api/users/:id/reset-password", async (c) => {
     const targetUser = foundUsers[0];
     if (!targetUser) {
       return c.json({ success: false, message: "Pengguna tidak ditemukan." }, 404);
+    }
+
+    // Jika bukan superadmin, hanya izinkan tenant_owner mereset password staf di cabangnya sendiri atau akun miliknya sendiri
+    if (user.role !== "superadmin") {
+      const isSelf = user.userId === id;
+      const isOwnerOfStaff =
+        user.role === "tenant_owner" &&
+        targetUser.role === "staff" &&
+        targetUser.tenantId === user.tenantId;
+
+      if (!isSelf && !isOwnerOfStaff) {
+        return c.json(
+          { success: false, message: "Akses ditolak: Anda tidak memiliki wewenang mereset password pengguna ini." },
+          403
+        );
+      }
     }
 
     const hashedPassword = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 10 });
@@ -808,11 +894,17 @@ app.post("/api/users/:id/reset-password", async (c) => {
 });
 
 // ==========================================
-// 2B. Staff Kasir Management per Outlet (Tenant Owner)
+// 2B. Staff Kasir Management per Outlet (Tenant Owner & Superadmin)
 // ==========================================
-app.get("/api/tenants/:id/staff", async (c) => {
+app.get("/api/tenants/:id/staff", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const tenantId = c.req.param("id");
+
+    if (user.role !== "superadmin" && user.tenantId !== tenantId) {
+      return c.json({ success: false, message: "Akses ditolak untuk data cabang ini" }, 403);
+    }
+
     const staffList = await db
       .select({
         id: users.id,
@@ -831,9 +923,15 @@ app.get("/api/tenants/:id/staff", async (c) => {
   }
 });
 
-app.post("/api/tenants/:id/staff", async (c) => {
+app.post("/api/tenants/:id/staff", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const tenantId = c.req.param("id");
+
+    if (user.role !== "superadmin" && user.tenantId !== tenantId) {
+      return c.json({ success: false, message: "Akses ditolak untuk cabang ini" }, 403);
+    }
+
     const { name, email, password } = await c.req.json();
     if (!name || !email || !password) {
       return c.json({ success: false, message: "Nama, email, dan kata sandi wajib diisi" }, 400);
@@ -867,14 +965,19 @@ app.post("/api/tenants/:id/staff", async (c) => {
   }
 });
 
-app.delete("/api/staff/:id", async (c) => {
+app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
       return c.json({ success: false, message: "Hanya akun staf kasir yang dapat dihapus dari menu ini" }, 400);
     }
+    if (user.role !== "superadmin" && target.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Staf bukan milik outlet Anda" }, 403);
+    }
+
     await db.delete(users).where(eq(users.id, id));
     return c.json({ success: true, message: "Akun staf kasir berhasil dihapus" });
   } catch (error: any) {
@@ -885,11 +988,18 @@ app.delete("/api/staff/:id", async (c) => {
 // ==========================================
 // 2C. Cashier Shift & Cash Reconciliation Endpoints
 // ==========================================
-app.get("/api/shifts/active", async (c) => {
+// ==========================================
+// 2C. Cashier Shift & Cash Reconciliation Endpoints
+// ==========================================
+app.get("/api/shifts/active", authMiddleware, async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    const userId = c.req.query("userId");
-    if (!tenantId) return c.json({ success: false, message: "tenantId wajib disertakan" }, 400);
+    const user = getUser(c);
+    const tenantId = user.role === "superadmin" && c.req.query("tenantId")
+      ? c.req.query("tenantId")!
+      : (user.tenantId || "tenant-01");
+    const userId = user.role === "superadmin" && c.req.query("userId")
+      ? c.req.query("userId")
+      : user.userId;
 
     const conditions = [eq(shifts.tenantId, tenantId), eq(shifts.status, "open")];
     if (userId) {
@@ -910,18 +1020,24 @@ app.get("/api/shifts/active", async (c) => {
     // Get cashier info
     const cashierUser = (await db.select().from(users).where(eq(users.id, active.userId)))[0];
 
-    // Calculate cash payments received since openedAt
-    const ordersDuringShift = await db
+    // Calculate cash payments received for this active shift
+    const ordersInTenant = await db
       .select()
       .from(orders)
       .where(
         and(
           eq(orders.tenantId, active.tenantId),
-          gte(orders.createdAt, active.openedAt),
           eq(orders.paymentStatus, "paid"),
           eq(orders.paymentMethod, "cash")
         )
       );
+
+    const ordersDuringShift = ordersInTenant.filter((o) => {
+      if (o.paidShiftId === active.id) return true;
+      if (o.paidAt && o.paidAt >= active.openedAt) return true;
+      if (!o.paidAt && o.createdAt >= active.openedAt) return true;
+      return false;
+    });
     const currentCashTotal = ordersDuringShift.reduce((sum, o) => sum + o.totalAmount, 0);
 
     return c.json({
@@ -939,13 +1055,13 @@ app.get("/api/shifts/active", async (c) => {
   }
 });
 
-app.post("/api/shifts/open", async (c) => {
+app.post("/api/shifts/open", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const { tenantId, userId, startingCash = 0, notes } = body;
-    if (!tenantId || !userId) {
-      return c.json({ success: false, message: "tenantId dan userId wajib diisi" }, 400);
-    }
+    const tenantId = user.role === "superadmin" && body.tenantId ? body.tenantId : (user.tenantId || "tenant-01");
+    const userId = user.userId;
+    const { startingCash = 0, notes } = body;
 
     // Check if user already has an open shift in this tenant
     const existingOpen = await db
@@ -998,14 +1114,20 @@ app.post("/api/shifts/open", async (c) => {
   }
 });
 
-app.post("/api/shifts/close", async (c) => {
+app.post("/api/shifts/close", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
     const { shiftId, actualCashTotal = 0, notes } = body;
     if (!shiftId) return c.json({ success: false, message: "shiftId wajib diisi" }, 400);
 
     const shiftRow = (await db.select().from(shifts).where(eq(shifts.id, shiftId)))[0];
     if (!shiftRow) return c.json({ success: false, message: "Shift tidak ditemukan" }, 404);
+
+    if (user.role !== "superadmin" && shiftRow.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Shift bukan milik outlet Anda" }, 403);
+    }
+
     if (shiftRow.status === "closed") {
       return c.json({ success: false, message: "Shift sudah ditutup sebelumnya" }, 400);
     }
@@ -1013,18 +1135,23 @@ app.post("/api/shifts/close", async (c) => {
     const closedAt = new Date().toISOString();
 
     // Calculate all cash payments received during the shift
-    const ordersDuringShift = await db
+    const ordersInTenant = await db
       .select()
       .from(orders)
       .where(
         and(
           eq(orders.tenantId, shiftRow.tenantId),
-          gte(orders.createdAt, shiftRow.openedAt),
-          lte(orders.createdAt, closedAt),
           eq(orders.paymentStatus, "paid"),
           eq(orders.paymentMethod, "cash")
         )
       );
+
+    const ordersDuringShift = ordersInTenant.filter((o) => {
+      if (o.paidShiftId === shiftRow.id) return true;
+      if (o.paidAt && o.paidAt >= shiftRow.openedAt && o.paidAt <= closedAt) return true;
+      if (!o.paidAt && o.createdAt >= shiftRow.openedAt && o.createdAt <= closedAt) return true;
+      return false;
+    });
 
     const systemCashTotal = ordersDuringShift.reduce((sum, o) => sum + o.totalAmount, 0);
     const expectedCash = shiftRow.startingCash + systemCashTotal;
@@ -1063,13 +1190,18 @@ app.post("/api/shifts/close", async (c) => {
   }
 });
 
-app.get("/api/shifts/history", async (c) => {
+app.get("/api/shifts/history", authMiddleware, async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    const shiftRows =
-      tenantId && tenantId !== "all"
-        ? await db.select().from(shifts).where(eq(shifts.tenantId, tenantId)).orderBy(desc(shifts.openedAt)).limit(200)
-        : await db.select().from(shifts).orderBy(desc(shifts.openedAt)).limit(200);
+    const user = getUser(c);
+    const requestedTenantId = c.req.query("tenantId");
+    const tenantId = user.role === "superadmin"
+      ? (requestedTenantId && requestedTenantId !== "all" ? requestedTenantId : null)
+      : user.tenantId;
+
+    const shiftRows = tenantId
+      ? await db.select().from(shifts).where(eq(shifts.tenantId, tenantId)).orderBy(desc(shifts.openedAt)).limit(200)
+      : await db.select().from(shifts).orderBy(desc(shifts.openedAt)).limit(200);
+
     const userRows = await db.select().from(users);
 
     const enriched = shiftRows.map((s) => {
@@ -1089,7 +1221,7 @@ app.get("/api/shifts/history", async (c) => {
 // ==========================================
 // 2D. WhatsApp Delivery Audit Logs
 // ==========================================
-app.get("/api/orders/:id/wa-logs", async (c) => {
+app.get("/api/orders/:id/wa-logs", authMiddleware, async (c) => {
   try {
     const orderId = c.req.param("id");
     const logs = await db.select().from(waLogs).where(eq(waLogs.orderId, orderId)).orderBy(desc(waLogs.createdAt));
@@ -1099,9 +1231,15 @@ app.get("/api/orders/:id/wa-logs", async (c) => {
   }
 });
 
-app.get("/api/tenants/:id/wa-logs", async (c) => {
+app.get("/api/tenants/:id/wa-logs", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const tenantId = c.req.param("id");
+
+    if (user.role !== "superadmin" && user.tenantId !== tenantId) {
+      return c.json({ success: false, message: "Akses ditolak" }, 403);
+    }
+
     const logs =
       tenantId === "all"
         ? await db.select().from(waLogs).orderBy(desc(waLogs.createdAt)).limit(200)
@@ -1112,13 +1250,16 @@ app.get("/api/tenants/:id/wa-logs", async (c) => {
   }
 });
 
-app.post("/api/whatsapp/log", async (c) => {
+app.post("/api/whatsapp/log", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const { tenantId, orderId, recipientPhone, recipientName, messagePreview, status, mode, errorMessage } = body;
+    const { tenantId: rawTenantId, orderId, recipientPhone, recipientName, messagePreview, status, mode, errorMessage } = body;
+    const targetTenantId = user.role === "superadmin" && rawTenantId ? rawTenantId : (user.tenantId || "tenant-01");
+
     const newLog = {
       id: `walog-${Date.now()}`,
-      tenantId: tenantId || "tenant-01",
+      tenantId: targetTenantId,
       orderId: orderId || null,
       recipientPhone: recipientPhone || "",
       recipientName: recipientName || null,
@@ -1136,13 +1277,17 @@ app.post("/api/whatsapp/log", async (c) => {
 });
 
 // 3. Customers
-app.get("/api/customers", async (c) => {
+app.get("/api/customers", authMiddleware, async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    const custList =
-      tenantId && tenantId !== "all"
-        ? await db.select().from(customers).where(eq(customers.tenantId, tenantId))
-        : await db.select().from(customers);
+    const user = getUser(c);
+    const requestedTenantId = c.req.query("tenantId");
+    const tenantId = user.role === "superadmin"
+      ? (requestedTenantId && requestedTenantId !== "all" ? requestedTenantId : null)
+      : user.tenantId;
+
+    const custList = tenantId
+      ? await db.select().from(customers).where(eq(customers.tenantId, tenantId))
+      : await db.select().from(customers);
 
     return c.json({ success: true, data: custList });
   } catch (error: any) {
@@ -1150,13 +1295,15 @@ app.get("/api/customers", async (c) => {
   }
 });
 
-app.post("/api/customers", async (c) => {
+app.post("/api/customers", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const tenantId = body.tenantId && body.tenantId !== "all" ? body.tenantId : "tenant-01";
+    const targetTenantId = user.role === "superadmin" && body.tenantId ? body.tenantId : (user.tenantId || "tenant-01");
+
     const newCust = {
       id: `cust-${Date.now()}`,
-      tenantId,
+      tenantId: targetTenantId,
       name: body.name,
       phone: body.phone,
       address: body.address || "",
@@ -1170,9 +1317,17 @@ app.post("/api/customers", async (c) => {
   }
 });
 
-app.put("/api/customers/:id", async (c) => {
+app.put("/api/customers/:id", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
+    const [existing] = await db.select().from(customers).where(eq(customers.id, id));
+    if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pelanggan bukan milik outlet Anda" }, 403);
+    }
+
     const body = await c.req.json();
     const { name, phone, address, notes } = body;
 
@@ -1189,9 +1344,17 @@ app.put("/api/customers/:id", async (c) => {
   }
 });
 
-app.delete("/api/customers/:id", async (c) => {
+app.delete("/api/customers/:id", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
+    const [existing] = await db.select().from(customers).where(eq(customers.id, id));
+    if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pelanggan bukan milik outlet Anda" }, 403);
+    }
+
     await db.delete(customers).where(eq(customers.id, id));
     return c.json({ success: true, message: "Pelanggan berhasil dihapus" });
   } catch (error: any) {
@@ -1200,20 +1363,29 @@ app.delete("/api/customers/:id", async (c) => {
 });
 
 // 4. Orders
-app.get("/api/orders", async (c) => {
+app.get("/api/orders", authMiddleware, async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    const orderList =
-      tenantId && tenantId !== "all"
-        ? await db
-            .select()
-            .from(orders)
-            .where(eq(orders.tenantId, tenantId))
-            .orderBy(desc(orders.createdAt))
-        : await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const user = getUser(c);
+    const tenantIdQuery = c.req.query("tenantId");
+    const targetTenantId =
+      user.role === "superadmin"
+        ? (tenantIdQuery && tenantIdQuery !== "all" ? tenantIdQuery : null)
+        : user.tenantId;
 
-    const custList = await db.select().from(customers);
-    const allWaLogs = await db.select().from(waLogs);
+    const orderList = targetTenantId
+      ? await db
+          .select()
+          .from(orders)
+          .where(eq(orders.tenantId, targetTenantId))
+          .orderBy(desc(orders.createdAt))
+      : await db.select().from(orders).orderBy(desc(orders.createdAt));
+
+    const custList = targetTenantId
+      ? await db.select().from(customers).where(eq(customers.tenantId, targetTenantId))
+      : await db.select().from(customers);
+    const allWaLogs = targetTenantId
+      ? await db.select().from(waLogs).where(eq(waLogs.tenantId, targetTenantId))
+      : await db.select().from(waLogs);
 
     const enriched = orderList.map((ord) => {
       const cust = custList.find((c) => c.id === ord.customerId);
@@ -1245,10 +1417,14 @@ app.get("/api/orders", async (c) => {
   }
 });
 
-app.post("/api/orders", async (c) => {
+app.post("/api/orders", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const tenantId = body.tenantId || "tenant-01";
+    const tenantId = user.role === "superadmin" ? (body.tenantId || user.tenantId || "tenant-01") : user.tenantId;
+    if (!tenantId) {
+      return c.json({ success: false, message: "Tenant ID tidak valid" }, 400);
+    }
     let customerId = body.customerId;
 
     if (!customerId && body.newCustomer) {
@@ -1270,6 +1446,16 @@ app.post("/api/orders", async (c) => {
 
     if (!customerId) {
       return c.json({ success: false, message: "Pelanggan belum dipilih atau belum diisi" }, 400);
+    }
+
+    // Verify customer exists and belongs to the tenant
+    const custResults = await db.select().from(customers).where(eq(customers.id, customerId));
+    const cust = custResults[0];
+    if (!cust) {
+      return c.json({ success: false, message: "Data pelanggan tidak ditemukan" }, 404);
+    }
+    if (user.role !== "superadmin" && cust.tenantId !== tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pelanggan bukan milik outlet Anda" }, 403);
     }
 
     const count = (await db.select().from(orders)).length + 1;
@@ -1305,6 +1491,20 @@ app.post("/api/orders", async (c) => {
       estimatedCompletionAt = new Date(Date.now() + durationHours * 3600 * 1000).toISOString();
     }
 
+    const paymentStatus = body.paymentStatus || "unpaid";
+    let paidAt: string | null = null;
+    let paidShiftId: string | null = null;
+
+    if (paymentStatus === "paid") {
+      paidAt = new Date().toISOString();
+      const openShifts = await db
+        .select()
+        .from(shifts)
+        .where(and(eq(shifts.tenantId, tenantId), eq(shifts.status, "open")));
+      const matchingShift = openShifts.find((s) => s.userId === user.userId) || openShifts[0];
+      paidShiftId = matchingShift ? matchingShift.id : null;
+    }
+
     const newOrder = {
       id: `ord-${Date.now()}`,
       tenantId,
@@ -1317,9 +1517,11 @@ app.post("/api/orders", async (c) => {
       totalAmount: finalTotalAmount,
       items: itemsJson,
       status: body.status || "process",
-      paymentStatus: body.paymentStatus || "unpaid",
+      paymentStatus,
       paymentMethod: body.paymentMethod || "cash",
       notes: body.notes || "",
+      paidAt,
+      paidShiftId,
       createdAt: new Date().toISOString(),
       estimatedCompletionAt,
     };
@@ -1330,14 +1532,12 @@ app.post("/api/orders", async (c) => {
     // Auto WhatsApp on Order Creation (Konfirmasi Pesanan / Struk Digital)
     // -------------------------------------------------------------
     let waData = null;
-    const custResults = await db.select().from(customers).where(eq(customers.id, customerId));
-    const cust = custResults[0];
     const tenantResults = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     const tenant = tenantResults[0];
 
     if (cust && cust.phone) {
       const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
-      const outletName = tenant ? tenant.outletName : "Orchid Brand Smart Laundry";
+      const outletName = tenant ? tenant.outletName : "Laundry Cleanique";
       const paymentNote = (body.paymentStatus === "paid") ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${finalTotalAmount.toLocaleString("id-ID")})`;
 
       let itemsFormattedText = `🧺 *Layanan:* ${finalServiceType} (${finalWeightOrQty} ${finalUnit})`;
@@ -1435,8 +1635,9 @@ app.post("/api/orders", async (c) => {
 });
 
 // Update Order Status & Generate WhatsApp notification template
-app.patch("/api/orders/:id/status", async (c) => {
+app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const { status } = await c.req.json();
 
@@ -1444,6 +1645,10 @@ app.patch("/api/orders/:id/status", async (c) => {
     const existing = existingResults[0];
     if (!existing) {
       return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+    }
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pesanan bukan milik outlet Anda" }, 403);
     }
 
     if (existing.status === "completed") {
@@ -1455,10 +1660,21 @@ app.patch("/api/orders/:id/status", async (c) => {
 
     const completedAt = status === "completed" ? new Date().toISOString() : null;
     const paymentStatus = status === "completed" ? "paid" : existing.paymentStatus;
+    const updatePayload: any = { status, completedAt, paymentStatus };
+
+    if (paymentStatus === "paid" && existing.paymentStatus !== "paid") {
+      updatePayload.paidAt = new Date().toISOString();
+      const openShifts = await db
+        .select()
+        .from(shifts)
+        .where(and(eq(shifts.tenantId, existing.tenantId), eq(shifts.status, "open")));
+      const matchingShift = openShifts.find((s) => s.userId === user.userId) || openShifts[0];
+      updatePayload.paidShiftId = matchingShift ? matchingShift.id : null;
+    }
 
     await db
       .update(orders)
-      .set({ status, completedAt, paymentStatus })
+      .set(updatePayload)
       .where(eq(orders.id, id));
 
     // Get customer info for WA notification
@@ -1471,7 +1687,7 @@ app.patch("/api/orders/:id/status", async (c) => {
     let waData = null;
     if (status === "ready" && cust && cust.phone) {
       const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
-      const outletName = tenant ? tenant.outletName : "Orchid Brand Smart Laundry";
+      const outletName = tenant ? tenant.outletName : "Laundry Cleanique";
       const paymentNote = existing.paymentStatus === "paid" ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${existing.totalAmount.toLocaleString("id-ID")})`;
       const origin = c.req.header("origin") || "http://localhost:5173";
       const trackingUrl = `${origin}/track/${encodeURIComponent(existing.invoiceNo)}`;
@@ -1554,23 +1770,50 @@ app.patch("/api/orders/:id/status", async (c) => {
 });
 
 // Update Payment Status
-app.patch("/api/orders/:id/payment", async (c) => {
+app.patch("/api/orders/:id/payment", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const { paymentStatus, paymentMethod } = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
     const existing = existingResults[0];
-    if (existing && existing.status === "completed") {
+    if (!existing) {
+      return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+    }
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pesanan bukan milik outlet Anda" }, 403);
+    }
+
+    if (existing.status === "completed") {
       return c.json(
         { success: false, message: "Pesanan sudah selesai dan pembayaran tidak dapat diubah lagi" },
         400
       );
     }
 
+    const updatePayload: any = {
+      paymentStatus,
+      paymentMethod: paymentMethod || existing.paymentMethod || "cash",
+    };
+
+    if (paymentStatus === "paid" && existing.paymentStatus !== "paid") {
+      updatePayload.paidAt = new Date().toISOString();
+      const openShifts = await db
+        .select()
+        .from(shifts)
+        .where(and(eq(shifts.tenantId, existing.tenantId), eq(shifts.status, "open")));
+      const matchingShift = openShifts.find((s) => s.userId === user.userId) || openShifts[0];
+      updatePayload.paidShiftId = matchingShift ? matchingShift.id : null;
+    } else if (paymentStatus === "unpaid") {
+      updatePayload.paidAt = null;
+      updatePayload.paidShiftId = null;
+    }
+
     await db
       .update(orders)
-      .set({ paymentStatus, paymentMethod: paymentMethod || "cash" })
+      .set(updatePayload)
       .where(eq(orders.id, id));
 
     return c.json({ success: true, message: "Status pembayaran berhasil diperbarui" });
@@ -1580,8 +1823,9 @@ app.patch("/api/orders/:id/payment", async (c) => {
 });
 
 // Update Order (Edit Detail Kasir)
-app.put("/api/orders/:id", async (c) => {
+app.put("/api/orders/:id", authMiddleware, async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
     const body = await c.req.json();
 
@@ -1589,6 +1833,10 @@ app.put("/api/orders/:id", async (c) => {
     const existing = existingResults[0];
     if (!existing) {
       return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+    }
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Pesanan bukan milik outlet Anda" }, 403);
     }
 
     if (existing.status === "completed") {
@@ -1601,14 +1849,14 @@ app.put("/api/orders/:id", async (c) => {
     const updateData: any = {};
     if (body.customerId !== undefined) updateData.customerId = body.customerId;
     if (body.serviceType !== undefined) updateData.serviceType = body.serviceType;
-    if (body.weightOrQty !== undefined) updateData.weightOrQty = Number(body.weightOrQty);
+    if (body.weightOrQty !== undefined) updateData.weightOrQty = Number(body.weightOrQty) || 0;
     if (body.unit !== undefined) updateData.unit = body.unit;
-    if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit);
-    if (body.totalAmount !== undefined) updateData.totalAmount = Number(body.totalAmount);
+    if (body.pricePerUnit !== undefined) updateData.pricePerUnit = Number(body.pricePerUnit) || 0;
+    if (body.totalAmount !== undefined) updateData.totalAmount = Number(body.totalAmount) || 0;
     if (body.items !== undefined) {
       try {
-        const itemsArr = Array.isArray(body.items) ? body.items : typeof body.items === "string" ? JSON.parse(body.items) : [];
-        updateData.items = typeof body.items === "string" ? body.items : JSON.stringify(body.items);
+        const itemsArr = Array.isArray(body.items) ? body.items : JSON.parse(body.items);
+        updateData.items = JSON.stringify(itemsArr);
         if (itemsArr.length > 0) {
           if (body.serviceType === undefined) {
             updateData.serviceType = itemsArr.map((it: any) => it.serviceType).join(", ");
@@ -1645,6 +1893,19 @@ app.put("/api/orders/:id", async (c) => {
     if (body.paymentMethod !== undefined) updateData.paymentMethod = body.paymentMethod;
     if (body.notes !== undefined) updateData.notes = body.notes;
 
+    if (updateData.paymentStatus === "paid" && existing.paymentStatus !== "paid") {
+      updateData.paidAt = new Date().toISOString();
+      const openShifts = await db
+        .select()
+        .from(shifts)
+        .where(and(eq(shifts.tenantId, existing.tenantId), eq(shifts.status, "open")));
+      const matchingShift = openShifts.find((s) => s.userId === user.userId) || openShifts[0];
+      updateData.paidShiftId = matchingShift ? matchingShift.id : null;
+    } else if (updateData.paymentStatus === "unpaid") {
+      updateData.paidAt = null;
+      updateData.paidShiftId = null;
+    }
+
     await db.update(orders).set(updateData).where(eq(orders.id, id));
 
     return c.json({ success: true, message: "Order berhasil diperbarui" });
@@ -1653,41 +1914,57 @@ app.put("/api/orders/:id", async (c) => {
   }
 });
 
-// Delete Order (Protected: Staff cannot delete orders)
-app.delete("/api/orders/:id", async (c) => {
-  try {
-    const id = c.req.param("id");
-    const roleHeader = c.req.header("x-user-role") || c.req.query("role");
-    if (roleHeader === "staff") {
-      return c.json({
-        success: false,
-        message: "Akses Ditolak: Akun Kasir/Staff tidak memiliki wewenang untuk menghapus pesanan.",
-      }, 403);
-    }
-
+// Delete Order: only authenticated superadmins and tenant owners may delete orders.
+// The role is taken exclusively from the verified token by requireRole; client-supplied
+// headers/query parameters are intentionally ignored.
+app.delete(
+  "/api/orders/:id",
+  authMiddleware,
+  requireRole(["superadmin", "tenant_owner"]),
+  async (c) => {
     try {
-      await db.delete(waLogs).where(eq(waLogs.orderId, id));
-    } catch {}
+      const user = getUser(c);
+      const id = c.req.param("id");
 
-    await db.delete(orders).where(eq(orders.id, id));
-    return c.json({ success: true, message: "Order berhasil dihapus" });
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
+      const existingResults = await db.select().from(orders).where(eq(orders.id, id));
+      const existing = existingResults[0];
+      if (!existing) {
+        return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
+      }
+
+      if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+        return c.json({ success: false, message: "Akses ditolak: Pesanan bukan milik outlet Anda" }, 403);
+      }
+
+      try {
+        await db.delete(waLogs).where(eq(waLogs.orderId, id));
+      } catch {}
+
+      await db.delete(orders).where(eq(orders.id, id));
+      return c.json({ success: true, message: "Order berhasil dihapus" });
+    } catch (error: any) {
+      return c.json({ success: false, message: error.message }, 500);
+    }
   }
-});
+);
 
-// 5. Expenses & Income (Buku Arus Kas)
-app.get("/api/expenses", async (c) => {
+// 5. Expenses & Income (Buku Arus Kas - Protected: Super Admin & Tenant Owner Only)
+app.get("/api/expenses", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
-    const expList =
-      tenantId && tenantId !== "all"
-        ? await db
-            .select()
-            .from(expenses)
-            .where(eq(expenses.tenantId, tenantId))
-            .orderBy(desc(expenses.expenseDate))
-        : await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+    const user = getUser(c);
+    const tenantIdQuery = c.req.query("tenantId");
+    const targetTenantId =
+      user.role === "superadmin"
+        ? (tenantIdQuery && tenantIdQuery !== "all" ? tenantIdQuery : null)
+        : user.tenantId;
+
+    const expList = targetTenantId
+      ? await db
+          .select()
+          .from(expenses)
+          .where(eq(expenses.tenantId, targetTenantId))
+          .orderBy(desc(expenses.expenseDate))
+      : await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
 
     return c.json({ success: true, data: expList });
   } catch (error: any) {
@@ -1695,10 +1972,15 @@ app.get("/api/expenses", async (c) => {
   }
 });
 
-app.post("/api/expenses", async (c) => {
+app.post("/api/expenses", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const body = await c.req.json();
-    const tenantId = body.tenantId || "tenant-01";
+    const tenantId = user.role === "superadmin" ? (body.tenantId || user.tenantId || "tenant-01") : user.tenantId;
+    if (!tenantId) {
+      return c.json({ success: false, message: "Tenant ID tidak valid" }, 400);
+    }
+
     const type = body.type === "income" ? "income" : "expense";
 
     const newExpense = {
@@ -1723,9 +2005,20 @@ app.post("/api/expenses", async (c) => {
   }
 });
 
-app.delete("/api/expenses/:id", async (c) => {
+app.delete("/api/expenses/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
+    const user = getUser(c);
     const id = c.req.param("id");
+
+    const [existing] = await db.select().from(expenses).where(eq(expenses.id, id));
+    if (!existing) {
+      return c.json({ success: false, message: "Catatan transaksi tidak ditemukan" }, 404);
+    }
+
+    if (user.role !== "superadmin" && existing.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Catatan transaksi bukan milik outlet Anda" }, 403);
+    }
+
     await db.delete(expenses).where(eq(expenses.id, id));
     return c.json({ success: true, message: "Catatan transaksi berhasil dihapus" });
   } catch (error: any) {
@@ -1733,20 +2026,23 @@ app.delete("/api/expenses/:id", async (c) => {
   }
 });
 
-// 6. Cashflow Statistics & Dashboard
-app.get("/api/stats/cashflow", async (c) => {
+// 6. Cashflow Statistics & Dashboard (Protected: Super Admin & Tenant Owner Only)
+app.get("/api/stats/cashflow", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
-    const tenantId = c.req.query("tenantId");
+    const user = getUser(c);
+    const tenantIdQuery = c.req.query("tenantId");
+    const targetTenantId =
+      user.role === "superadmin"
+        ? (tenantIdQuery && tenantIdQuery !== "all" ? tenantIdQuery : null)
+        : user.tenantId;
 
-    const orderList =
-      tenantId && tenantId !== "all"
-        ? await db.select().from(orders).where(eq(orders.tenantId, tenantId))
-        : await db.select().from(orders);
+    const orderList = targetTenantId
+      ? await db.select().from(orders).where(eq(orders.tenantId, targetTenantId))
+      : await db.select().from(orders);
 
-    const expList =
-      tenantId && tenantId !== "all"
-        ? await db.select().from(expenses).where(eq(expenses.tenantId, tenantId))
-        : await db.select().from(expenses);
+    const expList = targetTenantId
+      ? await db.select().from(expenses).where(eq(expenses.tenantId, targetTenantId))
+      : await db.select().from(expenses);
 
     // Pemasukan dari order yang sudah lunas/selesai
     const orderIncome = orderList
@@ -1800,9 +2096,49 @@ app.get("/api/stats/cashflow", async (c) => {
   }
 });
 
-const port = Number(process.env.PORT) || 5000;
-console.log(`🚀 Orchid Brand Smart Laundry API listening on port ${port} (PostgreSQL)`);
+// -------------------------------------------------------------
+// AI Operational Assistant (In-Web Dashboard)
+// -------------------------------------------------------------
+app.post(
+  "/api/ai/chat",
+  authMiddleware,
+  rateLimit({ max: 30, windowMs: 60 * 1000 }),
+  async (c) => {
+    try {
+      const user = getUser(c);
+      const body = await c.req.json();
+      const { message, history } = body;
 
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return c.json({ success: false, message: "Pesan tidak boleh kosong" }, 400);
+      }
+
+      const tenantId = user.role === "superadmin" && body.tenantId ? body.tenantId : user.tenantId;
+
+      const aiResult = await askLaundryAssistant({
+        message: message.trim(),
+        tenantId,
+        user: {
+          userId: user.userId,
+          role: user.role,
+        },
+        history: Array.isArray(history) ? history : [],
+      });
+
+      return c.json({
+        success: true,
+        data: aiResult,
+      });
+    } catch (error: any) {
+      return c.json({ success: false, message: error.message }, 500);
+    }
+  }
+);
+
+const port = Number(process.env.PORT) || 5000;
+console.log(`🚀 Laundry Cleanique API listening on port ${port} (PostgreSQL)`);
+
+export { app };
 export default {
   port,
   fetch: app.fetch,

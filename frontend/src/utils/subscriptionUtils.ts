@@ -1,4 +1,4 @@
-import { User } from "../types";
+﻿import { User } from "../types";
 
 export interface UserActiveStatus {
   isActive: boolean;
@@ -163,7 +163,7 @@ export function calculateExtendedDate(
 }
 
 /**
- * Nomor kontak WhatsApp Admin Pusat Orchid Brand
+ * Nomor kontak WhatsApp Admin Pusat Laundry Cleanique
  */
 export const DEFAULT_ADMIN_PHONE = "081234567890";
 
@@ -192,7 +192,7 @@ export function getAdminWhatsAppUrl(
     : "Sudah Berakhir";
 
   const message =
-    `Halo Admin Orchid Brand Smart Laundry 👋\n\n` +
+    `Halo Admin Laundry Cleanique 👋\n\n` +
     `Saya ingin mengajukan permohonan *Perpanjangan Masa Aktif* untuk akun sistem kasir kami:\n\n` +
     `👤 *Nama Pengguna:* ${userName}\n` +
     `🏪 *Outlet / Cabang:* ${outletName}\n` +

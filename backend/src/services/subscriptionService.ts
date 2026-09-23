@@ -223,11 +223,15 @@ export async function createSubscriptionInvoice(params: {
 /**
  * Unggah bukti transfer pembayaran langganan
  */
-export async function uploadPaymentProof(invoiceId: string, proofUrl: string) {
+export async function uploadPaymentProof(invoiceId: string, proofUrl: string, tenantId: string) {
+  if (!tenantId) {
+    throw new Error("Tenant ID diperlukan untuk mengunggah bukti pembayaran");
+  }
+
   const [existing] = await db
     .select()
     .from(subscriptionInvoices)
-    .where(eq(subscriptionInvoices.id, invoiceId));
+    .where(and(eq(subscriptionInvoices.id, invoiceId), eq(subscriptionInvoices.tenantId, tenantId)));
 
   if (!existing) {
     throw new Error("Invoice tidak ditemukan");

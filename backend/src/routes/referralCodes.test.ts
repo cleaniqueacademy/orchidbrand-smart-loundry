@@ -27,11 +27,11 @@ describe("referralCodes routes integration tests", () => {
   });
 
   it("GET /api/referral-codes/validate - memvalidasi kode valid dari seed", async () => {
-    const res = await app.request("/api/referral-codes/validate?code=ORCHIDHEMAT");
+    const res = await app.request("/api/referral-codes/validate?code=CLEANHEMAT");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.code).toBe("ORCHIDHEMAT");
+    expect(body.data.code).toBe("CLEANHEMAT");
     expect(body.data.discountType).toBe("percent");
     expect(body.data.discountValue).toBe(10);
   });

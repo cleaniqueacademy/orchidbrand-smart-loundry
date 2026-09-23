@@ -12,6 +12,7 @@ import {
 } from "../types";
 import { useToast } from "../components/common/ToastContext";
 import { useConfirm } from "../components/common/ConfirmContext";
+import { authHeaders } from "../utils/api";
 
 const API_BASE = "/api";
 
@@ -49,59 +50,88 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       setLoading(true);
 
-      // 1. Stats
-      const statsRes = await fetch(`${API_BASE}/stats/cashflow?tenantId=${tenantId}`);
-      if (statsRes.ok) {
-        const json = await statsRes.json();
-        if (json.success) setStats(json.data);
+      // 1. Stats (Only for superadmin & tenant_owner)
+      if (currentUser?.role !== "staff") {
+        const statsRes = await fetch(`${API_BASE}/stats/cashflow?tenantId=${tenantId}`, {
+          headers: authHeaders(),
+        });
+        if (statsRes.ok) {
+          const json = await statsRes.json();
+          if (json.success) setStats(json.data);
+        }
       }
 
       // 2. Orders
-      const ordersRes = await fetch(`${API_BASE}/orders?tenantId=${tenantId}`);
+      const ordersRes = await fetch(`${API_BASE}/orders?tenantId=${tenantId}`, {
+        headers: authHeaders(),
+      });
       if (ordersRes.ok) {
         const json = await ordersRes.json();
         if (json.success) setOrders(json.data);
       }
 
       // 3. Customers
-      const custRes = await fetch(`${API_BASE}/customers?tenantId=${tenantId}`);
+      const custRes = await fetch(`${API_BASE}/customers?tenantId=${tenantId}`, {
+        headers: authHeaders(),
+      });
       if (custRes.ok) {
         const json = await custRes.json();
         if (json.success) setCustomers(json.data);
       }
 
-      // 4. Expenses
-      const expRes = await fetch(`${API_BASE}/expenses?tenantId=${tenantId}`);
-      if (expRes.ok) {
-        const json = await expRes.json();
-        if (json.success) setExpenses(json.data);
+      // 4. Expenses (Only for superadmin & tenant_owner)
+      if (currentUser?.role !== "staff") {
+        const expRes = await fetch(`${API_BASE}/expenses?tenantId=${tenantId}`, {
+          headers: authHeaders(),
+        });
+        if (expRes.ok) {
+          const json = await expRes.json();
+          if (json.success) setExpenses(json.data);
+        }
       }
 
-      // 5. Tenants
-      const tenantsRes = await fetch(`${API_BASE}/tenants`);
-      if (tenantsRes.ok) {
-        const json = await tenantsRes.json();
-        if (json.success) setTenants(json.data);
+      // 5. Tenants (Only for superadmin)
+      if (currentUser?.role === "superadmin") {
+        const tenantsRes = await fetch(`${API_BASE}/tenants`, {
+          headers: authHeaders(),
+        });
+        if (tenantsRes.ok) {
+          const json = await tenantsRes.json();
+          if (json.success) setTenants(json.data);
+        }
       }
 
-      // 6. Users (Super Admin data)
-      const usersRes = await fetch(`${API_BASE}/users`);
-      if (usersRes.ok) {
-        const json = await usersRes.json();
-        if (json.success) setUsers(json.data);
+      // 6. Users (Super Admin data only)
+      if (currentUser?.role === "superadmin") {
+        const usersRes = await fetch(`${API_BASE}/users`, {
+          headers: authHeaders(),
+        });
+        if (usersRes.ok) {
+          const json = await usersRes.json();
+          if (json.success) setUsers(json.data);
+        }
       }
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, currentUser?.role]);
 
   useEffect(() => {
     if (currentUser) {
       fetchData();
     }
   }, [fetchData, currentUser]);
+
+  // Do not retain privileged administrative data if the authenticated role changes
+  // (for example after logout/login in the same browser tab).
+  useEffect(() => {
+    if (currentUser?.role !== "superadmin") {
+      setTenants([]);
+      setUsers([]);
+    }
+  }, [currentUser?.role]);
 
   // Order status update
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -120,7 +150,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -162,7 +192,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}/payment`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ paymentStatus, paymentMethod }),
       });
       const data = await res.json();
@@ -212,7 +242,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           tenantId,
           ...orderData,
@@ -242,7 +272,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(updatedData),
       });
       const data = await res.json();
@@ -279,7 +309,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/orders/${order.id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ status: "cancelled" }),
       });
       const data = await res.json();
@@ -314,7 +344,10 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       const data = await res.json();
       if (data.success) {
         fetchData();
@@ -338,7 +371,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/expenses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           tenantId,
           ...expenseData,
@@ -386,7 +419,10 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_BASE}/expenses/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/expenses/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       if (res.ok) {
         fetchData();
         toast.success("Catatan Dihapus", "Catatan transaksi berhasil dihapus dari buku kas.");
@@ -409,7 +445,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/customers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ tenantId, ...custData }),
       });
       const data = await res.json();
@@ -435,7 +471,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/customers/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(updatedData),
       });
       const data = await res.json();
@@ -474,7 +510,10 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_BASE}/customers/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/customers/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       const data = await res.json();
       if (data.success) {
         fetchData();
@@ -520,7 +559,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ status: nextStatus }),
       });
       if (res.ok) {
@@ -544,7 +583,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ subscriptionUntil }),
       });
       if (res.ok) {
@@ -571,7 +610,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/extend`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -608,7 +647,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/tenants`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(tenantData),
       });
       const data = await res.json();
@@ -647,7 +686,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/tenants/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(tenantData),
       });
       const data = await res.json();
@@ -677,7 +716,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(userData),
       });
       const data = await res.json();
@@ -721,7 +760,10 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_BASE}/users/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/users/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       if (res.ok) {
         fetchData();
         toast.success(
@@ -745,20 +787,20 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(userData),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
         // Update local session if updating own profile
-        const stored = localStorage.getItem("orchid_user");
+        const stored = localStorage.getItem("cleanique_user");
         if (stored) {
           try {
             const userObj = JSON.parse(stored);
             if (userObj.id === id) {
               const updatedObj = { ...userObj, ...userData };
-              localStorage.setItem("orchid_user", JSON.stringify(updatedObj));
+              localStorage.setItem("cleanique_user", JSON.stringify(updatedObj));
               window.dispatchEvent(new Event("storage"));
             }
           } catch {}
@@ -779,7 +821,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/reset-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ newPassword }),
       });
       const data = await res.json();
@@ -828,4 +870,3 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     handleResetPassword,
   };
 }
-

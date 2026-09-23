@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { CashierShift } from "../types";
+import { authHeaders } from "../utils/api";
 
 export function useCashierShift(tenantId: string | null, userId: string | null) {
   const [currentShift, setCurrentShift] = useState<CashierShift | null>(null);
@@ -17,7 +18,9 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
       const url = targetUser
         ? `/api/shifts/active?tenantId=${encodeURIComponent(targetTenant)}&userId=${encodeURIComponent(targetUser)}`
         : `/api/shifts/active?tenantId=${encodeURIComponent(targetTenant)}`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setCurrentShift(json.data || null);
@@ -42,7 +45,7 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
     try {
       const res = await fetch("/api/shifts/open", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           tenantId,
           userId,
@@ -76,7 +79,7 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
     try {
       const res = await fetch("/api/shifts/close", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           shiftId: currentShift.id,
           actualCashTotal,
@@ -106,7 +109,9 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
       const url = targetTenant && targetTenant !== "all"
         ? `/api/shifts/history?tenantId=${encodeURIComponent(targetTenant)}`
         : `/api/shifts/history`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: authHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setHistory(json.data || []);

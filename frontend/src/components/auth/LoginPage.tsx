@@ -62,7 +62,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       }
 
       if (data.token) {
-        localStorage.setItem("orchid_token", data.token);
+        localStorage.setItem("cleanique_token", data.token);
       }
 
       setSuccessMessage("Login berhasil! Mengalihkan ke dashboard...");
@@ -98,7 +98,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <Sparkles className="w-7 h-7 text-sky-300" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">
-            Orchid Brand
+            Laundry Cleanique
           </h1>
           <p className="text-xs font-semibold uppercase tracking-widest text-blue-300 mt-0.5">
             Smart Laundry Management System
@@ -146,7 +146,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="nama@orchidbrand.com"
+                  placeholder="nama@cleaniquelaundry.com"
                   required
                   disabled={loading}
                   className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition bg-zinc-50/50 hover:bg-white focus:bg-white text-zinc-900 placeholder:text-zinc-400"
@@ -228,9 +228,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={() => {
-                  setEmail("admin@orchidbrand.com");
+                  setEmail("admin@cleaniquelaundry.com");
                   setPassword("admin123");
-                  executeLogin("admin@orchidbrand.com", "admin123");
+                  executeLogin("admin@cleaniquelaundry.com", "admin123");
                 }}
                 disabled={loading}
                 className="p-2 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200 text-violet-900 text-center transition cursor-pointer"
@@ -270,9 +270,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={() => {
-                  setEmail("marketing@orchidbrand.com");
+                  setEmail("marketing@cleaniquelaundry.com");
                   setPassword("marketing123");
-                  executeLogin("marketing@orchidbrand.com", "marketing123");
+                  executeLogin("marketing@cleaniquelaundry.com", "marketing123");
                 }}
                 disabled={loading}
                 className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-center transition cursor-pointer"
@@ -297,7 +297,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Footer Notice */}
         <div className="mt-6 text-center text-[11px] text-blue-300 leading-relaxed">
           <p>
-            Sistem langganan offline Orchid Brand.
+            Sistem langganan offline Laundry Cleanique.
             <br />
             Status akun dan masa aktif dikelola secara terpusat oleh Super Admin.
           </p>

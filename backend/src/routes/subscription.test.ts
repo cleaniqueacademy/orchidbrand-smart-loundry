@@ -54,7 +54,7 @@ describe("subscription routes integration tests", () => {
       phone: `0819${Date.now().toString().slice(-8)}`,
       email: `subroute_${Date.now()}@test.com`,
       password: "password123",
-      referralCode: "ORCHIDHEMAT",
+      referralCode: "CLEANHEMAT",
     });
 
     testTenantId = signup.data!.tenantId;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Order, Customer, TabType } from "./types";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -32,6 +32,7 @@ import { InactiveAccountModal } from "./components/modals/InactiveAccountModal";
 import { OpenShiftModal } from "./components/modals/OpenShiftModal";
 import { CloseShiftModal } from "./components/modals/CloseShiftModal";
 import { WhatsAppLogsModal } from "./components/modals/WhatsAppLogsModal";
+import { AIAssistantWidget } from "./components/ai/AIAssistantWidget";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
 import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
@@ -76,7 +77,7 @@ export default function App() {
   // Desktop Draggable Sidebar States
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem("orchid_sidebar_width");
+      const saved = localStorage.getItem("cleanique_sidebar_width");
       if (saved) {
         const parsed = parseInt(saved, 10);
         if (!isNaN(parsed) && parsed >= 68 && parsed <= 420) {
@@ -716,6 +717,17 @@ export default function App() {
         orderId={selectedOrderForWaLogs?.id}
         invoiceNo={selectedOrderForWaLogs?.invoiceNo}
         tenantId={selectedOrderForWaLogs?.tenantId || effectiveTenantId}
+      />
+
+      {/* In-Web Dashboard AI Assistant (Gemini Flash) */}
+      <AIAssistantWidget
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUserRole={currentUserRole}
+        onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
+        onOpenOpenShiftModal={() => setShowOpenShiftModal(true)}
+        onOpenCloseShiftModal={() => setShowCloseShiftModal(true)}
+        onOpenExpenseModal={handleOpenExpenseModal}
       />
     </div>
   );

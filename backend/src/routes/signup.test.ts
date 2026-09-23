@@ -70,7 +70,7 @@ describe("signup routes integration tests", () => {
         password: "password123",
         city: "Bandung",
         address: "Jl. Merdeka No. 12",
-        referralCode: "ORCHIDHEMAT",
+        referralCode: "CLEANHEMAT",
       }),
     });
 

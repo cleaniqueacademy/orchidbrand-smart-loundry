@@ -1,5 +1,5 @@
 {
-  "name": "orchidbrand-landing",
+  "name": "cleanique-landing",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -16,5 +16,8 @@
     "typescript": "^5.7.3",
     "vite": "^6.0.7"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "^18",
+    "@types/react-dom": "^18"
+  }
 }

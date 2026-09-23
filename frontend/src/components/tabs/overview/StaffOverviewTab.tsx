@@ -317,7 +317,7 @@ export const StaffOverviewTab: React.FC<StaffOverviewTabProps> = ({
               Cucian Siap Diambil Pelanggan
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Cek posisi nomor rak dan serahkan bungkusan cucian saat pelanggan datang
+              Cocokkan nomor nota invoice dan serahkan bungkusan cucian saat pelanggan datang
             </p>
           </div>
           <button

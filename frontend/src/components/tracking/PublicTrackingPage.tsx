@@ -113,7 +113,7 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
             </div>
             <div>
               <h1 className="font-bold text-sm sm:text-base leading-tight tracking-tight text-white">
-                {outlet?.outletName || "Orchid Smart Laundry"}
+                {outlet?.outletName || "Laundry Cleanique"}
               </h1>
               <p className="text-[10px] text-zinc-400">Portal Cek Resi Cucian Mandiri</p>
             </div>
@@ -416,7 +416,7 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
 
               <div className="space-y-2 text-xs text-zinc-300">
                 <p className="font-semibold text-white text-sm">
-                  {outlet?.outletName || "Orchid Smart Laundry"}
+                  {outlet?.outletName || "Laundry Cleanique"}
                 </p>
                 {outlet?.address && (
                   <p className="text-zinc-400 leading-relaxed flex items-start gap-2">
@@ -468,9 +468,9 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
         <footer className="text-center py-6 text-[11px] text-zinc-600 space-y-1">
           <p className="flex items-center justify-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Sistem Pelacakan Resmi Orchid Brand Smart Laundry</span>
+            <span>Sistem Pelacakan Resmi Laundry Cleanique</span>
           </p>
-          <p>© {new Date().getFullYear()} Orchid Brand Smart Laundry. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Laundry Cleanique. All rights reserved.</p>
         </footer>
       </main>
     </div>

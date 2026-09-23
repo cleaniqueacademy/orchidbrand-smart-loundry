@@ -19,6 +19,7 @@ export interface TenantWASession {
   connectedUser: { id: string; name?: string } | null;
   lastError: string | null;
   reconnectAttempts: number; // untuk backoff eksponensial
+  reconnectTimer?: ReturnType<typeof setTimeout>;
 }
 
 const sessions = new Map<string, TenantWASession>();
@@ -26,6 +27,8 @@ const sessions = new Map<string, TenantWASession>();
 // Rate limiter: catat kapan terakhir tiap nomor dikirimi pesan
 const lastSentMap = new Map<string, number>(); // key: `${tenantId}:${phone}` → timestamp ms
 const RATE_LIMIT_MS = 60_000; // 60 detik cooldown per nomor per tenant
+const MAX_RECONNECT_ATTEMPTS = 8;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 15 * 60_000;
 
 const SESSIONS_BASE_DIR = path.resolve(process.cwd(), "data", "wa_sessions");
 
@@ -46,6 +49,21 @@ function backoffDelay(attempt: number): number {
   const base = 5_000; // 5 detik
   const max = 300_000; // 5 menit
   return Math.min(base * Math.pow(3, attempt), max); // 5s → 15s → 45s → 135s → 300s
+}
+
+function clearReconnectTimer(session: TenantWASession | undefined): void {
+  if (session?.reconnectTimer) {
+    clearTimeout(session.reconnectTimer);
+    session.reconnectTimer = undefined;
+  }
+}
+
+function clearSessionCredentials(sessionDir: string): void {
+  try {
+    fs.rmSync(sessionDir, { recursive: true, force: true });
+  } catch (error) {
+    console.error(`[WA] Failed to clear credentials at ${sessionDir}:`, error);
+  }
 }
 
 // ─── Session dir ─────────────────────────────────────────────────────────────
@@ -90,6 +108,7 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
   let session = sessions.get(tenantId);
 
   if (forceRefresh && session) {
+    clearReconnectTimer(session);
     if (session.sock && session.status !== "connected") {
       try { session.sock.end(undefined); } catch {}
       sessions.delete(tenantId);
@@ -103,6 +122,11 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
 
   if (!forceRefresh && session && session.status === "qrcode" && session.qrCodeDataUrl) {
     return { status: session.status, qrCodeDataUrl: session.qrCodeDataUrl, connectedUser: null };
+  }
+
+  // Prevent concurrent callers from opening duplicate sockets for one tenant.
+  if (!forceRefresh && session && session.status === "connecting") {
+    return { status: session.status, qrCodeDataUrl: null, connectedUser: null };
   }
 
   const sessionDir = getSessionDir(tenantId);
@@ -146,8 +170,9 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
           scale: 6,
           color: { dark: "#0a192f", light: "#ffffff" },
         });
-        session!.qrCodeDataUrl = qrCodeDataUrl;
-        session!.status = "qrcode";
+        if (sessions.get(tenantId) !== session) return;
+        session.qrCodeDataUrl = qrCodeDataUrl;
+        session.status = "qrcode";
         console.log(`[WA] QR Code generated for tenant: ${tenantId}`);
       } catch (err: any) {
         console.error(`[WA] Failed to generate QR code:`, err);
@@ -155,6 +180,8 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
     }
 
     if (connection === "open") {
+      if (sessions.get(tenantId) !== session) return;
+      clearReconnectTimer(session);
       session!.status = "connected";
       session!.qrCodeDataUrl = null;
       session!.lastError = null;
@@ -170,30 +197,54 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
     }
 
     if (connection === "close") {
+      if (sessions.get(tenantId) !== session) return;
       const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
       const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-      const shouldReconnect = !isLoggedOut;
+      const isBadSession = statusCode === DisconnectReason.badSession;
+      const shouldReconnect = !isLoggedOut && !isBadSession;
 
       console.log(`[WA] Connection closed for tenant: ${tenantId}. Code: ${statusCode}. Reconnect: ${shouldReconnect}`);
 
-      if (isLoggedOut) {
-        // Logout paksa: bersihkan semua sesi
+      session!.sock = null;
+      session!.connectedUser = null;
+      session!.qrCodeDataUrl = null;
+      session!.lastError = `Koneksi ditutup (code ${statusCode ?? "unknown"})`;
+
+      if (isLoggedOut || isBadSession) {
+        // Invalid/corrupt credentials must not be retried indefinitely.
         session!.status = "disconnected";
-        session!.sock = null;
-        session!.connectedUser = null;
-        session!.qrCodeDataUrl = null;
         session!.reconnectAttempts = 0;
-        try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch {}
+        clearSessionCredentials(sessionDir);
+        if (isBadSession) {
+          session!.lastError = "Kredensial WhatsApp tidak valid; sesi dihapus, silakan scan QR ulang.";
+        }
       } else if (shouldReconnect && sessions.has(tenantId)) {
         session!.status = "connecting";
         session!.reconnectAttempts = (session!.reconnectAttempts || 0) + 1;
+
+        if (session!.reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+          session!.status = "disconnected";
+          session!.lastError = `Reconnect dihentikan setelah ${MAX_RECONNECT_ATTEMPTS} percobaan.`;
+          console.error(`[WA] Circuit breaker open for tenant: ${tenantId}`);
+          session!.reconnectTimer = setTimeout(() => {
+            if (sessions.get(tenantId) === session) {
+              session!.reconnectAttempts = 0;
+              session!.lastError = null;
+            }
+            session!.reconnectTimer = undefined;
+          }, CIRCUIT_BREAKER_COOLDOWN_MS);
+          session!.reconnectTimer.unref?.();
+          return;
+        }
 
         // FIX #4: Backoff eksponensial — semakin sering disconnect, semakin lama tunggu
         const delay = backoffDelay(session!.reconnectAttempts - 1);
         console.log(`[WA] Reconnect attempt #${session!.reconnectAttempts} in ${delay / 1000}s for tenant: ${tenantId}`);
 
-        setTimeout(() => {
-          if (sessions.has(tenantId)) {
+        clearReconnectTimer(session);
+        session!.reconnectTimer = setTimeout(() => {
+          session!.reconnectTimer = undefined;
+          if (sessions.get(tenantId) === session && session!.status === "connecting") {
             initWhatsAppSession(tenantId).catch(console.error);
           }
         }, delay);
@@ -215,6 +266,7 @@ export async function initWhatsAppSession(tenantId: string, forceRefresh = false
 
 export async function disconnectWhatsApp(tenantId: string) {
   const session = sessions.get(tenantId);
+  clearReconnectTimer(session);
   if (session && session.sock) {
     try { await session.sock.logout(); } catch {}
     try { session.sock.end(undefined); } catch {}

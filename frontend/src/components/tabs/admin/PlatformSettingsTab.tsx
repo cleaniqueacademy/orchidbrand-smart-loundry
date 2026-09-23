@@ -19,7 +19,7 @@ import { PlatformSettings } from "../../../types";
 
 export const PlatformSettingsTab: React.FC = () => {
   const [formData, setFormData] = useState<Partial<PlatformSettings>>({
-    platformName: "Orchid Brand Smart Laundry",
+    platformName: "Laundry Cleanique",
     bankName: "BCA",
     bankAccountNumber: "",
     bankAccountName: "",
@@ -156,7 +156,7 @@ export const PlatformSettingsTab: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="PT ORCHID DIGITAL INDONESIA"
+                placeholder="PT CLEANIQUE DIGITAL INDONESIA"
                 value={formData.bankAccountName || ""}
                 onChange={(e) => setFormData({ ...formData, bankAccountName: e.target.value })}
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
@@ -252,7 +252,7 @@ export const PlatformSettingsTab: React.FC = () => {
               </label>
               <input
                 type="email"
-                placeholder="support@orchidbrand.com"
+                placeholder="support@cleaniquelaundry.com"
                 value={formData.supportEmail || ""}
                 onChange={(e) => setFormData({ ...formData, supportEmail: e.target.value })}
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
@@ -267,7 +267,7 @@ export const PlatformSettingsTab: React.FC = () => {
               </label>
               <input
                 type="url"
-                placeholder="https://orchidbrand.com/terms"
+                placeholder="https://cleaniquelaundry.com/terms"
                 value={formData.termsUrl || ""}
                 onChange={(e) => setFormData({ ...formData, termsUrl: e.target.value })}
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
@@ -280,7 +280,7 @@ export const PlatformSettingsTab: React.FC = () => {
               </label>
               <input
                 type="url"
-                placeholder="https://orchidbrand.com/privacy"
+                placeholder="https://cleaniquelaundry.com/privacy"
                 value={formData.privacyUrl || ""}
                 onChange={(e) => setFormData({ ...formData, privacyUrl: e.target.value })}
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
