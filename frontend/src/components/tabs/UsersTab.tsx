@@ -42,7 +42,7 @@ const roleBadgeConfig: Record<Role, { label: string; className: string; desc: st
   superadmin: {
     label: "Super Admin",
     className: "bg-blue-900 text-white border-blue-900",
-    desc: "Akses penuh platform SaaS, seluruh cabang, audit log, dan perpanjangan lisensi.",
+    desc: "Akses penuh Laundry Cleanique, seluruh cabang, audit log, dan perpanjangan lisensi.",
   },
   tenant_owner: {
     label: "Tenant Owner",

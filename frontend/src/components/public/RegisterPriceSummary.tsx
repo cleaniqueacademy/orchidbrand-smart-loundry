@@ -9,7 +9,7 @@ interface RegisterPriceSummaryProps {
 }
 
 export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
-  basePrice = 150000,
+  basePrice = 60000,
   discountType,
   discountValue = 0,
   trialDays = 7,

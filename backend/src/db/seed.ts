@@ -92,52 +92,32 @@ export async function seedInitialData(force = true) {
     });
 
     // ----------------------------------------------------
-    // 2. Subscription Plans
+    // 2. Subscription Plans (1 Paket Flat)
     // ----------------------------------------------------
+    // Harga: Rp 60.000/bulan (normal) | Rp 55.000/bulan (dengan referral)
+    // Komisi mitra marketing: Rp 5.000/bulan dari pembayaran referral
     await db.insert(plans).values([
       {
-        id: "plan-basic",
-        code: "basic",
-        name: "Paket Starter",
-        description: "Cocok untuk outlet laundry rintisan dan rumahan",
+        id: "plan-standard",
+        code: "standard",
+        name: "Paket Bulanan",
+        description: "Akses penuh semua fitur Laundry Cleanique. Trial 7 hari gratis untuk pendaftar baru.",
         durationMonths: 1,
-        pricePerMonth: 99000,
+        pricePerMonth: 60000,
         features: JSON.stringify([
-          "Semua fitur POS Kasir & Struk",
-          "1 Nomor WhatsApp Notifikasi",
-          "Maksimal 3 Akun Kasir/Staf",
+          "Kasir POS Lengkap & Cetak Struk Thermal",
+          "Notifikasi WhatsApp Otomatis ke Pelanggan",
           "Laporan Keuangan & Pengeluaran",
+          "Manajemen Staf & Shift Kasir",
           "50 Kuota Asisten AI / Hari",
+          "Trial 7 Hari Gratis",
         ]),
         maxWaNumbers: 1,
-        maxStaff: 3,
+        maxStaff: 5,
         aiTokenQuotaDaily: 50,
         isTrialAllowed: "true",
         isActive: "true",
         sortOrder: 1,
-        createdAt: today,
-      },
-      {
-        id: "plan-pro",
-        code: "pro",
-        name: "Paket Pro Outlet",
-        description: "Pilihan terbaik untuk outlet berkembang dengan volume order tinggi",
-        durationMonths: 1,
-        pricePerMonth: 199000,
-        features: JSON.stringify([
-          "Semua fitur Paket Starter",
-          "Multi-Nomor WhatsApp (Hingga 3 Nomor)",
-          "Maksimal 10 Akun Kasir/Staf",
-          "Laporan Multi-Cabang & Shift Lengkap",
-          "200 Kuota Asisten AI / Hari",
-          "Dukungan Prioritas CS",
-        ]),
-        maxWaNumbers: 3,
-        maxStaff: 10,
-        aiTokenQuotaDaily: 200,
-        isTrialAllowed: "true",
-        isActive: "true",
-        sortOrder: 2,
         createdAt: today,
       },
     ]);
@@ -243,39 +223,21 @@ export async function seedInitialData(force = true) {
     });
 
     const refCodeId1 = "ref-01";
-    const refCodeId2 = "ref-02";
 
+    // Skema referral: Diskon Rp 5.000/bulan untuk outlet (harga jadi 55k/bln)
+    // Komisi mitra: Rp 5.000/bulan dari pembayaran tersebut → sistem dapat 50k/bln
     await db.insert(referralCodes).values([
       {
         id: refCodeId1,
         code: "CLEANHEMAT",
-        name: "Promo Berkah 10% Off",
-        description: "Diskon 10% untuk langganan baru, komisi 10% untuk affiliate",
-        discountType: "percent",
-        discountValue: 10,
-        commissionType: "percent",
-        commissionValue: 10,
-        maxUsage: 100,
-        currentUsage: 2,
-        validFrom: "2026-01-01",
-        validUntil: "2027-12-31",
-        isActive: "true",
-        appliesToAllTenants: "true",
-        marketingProfileId: marketingProfileId,
-        createdByUserId: adminId,
-        createdAt: today,
-      },
-      {
-        id: refCodeId2,
-        code: "PROMOBARU",
-        name: "Potongan Rp 25.000",
-        description: "Diskon flat Rp25.000 untuk pendaftaran pertama",
+        name: "Hemat Rp 5.000/Bulan",
+        description: "Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Komisi Rp 5.000/bulan untuk mitra marketing.",
         discountType: "fixed",
-        discountValue: 25000,
+        discountValue: 5000,
         commissionType: "fixed",
-        commissionValue: 15000,
-        maxUsage: 50,
-        currentUsage: 0,
+        commissionValue: 5000,
+        maxUsage: 500,
+        currentUsage: 2,
         validFrom: "2026-01-01",
         validUntil: "2027-12-31",
         isActive: "true",

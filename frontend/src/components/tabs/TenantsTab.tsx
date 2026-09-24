@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Plus, Building2, Store, DollarSign, ShoppingBag, KeyRound, CreditCard, Pencil } from "lucide-react";
+import { Plus, Building2, Store, DollarSign, ShoppingBag, KeyRound, CreditCard, Pencil, Sparkles, Tag, Clock } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { ResetPasswordModal } from "../modals/ResetPasswordModal";
 import { EditTenantModal } from "../modals/EditTenantModal";
+import { AdminExtendModal } from "../modals/AdminExtendModal";
 
 interface TenantsTabProps {
   tenants: Tenant[];
@@ -13,6 +14,7 @@ interface TenantsTabProps {
   currentTenantId?: string;
   onResetPassword?: (userId: string, newPassword: string) => Promise<boolean>;
   onUpdateTenant?: (tenantId: string, data: Record<string, unknown>) => Promise<boolean>;
+  onRefreshData?: () => void;
 }
 
 function maskAccountNumber(num?: string | null) {
@@ -27,10 +29,12 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
   onOpenTenantModal,
   onResetPassword,
   onUpdateTenant,
+  onRefreshData,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [tenantToEdit, setTenantToEdit] = useState<Tenant | null>(null);
+  const [tenantToExtend, setTenantToExtend] = useState<Tenant | null>(null);
 
   const totalOmsetAll = tenants.reduce((sum, t) => sum + (t.totalOmset || 0), 0);
   const totalOrdersAll = tenants.reduce((sum, t) => sum + (t.totalOrders || 0), 0);
@@ -139,17 +143,18 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         );
       },
     },
-    // 4. Status
+    // 4. Status & Tarif
     {
       id: "status",
-      header: "Status",
+      header: "Status / Tarif",
       align: "center",
-      className: "w-[80px]",
+      className: "w-[110px]",
       cell: (t) => {
         const isActive = (t.status || "active") === "active";
         const dateStr = t.subscriptionUntil || "2026-12-31";
         const diffDays = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
         const isExpired = diffDays < 0;
+        const hasReferral = Boolean(t.referralCodeId || t.source === "referral");
         return (
           <div className="flex flex-col items-center gap-1">
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
@@ -161,6 +166,15 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
             <span className={`text-[9px] font-semibold ${isExpired ? "text-rose-500" : diffDays <= 7 ? "text-amber-500" : "text-zinc-400"}`}>
               {isExpired ? "Expired" : `${diffDays}h lagi`}
             </span>
+            {hasReferral ? (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Terdaftar dengan kode referral: Tarif Rp 55.000/bln">
+                <Tag className="w-2.5 h-2.5" /> Ref (55k)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-zinc-50 text-zinc-500 border border-zinc-200" title="Tarif standar: Rp 60.000/bln">
+                Reg (60k)
+              </span>
+            )}
           </div>
         );
       },
@@ -180,21 +194,31 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         </div>
       ),
     },
-    // 6. Edit action
+    // 6. Actions (Perpanjang & Edit)
     {
       id: "actions",
       header: "",
       align: "center",
-      className: "w-[40px]",
+      className: "w-[75px]",
       cell: (t) => (
-        <button
-          type="button"
-          onClick={() => setTenantToEdit(t)}
-          className="p-1.5 rounded-lg border border-zinc-200 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition"
-          title="Edit cabang"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setTenantToExtend(t)}
+            className="p-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition cursor-pointer"
+            title="Perpanjang Masa Aktif & Catat Kas"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setTenantToEdit(t)}
+            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition cursor-pointer"
+            title="Edit cabang"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </div>
       ),
     },
   ];
@@ -278,6 +302,14 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         onSubmit={async (tenantId, data) => {
           if (onUpdateTenant) return await onUpdateTenant(tenantId, data as Record<string, unknown>);
           return false;
+        }}
+      />
+      <AdminExtendModal
+        isOpen={!!tenantToExtend}
+        tenant={tenantToExtend}
+        onClose={() => setTenantToExtend(null)}
+        onSuccess={() => {
+          if (onRefreshData) onRefreshData();
         }}
       />
     </div>

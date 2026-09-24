@@ -18,7 +18,6 @@ import {
   UserCheck,
   CreditCard,
   UserPlus,
-  Clock,
   Layers,
   Sliders,
 } from "lucide-react";
@@ -147,20 +146,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isStaff = currentUserRole === "staff";
   const isMarketing = currentUserRole === "marketing";
 
-  // Menu Super Admin: Platform SaaS + Audit & Troubleshooting Data
+  // Menu Super Admin: Ringkas, Terintegrasi & Tanpa Redundansi
   const superAdminNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Building2 },
-    { id: "tenants" as TabType, label: "Cabang", icon: Store },
-    { id: "users" as TabType, label: "Pengguna", icon: ShieldCheck },
-    { id: "signups" as TabType, label: "Pendaftar Mandiri", icon: UserPlus },
-    { id: "plans" as TabType, label: "Paket & Harga", icon: Layers },
-    { id: "invoices" as TabType, label: "Verifikasi Tagihan", icon: CreditCard },
-    { id: "marketing" as TabType, label: "Mitra Marketing", icon: UserCheck },
+    { id: "tenants" as TabType, label: "Kelola Outlet & Akun", icon: Store },
+    { id: "invoices" as TabType, label: "Arus Kas & Rekap Langganan", icon: CreditCard },
     { id: "referral_codes" as TabType, label: "Kode Referral", icon: Tag },
     { id: "settings_platform" as TabType, label: "Setting Platform", icon: Sliders },
-    { id: "orders" as TabType, label: "Data Order", icon: ShoppingBag },
     { id: "logs" as TabType, label: "Data Log", icon: Activity },
-    { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
   ];
 
   // Menu Marketing: Dashboard Affiliate & Kode Referral
@@ -182,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
   ];
 
-  // Menu Tenant Owner: Operasional Lengkap
+  // Menu Tenant Owner: 5 menu bersih (Layanan & Langganan ada di Pengaturan)
   const tenantOperationalNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Sparkles },
     {
@@ -192,11 +185,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: activeOrdersCount > 0 ? activeOrdersCount : undefined,
       highlight: readyOrdersCount > 0 ? readyOrdersCount : undefined,
     },
-    { id: "services" as TabType, label: "Layanan", icon: Tag },
-    { id: "cashflow" as TabType, label: "Buku Kas", icon: DollarSign },
     { id: "customers" as TabType, label: "Pelanggan", icon: Users },
-    { id: "subscription" as TabType, label: "Langganan", icon: Clock },
-    { id: "reports" as TabType, label: "Laporan", icon: FileSpreadsheet },
+    { id: "finance" as TabType, label: "Keuangan & Laporan", icon: DollarSign },
     { id: "settings" as TabType, label: "Pengaturan", icon: Settings },
   ];
 
@@ -339,13 +329,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Content */}
         <div className={`flex-1 ${isCollapsed ? "px-2" : "px-3"} py-3 overflow-y-auto space-y-4`}>
           {isSuperAdmin ? (
-            /* Grup Manajemen Platform SaaS untuk Super Admin */
+            /* Grup Manajemen Laundry Cleanique untuk Super Admin */
             <div>
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />
               ) : (
                 <div className="text-[10px] font-bold uppercase tracking-wider text-blue-900/70 px-3 mb-1.5">
-                  Platform SaaS
+                  Laundry Cleanique
                 </div>
               )}
               {renderNavButtons(superAdminNav)}

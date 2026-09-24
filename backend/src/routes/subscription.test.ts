@@ -184,4 +184,72 @@ describe("subscription routes integration tests", () => {
     expect(body.success).toBe(true);
     expect(body.data.totalChecked).toBeDefined();
   });
+
+  it("POST /api/subscription/apply-referral - menolak kode referral yang tidak valid", async () => {
+    const res = await app.request("/api/subscription/apply-referral", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ownerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        referralCode: "KODE_PALSU_TIDAK_ADA",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+  });
+
+  it("POST /api/subscription/remove-referral - berhasil mencopot kode referral", async () => {
+    const res = await app.request("/api/subscription/remove-referral", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ownerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantId: testTenantId,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+
+    // Cek ringkasan langganan sudah tidak memiliki kode referral
+    const sumRes = await app.request("/api/subscription/summary", {
+      headers: { Authorization: `Bearer ${ownerToken}` },
+    });
+    const sumBody = await sumRes.json();
+    expect(sumBody.data.referralCodeUsed).toBeNull();
+  });
+
+  it("POST /api/subscription/apply-referral - berhasil menerapkan kembali kode referral valid", async () => {
+    const res = await app.request("/api/subscription/apply-referral", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ownerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantId: testTenantId,
+        referralCode: "CLEANHEMAT",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.referralCode).toBe("CLEANHEMAT");
+
+    // Cek ringkasan langganan sekarang memiliki kode referral kembali
+    const sumRes = await app.request("/api/subscription/summary", {
+      headers: { Authorization: `Bearer ${ownerToken}` },
+    });
+    const sumBody = await sumRes.json();
+    expect(sumBody.data.referralCodeUsed).toBe("CLEANHEMAT");
+  });
 });
+

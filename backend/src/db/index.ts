@@ -366,6 +366,24 @@ export async function initPostgresTables() {
       );
     `;
 
+    await client`
+      CREATE TABLE IF NOT EXISTS platform_cashflow (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount DOUBLE PRECISION NOT NULL,
+        date TEXT NOT NULL,
+        tenant_id TEXT REFERENCES tenants(id),
+        referral_code TEXT,
+        duration_months DOUBLE PRECISION,
+        description TEXT NOT NULL,
+        proof_url TEXT,
+        notes TEXT,
+        created_by_user_id TEXT REFERENCES users(id),
+        created_at TEXT NOT NULL
+      );
+    `;
+
     // ----------------------------------------------------
     // 4. WhatsApp Multi-Number & Messages
     // ----------------------------------------------------

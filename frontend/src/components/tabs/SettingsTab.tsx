@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Store,
   Save,
@@ -13,16 +13,23 @@ import {
   Shield,
   Sliders,
   Check,
+  Tag,
+  CreditCard,
 } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { useToast } from "../common/ToastContext";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { EditProfileModal } from "../modals/EditProfileModal";
 import { StaffManagementSection } from "./StaffManagementSection";
+import { ServicesTab } from "./ServicesTab";
+import { SubscriptionStatusCard } from "./SubscriptionStatusCard";
 
 interface SettingsTabProps {
   tenant?: Tenant | null;
   currentUser?: User | null;
+  currentUserRole?: string;
+  tenantId?: string;
+  tenants?: Tenant[];
   onUpdateTenant: (
     id: string,
     data: {
@@ -46,9 +53,33 @@ interface SettingsTabProps {
   setActiveTab?: (tab: any) => void;
 }
 
+const SubTabSkeleton: React.FC = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="h-6 bg-zinc-200/80 rounded-lg w-48 mb-3" />
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="h-20 bg-zinc-100 rounded-xl border border-zinc-200/60 p-3 space-y-2">
+        <div className="h-4 bg-zinc-200 rounded w-20" />
+        <div className="h-5 bg-zinc-200 rounded w-28" />
+      </div>
+      <div className="h-20 bg-zinc-100 rounded-xl border border-zinc-200/60 p-3 space-y-2">
+        <div className="h-4 bg-zinc-200 rounded w-20" />
+        <div className="h-5 bg-zinc-200 rounded w-28" />
+      </div>
+      <div className="h-20 bg-zinc-100 rounded-xl border border-zinc-200/60 p-3 space-y-2">
+        <div className="h-4 bg-zinc-200 rounded w-20" />
+        <div className="h-5 bg-zinc-200 rounded w-28" />
+      </div>
+    </div>
+    <div className="h-48 bg-zinc-100 rounded-2xl border border-zinc-200/60" />
+  </div>
+);
+
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   tenant,
   currentUser,
+  currentUserRole = "tenant_owner",
+  tenantId,
+  tenants = [],
   onUpdateTenant,
   onUpdateUser,
   onOpenWhatsAppModal,
@@ -56,6 +87,20 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   setActiveTab,
 }) => {
   const toast = useToast();
+  type SettingsSubTab = "profil" | "layanan" | "staf" | "langganan";
+  const [settingsTab, setSettingsTab] = useState<SettingsSubTab>("profil");
+
+  // Resolve active tenant safely for both Tenant Owner & Super Admin preview
+  const resolvedTenant =
+    tenant ||
+    (tenants && tenants.find((t) => t.id === tenantId)) ||
+    (tenants && tenants[0]);
+
+  const effectiveTenantId =
+    tenantId && tenantId !== "all"
+      ? tenantId
+      : resolvedTenant?.id || (tenants && tenants[0]?.id) || "tenant-01";
+
   const [ownerName, setOwnerName] = useState(currentUser?.name || "");
   const [outletName, setOutletName] = useState(tenant?.outletName || "");
   const [phone, setPhone] = useState(tenant?.phone || "");
@@ -153,12 +198,41 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           Pengaturan
         </h1>
         <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-          Kelola profil cabang, fitur operasional kasir, dan masa aktif langganan outlet laundry.
+          Kelola profil cabang, master layanan, manajemen staf, dan status langganan outlet.
         </p>
       </div>
 
-      {/* Bagian 1: Grid 2 Kolom Seimbang (Profil Cabang & Status Akun / Integrasi) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* Internal Sub-Tab Navigation */}
+      <div className="flex items-center gap-1 bg-zinc-100 rounded-xl p-1 w-fit flex-wrap">
+        {([
+          { id: "profil", label: "Profil Outlet", icon: Store },
+          { id: "layanan", label: "Master Layanan", icon: Tag },
+          { id: "staf", label: "Manajemen Staf", icon: UserIcon },
+          { id: "langganan", label: "Langganan", icon: CreditCard },
+        ] as { id: "profil" | "layanan" | "staf" | "langganan"; label: string; icon: React.ElementType }[]).map((tab) => {
+          const Icon = tab.icon;
+          const isActive = settingsTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSettingsTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                isActive
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* === TAB: PROFIL OUTLET === */}
+      {settingsTab === "profil" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Kolom Kiri: Form Informasi Cabang (7 cols) */}
         <form
           onSubmit={handleProfileSubmit}
@@ -304,7 +378,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
 
             <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Hubungi Super Admin platform SaaS jika ingin memperpanjang masa aktif langganan toko Anda.
+              Hubungi Super Admin Laundry Cleanique jika ingin memperpanjang masa aktif langganan toko Anda.
             </p>
           </div>
 
@@ -458,39 +532,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
             <div className="mt-3.5 space-y-2.5 text-xs text-zinc-600 leading-relaxed">
               <p>
-                Semua pengaturan harga per satuan, minimum order, durasi pengerjaan SLA, dan status aktif paket cucian dikelola secara terpusat di menu <strong>Layanan</strong> pada bilah navigasi samping.
+                Kelola master layanan (tarif, SLA, unit) langsung dari tab <strong>Master Layanan</strong> di pengaturan ini.
               </p>
-              <div className="p-3 rounded-lg bg-blue-50/50 border border-blue-200/70 text-[11px] text-blue-900 space-y-1">
-                <div className="font-semibold">💡 Pengelolaan Lebih Lengkap:</div>
-                <p className="text-blue-800">
-                  Menu Layanan dilengkapi dengan indikator durasi SLA (jam/hari), pencarian, dan pagination untuk kenyamanan operasional.
-                </p>
-              </div>
             </div>
           </div>
 
-          {setActiveTab && (
-            <div className="pt-2 border-t border-zinc-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setActiveTab("services")}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
-              >
-                <span>Buka Menu Layanan</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+          {/* Note: setActiveTab kept for backwards compat but services is now in settings sub-tab */}
         </div>
       </div>
-
-      {/* Seksi Manajemen Kasir / Staff Cabang */}
-      {tenant?.id && (
-        <StaffManagementSection
-          tenantId={tenant.id}
-          tenantName={tenant.outletName}
-        />
-      )}
 
       {/* Edit Profile Modal */}
       <EditProfileModal
@@ -506,6 +555,50 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           return ok;
         }}
       />
+        </div>
+      )} {/* end settingsTab === "profil" */}
+
+      {/* === TAB: MASTER LAYANAN === */}
+      {settingsTab === "layanan" && (
+        effectiveTenantId ? (
+          <ServicesTab
+            tenantId={effectiveTenantId}
+            tenants={tenants.length > 0 ? tenants : resolvedTenant ? [resolvedTenant] : []}
+            currentUserRole={currentUserRole || "tenant_owner"}
+          />
+        ) : (
+          <SubTabSkeleton />
+        )
+      )}
+
+      {/* === TAB: MANAJEMEN STAF === */}
+      {settingsTab === "staf" && (
+        effectiveTenantId ? (
+          <StaffManagementSection
+            tenantId={effectiveTenantId}
+            tenantName={resolvedTenant?.outletName || "Outlet"}
+          />
+        ) : (
+          <SubTabSkeleton />
+        )
+      )}
+
+      {/* === TAB: LANGGANAN === */}
+      {settingsTab === "langganan" && (
+        effectiveTenantId ? (
+          <div className="space-y-4">
+            <div className="pb-2 border-b border-zinc-200/80">
+              <h2 className="text-sm font-bold text-zinc-900">Status Langganan</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Perpanjang masa aktif outlet Anda dengan mudah. Tarif hemat: <strong>Rp 55.000/bulan</strong> (dengan kode referral) atau <strong>Rp 60.000/bulan</strong> (standar).
+              </p>
+            </div>
+            <SubscriptionStatusCard tenantId={effectiveTenantId} />
+          </div>
+        ) : (
+          <SubTabSkeleton />
+        )
+      )}
     </div>
   );
 };

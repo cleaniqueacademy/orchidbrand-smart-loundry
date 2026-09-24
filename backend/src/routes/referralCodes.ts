@@ -108,6 +108,48 @@ referralRoutes.get("/", async (c) => {
 });
 
 /**
+ * GET /api/referral-codes/track
+ * Melacak setiap kode referral (misal ILHAM-MARKETING) dan daftar tenant yang mendaftar dengannya
+ */
+referralRoutes.get("/track", requireRole(["superadmin"]), async (c) => {
+  try {
+    const allCodes = await db.select().from(referralCodes).orderBy(desc(referralCodes.createdAt));
+    const allTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+
+    const results = allCodes.map((rc) => {
+      const associatedTenants = allTenants.filter(
+        (t) => t.referralCodeId === rc.id
+      );
+      return {
+        id: rc.id,
+        code: rc.code,
+        name: rc.name,
+        description: rc.description,
+        discountType: rc.discountType,
+        discountValue: rc.discountValue,
+        commissionValue: rc.commissionValue,
+        isActive: rc.isActive === "true",
+        totalTenants: associatedTenants.length,
+        tenants: associatedTenants.map((t) => ({
+          id: t.id,
+          outletName: t.outletName,
+          phone: t.phone,
+          city: t.city,
+          status: t.status,
+          isTrial: t.isTrial === "true",
+          subscriptionUntil: t.subscriptionUntil,
+          createdAt: t.createdAt,
+        })),
+      };
+    });
+
+    return c.json({ success: true, data: results });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+/**
  * Buat kode referral baru
  * Role: superadmin atau marketing
  */

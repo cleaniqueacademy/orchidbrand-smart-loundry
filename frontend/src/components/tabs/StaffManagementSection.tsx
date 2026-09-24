@@ -121,7 +121,18 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
 
       {/* Staff List */}
       {loading ? (
-        <div className="py-8 text-center text-xs text-zinc-400">Memuat daftar kasir...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-pulse">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-zinc-200 shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 bg-zinc-200 rounded w-28" />
+                <div className="h-3 bg-zinc-200 rounded w-36" />
+                <div className="h-3 bg-zinc-200 rounded w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : staffList.length === 0 ? (
         <div className="py-8 text-center bg-zinc-50/50 rounded-xl border border-dashed border-zinc-200">
           <Users className="w-8 h-8 text-zinc-300 mx-auto mb-2 opacity-70" />

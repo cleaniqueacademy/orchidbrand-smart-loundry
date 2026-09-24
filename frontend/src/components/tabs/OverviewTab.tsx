@@ -52,7 +52,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   waData,
   onSendDirectWa,
 }) => {
-  // 1. Super Admin: Platform SaaS HQ Dashboard
+  // 1. Super Admin: Laundry Cleanique HQ Dashboard
   if (currentUserRole === "superadmin") {
     return (
       <AdminOverviewTab

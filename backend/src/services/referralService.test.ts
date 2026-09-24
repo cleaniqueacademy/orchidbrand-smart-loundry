@@ -66,8 +66,8 @@ describe("referralService - validateCode", () => {
     const res = await validateCode("cleanhemat");
     expect(res.valid).toBe(true);
     expect(res.code?.code).toBe("CLEANHEMAT");
-    expect(res.discountType).toBe("percent");
-    expect(res.discountValue).toBe(10);
+    expect(res.discountType).toBe("fixed");
+    expect(res.discountValue).toBe(5000); // Diskon Rp 5.000/bulan
   });
 
   it("menolak kode jika status isActive = 'false'", async () => {
@@ -294,14 +294,14 @@ describe("referralService - recordCommission", () => {
     const res = await recordCommission({
       referralCodeId: seedCode.id,
       subscriptionInvoiceId: null, // nullable / opsional
-      baseAmount: 150000,
+      baseAmount: 55000, // pembayaran 1 bulan dengan referral
       tenantId: existingTenant ? existingTenant.id : null,
     });
 
     expect(res).not.toBeNull();
     expect(res?.commissionId).toBeDefined();
-    // CLEANHEMAT: komisi 10% dari 150.000 = 15.000
-    expect(res?.commissionAmount).toBe(15000);
+    // CLEANHEMAT: komisi fixed Rp 5.000/bulan
+    expect(res?.commissionAmount).toBe(5000);
 
     // Verifikasi di database marketingCommissions
     const [commRow] = await db
@@ -311,7 +311,7 @@ describe("referralService - recordCommission", () => {
 
     expect(commRow).toBeDefined();
     expect(commRow.status).toBe("pending");
-    expect(commRow.commissionAmount).toBe(15000);
+    expect(commRow.commissionAmount).toBe(5000);
 
     // Bersihkan data tes
     await db.delete(marketingCommissions).where(eq(marketingCommissions.id, res!.commissionId));

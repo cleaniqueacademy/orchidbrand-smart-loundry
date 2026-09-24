@@ -51,7 +51,8 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const activeTenant = tenants.find((t) => t.id === tenantId) || tenants[0];
+  const safeTenants = Array.isArray(tenants) ? tenants : [];
+  const activeTenant = safeTenants.find((t) => t.id === tenantId) || safeTenants[0];
 
   const fetchServices = async () => {
     if (!tenantId) return;
@@ -307,12 +308,17 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading && servicesList.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-400">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
-                    Memuat data layanan outlet...
-                  </td>
-                </tr>
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4"><div className="h-4 bg-zinc-200 rounded w-36" /></td>
+                    <td className="py-4 px-3"><div className="h-4 bg-zinc-200 rounded w-12" /></td>
+                    <td className="py-4 px-4 text-right"><div className="h-4 bg-zinc-200 rounded w-20 ml-auto" /></td>
+                    <td className="py-4 px-3 text-center"><div className="h-4 bg-zinc-200 rounded w-8 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><div className="h-4 bg-zinc-200 rounded w-16 mx-auto" /></td>
+                    <td className="py-4 px-3 text-center"><div className="h-4 bg-zinc-200 rounded w-14 mx-auto" /></td>
+                    <td className="py-4 px-4 text-right"><div className="h-6 bg-zinc-200 rounded-lg w-16 ml-auto" /></td>
+                  </tr>
+                ))
               ) : filteredServices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-zinc-400">

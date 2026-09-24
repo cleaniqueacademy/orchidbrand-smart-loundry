@@ -292,6 +292,22 @@ export const subscriptionEvents = pgTable("subscription_events", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+export const platformCashflow = pgTable("platform_cashflow", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(), // 'income' | 'expense'
+  category: text("category").notNull(), // 'subscription' | 'marketing_commission' | 'server' | 'wa_quota' | 'other'
+  amount: doublePrecision("amount").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  tenantId: text("tenant_id").references(() => tenants.id),
+  referralCode: text("referral_code"),
+  durationMonths: doublePrecision("duration_months"),
+  description: text("description").notNull(),
+  proofUrl: text("proof_url"),
+  notes: text("notes"),
+  createdByUserId: text("created_by_user_id").references(() => users.id),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 // ==========================================
 // 4. WhatsApp Multi-Number & Inbox
 // ==========================================

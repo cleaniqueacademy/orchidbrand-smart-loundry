@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Store,
@@ -142,7 +142,7 @@ export const RegisterSuccessPage: React.FC = () => {
               <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                 3
               </span>
-              <span>Sesuaikan daftar harga layanan laundry pada menu Layanan.</span>
+              <span>Sesuaikan daftar harga layanan laundry pada menu Pengaturan &gt; Master Layanan.</span>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Order, Customer, TabType } from "./types";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -10,6 +10,7 @@ import { CustomersTab } from "./components/tabs/CustomersTab";
 import { TenantsTab } from "./components/tabs/TenantsTab";
 import { UsersTab } from "./components/tabs/UsersTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
+import { FinanceTab } from "./components/tabs/FinanceTab";
 import { SettingsTab } from "./components/tabs/SettingsTab";
 import { OrderFormTab } from "./components/tabs/OrderFormTab";
 import { ServicesTab } from "./components/tabs/ServicesTab";
@@ -20,6 +21,7 @@ import { SubscriptionTab } from "./components/tabs/subscription/SubscriptionTab"
 import { PlansTab } from "./components/tabs/admin/PlansTab";
 import { SignupsTab } from "./components/tabs/admin/SignupsTab";
 import { SubscriptionInvoicesTab } from "./components/tabs/admin/SubscriptionInvoicesTab";
+import { PlatformFinanceTab } from "./components/tabs/admin/PlatformFinanceTab";
 import { PlatformSettingsTab } from "./components/tabs/admin/PlatformSettingsTab";
 import { PublicTrackingPage } from "./components/tracking/PublicTrackingPage";
 import { RegisterPage } from "./components/public/RegisterPage";
@@ -119,7 +121,7 @@ export default function App() {
   } = useAuthSession();
 
   // Route Guard berdasarkan Role:
-  // 1. Super Admin: Platform SaaS & Troubleshooting Hub
+  // 1. Super Admin: Laundry Cleanique & Troubleshooting Hub
   // 2. Marketing: Khusus Dashboard Affiliate & Kode Referral
   // 3. Staff: Khusus Operasional Kasir
   // 4. Tenant Owner: Seluruh Operasional Toko miliknya
@@ -132,6 +134,7 @@ export default function App() {
         "orders",
         "logs",
         "reports",
+        "finance",
         "marketing",
         "referral_codes",
         "subscription",
@@ -505,17 +508,20 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "cashflow" && (
-                <CashflowTab
+              {(activeTab === "finance" || activeTab === "cashflow" || activeTab === "reports") && (
+                <FinanceTab
                   stats={stats}
                   expenses={expenses}
                   orders={orders}
                   tenants={tenants}
-                  tenantId={tenantId}
+                  currentTenantId={tenantId}
                   currentUserRole={currentUserRole}
+                  tenantId={effectiveTenantId}
                   enableCashierShift={isShiftEnabled}
                   onOpenExpenseModal={handleOpenExpenseModal}
                   onDeleteExpense={handleDeleteExpense}
+                  customers={customers}
+                  users={users}
                 />
               )}
 
@@ -539,6 +545,7 @@ export default function App() {
                   onResetPassword={handleResetPassword}
                   onOpenTenantModal={() => setShowTenantModal(true)}
                   onUpdateTenant={handleUpdateTenant}
+                  onRefreshData={fetchData}
                 />
               )}
 
@@ -559,18 +566,6 @@ export default function App() {
                 <SystemLogsTab
                   tenants={tenants}
                   currentTenantId={tenantId}
-                />
-              )}
-
-              {activeTab === "reports" && (
-                <ReportsTab
-                  orders={orders}
-                  expenses={expenses}
-                  tenants={tenants}
-                  currentTenantId={tenantId}
-                  customers={customers}
-                  currentUserRole={currentUserRole}
-                  users={users}
                 />
               )}
 
@@ -595,7 +590,7 @@ export default function App() {
               )}
 
               {activeTab === "invoices" && currentUserRole === "superadmin" && (
-                <SubscriptionInvoicesTab />
+                <PlatformFinanceTab />
               )}
 
               {activeTab === "settings_platform" && currentUserRole === "superadmin" && (
@@ -617,6 +612,9 @@ export default function App() {
                   onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
                   waStatus={waGateway.waData?.status}
                   setActiveTab={setActiveTab}
+                  currentUserRole={currentUserRole}
+                  tenantId={effectiveTenantId}
+                  tenants={tenants}
                 />
               )}
             </motion.div>

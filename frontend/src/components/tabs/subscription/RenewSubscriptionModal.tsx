@@ -28,7 +28,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     basePrice: number;
     discountAmount: number;
     finalPrice: number;
-  }>({ basePrice: 150000, discountAmount: 0, finalPrice: 150000 });
+  }>({ basePrice: 60000, discountAmount: 0, finalPrice: 60000 });
 
   useEffect(() => {
     if (isOpen) {

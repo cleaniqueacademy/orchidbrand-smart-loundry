@@ -107,7 +107,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             {tenants.length} <span className="text-xs font-semibold text-blue-700">Toko</span>
           </div>
           <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
-            Terdaftar di platform SaaS
+            Terdaftar di Laundry Cleanique
           </div>
         </div>
 
@@ -481,7 +481,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                   </div>
                   <div>
                     <div className="font-semibold text-zinc-900 text-xs">Super Admin</div>
-                    <div className="text-[10px] text-zinc-400">Penyedia platform SaaS</div>
+                    <div className="text-[10px] text-zinc-400">Penyedia Laundry Cleanique</div>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-violet-900 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-md font-mono">{adminCount} Akun</span>

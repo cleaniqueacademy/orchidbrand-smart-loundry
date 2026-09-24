@@ -177,6 +177,7 @@ export type TabType =
   | "customers"
   | "services"
   | "reports"
+  | "finance"
   | "tenants"
   | "users"
   | "settings"

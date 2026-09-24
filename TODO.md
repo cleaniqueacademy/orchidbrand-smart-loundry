@@ -1,4 +1,5 @@
 ﻿# Project Roadmap & TODO List
+
 # Laundry Cleanique v2.0
 
 Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)** dan apa saja yang **SEDANG / AKAN DIKERJAKAN (Backlog & Roadmap)**.
@@ -26,12 +27,14 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 ## ✅ Yang SUDAH Selesai (Completed)
 
 ### 1. Inisialisasi Monorepo & Infrastruktur
+
 - [x] Repository Git monorepo terhubung ke remote `origin/main`.
 - [x] Konfigurasi `.gitignore` monorepo lengkap (mengabaikan `node_modules`, `data/*.db`, `.env`, build dist).
 - [x] Konfigurasi Bun Workspaces (`backend`, `frontend`) dengan script satu perintah `bun dev`.
 - [x] Dockerization lengkap: Dockerfile backend, frontend (Nginx), dan `docker-compose.yml` persisten PostgreSQL.
 
 ### 2. Backend & Basis Data (Bun + Hono + Drizzle + PostgreSQL)
+
 - [x] Skema database relasional PostgreSQL: `users`, `tenants`, `customers`, `orders` (dengan `paid_at` & `paid_shift_id`), `expenses`, `services`, `shifts`, `wa_logs`.
 - [x] Auto-seed data demo saat startup pertama (`seed.ts` & default master services).
 - [x] Auto-migration skema database terintegrasi (`initPostgresTables` dengan DDL idempotent).
@@ -40,6 +43,7 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] **Keamanan Password:** Native Bun bcrypt hashing (`Bun.password.hash`) saat register/buat user & tenant, login verify (`Bun.password.verify`), auto-upgrade password plaintext lama ke bcrypt hash saat login pertama.
 
 ### 3. Kasir POS & Operasional Toko
+
 - [x] **Pencatatan Order Fleksibel & Cepat**: Dukungan kiloan, satuan (Bedcover, Jas, Sepatu), dan item jamak.
 - [x] **Pelacakan Berbasis Invoice & QR Code**: Identifikasi pakaian murni menggunakan nomor nota unik (`invoiceNo`) & QR Code tanpa nomor rak fisik.
 - [x] **Pendaftaran Pelanggan Instan (Inline Rapid Customer)**: Tambah pelanggan langsung di modal pesanan.
@@ -47,17 +51,19 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] **Koreksi & Pembatalan Pesanan Kasir**: Modal `EditOrderModal`, tombol Batalkan, dan Hapus Pesanan permanen.
 - [x] **Pelunasan Cepat Kasir (Quick Pay)**: Popover 1-klik lunas dengan Tunai, QRIS, atau Transfer (tercatat di `paid_shift_id`).
 - [x] **Deteksi & Filter "Cucian Menginap" (>3 Hari)**: Badge peringatan otomatis di dasbor kasir.
-- [x] **Pelacakan SLA & Peringatan Telat SLA (*Late SLA Warning*)**: Estimasi jam target pengerjaan dihitung otomatis dari durasi layanan (`estimated_completion_at`), badge merah telat, dan filter kasir "Telat SLA ⚠️".
+- [x] **Pelacakan SLA & Peringatan Telat SLA (_Late SLA Warning_)**: Estimasi jam target pengerjaan dihitung otomatis dari durasi layanan (`estimated_completion_at`), badge merah telat, dan filter kasir "Telat SLA ⚠️".
 
 ### 4. Engine Notifikasi WhatsApp Cerdas (Baileys & Manual)
+
 - [x] **Aturan Pengiriman Terkontrol:** WhatsApp otomatis dikirim pada 2 event kunci: **Struk Digital saat Order Dibuat** dan **Notifikasi saat Cucian Siap Diambil (`ready`)**.
 - [x] **Pemberitahuan Jam Buka Outlet:** Format pesan WhatsApp mencantumkan informasi jam operasional:
-  - *Senin - Jumat : 08.00 - 16.00*
-  - *Sabtu : 08.00 - 13.00*
+  - _Senin - Jumat : 08.00 - 16.00_
+  - _Sabtu : 08.00 - 13.00_
 - [x] **Integrasi Baileys QR Code:** Scan QR langsung di pengaturan, auto-reconnect berkala, dan simpan session disk terisolasi.
 - [x] **Fallback Manual via wa.me:** Tombol tautan langsung jika outlet memilih mode manual.
 
 ### 5. Cetak Struk Kasir Thermal & Portal Publik Cek Resi
+
 - [x] Modal pratinjau struk thermal (`ReceiptModal.tsx`) authentic.
 - [x] Pilihan ukuran kertas thermal: **58mm** (Bluetooth saku) dan **80mm** (Desktop POS).
 - [x] **Tautan QR Code Dinamis ke Portal Tracking Publik:** Scan QR pada kertas struk langsung membuka halaman cek resi mandiri customer `${origin}/track/:invoiceNo`.
@@ -67,11 +73,13 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] **Halaman Publik Cek Resi (`/track/:invoiceNo`):** UI mobile-first yang bersih, elegan, stepper progres 4 tahap, lokasi rak, rincian biaya & pembayaran, rincian item, dan tombol WhatsApp outlet.
 
 ### 6. Master Layanan & Dynamic Pricing (SLA)
+
 - [x] Master data layanan (`/api/services`) tersimpan di database relasional PostgreSQL.
 - [x] Menu tab operasional **Layanan** untuk mengelola harga dasar, satuan (kg/pcs/meter/pasang), minimum order, dan durasi SLA (jam).
 - [x] Form kasir secara dinamis mengambil daftar layanan dari database beserta harga dan durasi SLA otomatis.
 
 ### 7. Arus Kas & Laporan Keuangan
+
 - [x] Akumulasi otomatis uang masuk dari pesanan berstatus `paid`.
 - [x] Pelacakan piutang tagihan pelanggan (`unpaid`).
 - [x] Form pencatatan uang keluar operasional (`expenses`).
@@ -80,7 +88,8 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 - [x] Cetak dokumen resmi ber-kop surat outlet ke format **PDF**.
 
 ### 8. Arsitektur 3-Tier Multi-Tenant SaaS & RBAC (P1)
-- [x] **Super Admin (Platform SaaS Provider)**:
+
+- [x] **Super Admin (Laundry Cleanique Provider)**:
   - Mengelola ekosistem platform: Dashboard Platform, CRUD Cabang Toko (`tenants`), Manajemen Pengguna (`users`), Data Order (`orders`), Data Log (`logs`), dan Laporan Platform (`reports`).
   - **Dashboard SaaS Bersih**: Menghilangkan feed pesanan cucian kiloan kasir dari dashboard overview Super Admin, digantikan dengan:
     - **Pusat Diagnostik & Investigasi Masalah (Tech Support Hub)**: Akses cepat jika cabang/kasir meminta bantuan error aplikasi, nota hilang, nomor WA gagal kirim, atau selisih uang laci.
@@ -96,19 +105,21 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
   - Mengelola staf kasir tokonya sendiri di tab Pengaturan (`StaffManagementSection`).
   - Setup WhatsApp Notifikasi Gateway via Baileys QR Scan untuk cabangnya.
 - [x] **Staff (Operator & Kasir Toko)**:
-  - Karyawan toko dengan hak akses terbatas (*restricted access*).
+  - Karyawan toko dengan hak akses terbatas (_restricted access_).
   - Hanya dapat mengakses menu Kasir (`orders`) dan Pelanggan (`customers`).
   - Fitur kasir: Entri pesanan, pelunasan pembayaran, cetak struk thermal, Buka Shift (kas modal awal) & Tutup Shift (rekonsiliasi uang fisik laci).
   - **Akses diblokir**: Buku Kas / Laba Toko disembunyikan, penghapusan pesanan ditolak backend (`403 Forbidden`), tidak bisa ubah tarif layanan atau pengaturan platform.
 
 ### 9. Manajemen Shift Kasir & Rekonsiliasi Kas Laci (P1)
+
 - [x] **Buka Shift Kasir (`OpenShiftModal`)**: Input modal awal kas laci (kembalian) dengan tombol nominal cepat (50k, 100k, 150k, 200k, 300k).
 - [x] **Tutup Shift Kasir (`CloseShiftModal`)**: Input uang fisik laci aktual, perhitungan otomatis uang tunai sistem vs fisik secara real-time.
-- [x] **Laporan Selisih Kas (*Cash Discrepancy*)**: Deteksi otomatis selisih kas (🟢 Pas, 🟡 Kas Lebih, 🔴 Kas Kurang).
+- [x] **Laporan Selisih Kas (_Cash Discrepancy_)**: Deteksi otomatis selisih kas (🟢 Pas, 🟡 Kas Lebih, 🔴 Kas Kurang).
 - [x] **Indikator Shift Aktif di Header**: Menampilkan status shift berjalan, nama kasir, jam buka, dan tombol cepat Buka/Tutup shift.
 - [x] **Tab Riwayat Shift & Rekonsiliasi**: Sub-view switcher di tab Arus Kas untuk mengaudit seluruh catatan shift kasir.
 
 ### 10. Log Riwayat Pengiriman WhatsApp (`wa_logs`) (P1)
+
 - [x] Tabel `wa_logs` mencatat riwayat notifikasi (No. Tujuan, timestamp, pesan, status sent/failed, mode baileys/manual).
 - [x] Auto-logging otomatis saat status pesanan diubah ke `ready` (Siap Diambil).
 - [x] Badge hijau status **WA Terkirim** pada kolom no invoice pesanan di tabel kasir.
@@ -119,10 +130,12 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 ### 🟢 Prioritas Rendah / Ditunda (P2 - Backlog Parkir)
 
 #### 7. Manajemen Stok Bahan Baku (Chemical & Packaging Inventory)
-- [ ] *(Status: Ditunda / Nanti Dulu sesuai arahan)*
+
+- [ ] _(Status: Ditunda / Nanti Dulu sesuai arahan)_
 - [ ] Tabel stok deterjen, parfum, plastik packing, dan hanger.
 - [ ] Pengurangan otomatis atau pencatatan restock barang ke `expenses`.
 
 #### 8. Pengujian Otomatis & CI/CD
+
 - [ ] Unit testing API dengan `bun test`.
 - [ ] GitHub Actions workflow untuk verifikasi build monorepo.

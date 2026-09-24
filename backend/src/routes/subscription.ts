@@ -6,10 +6,14 @@ import {
   users,
   plans,
   referralCodes,
+  referralEvents,
+  platformCashflow,
 } from "../db/schema";
-import { eq, desc, and } from "drizzle-orm";
-import { authMiddleware, getUser } from "../middleware/auth";
+import { eq, desc, and, sql } from "drizzle-orm";
+import { authMiddleware, getUser, invalidateTenantAuthCache } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
+import { newId } from "../utils/id";
+import { today, addDays } from "../utils/date";
 import {
   getSubscriptionSummary,
   getApplicablePrice,
@@ -18,6 +22,7 @@ import {
   verifySubscriptionInvoice,
   rejectSubscriptionInvoice,
 } from "../services/subscriptionService";
+import { validateCode } from "../services/referralService";
 import { runTrialReminderCheck } from "../jobs/trialReminder";
 
 const subscriptionRoutes = new Hono();
@@ -311,5 +316,315 @@ subscriptionRoutes.post(
     }
   }
 );
+/**
+ * 10. POST /api/subscription/admin-extend
+ * Superadmin langsung memperpanjang masa aktif tenant setelah menerima transfer:
+ * - Mendeteksi apakah tenant memiliki kode referral (Rp 55.000 / bln) atau tidak (Rp 60.000 / bln)
+ * - Memperpanjang subscriptionUntil outlet
+ * - Mengubah isTrial = 'false' dan status = 'active'
+ * - Otomatis mencatat kas masuk platform (platformCashflow)
+ */
+subscriptionRoutes.post(
+  "/admin-extend",
+  requireRole(["superadmin"]),
+  async (c) => {
+    try {
+      const user = getUser(c);
+      const body = await c.req.json();
+      const {
+        tenantId,
+        durationMonths = 1,
+        notes = "",
+        paymentProofUrl = "",
+      } = body;
+
+      if (!tenantId) {
+        return c.json({ success: false, message: "Tenant ID wajib diisi" }, 400);
+      }
+
+      const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      const targetTenant = tenantRows[0];
+      if (!targetTenant) {
+        return c.json({ success: false, message: "Tenant tidak ditemukan" }, 404);
+      }
+
+      const months = Math.max(1, Number(durationMonths) || 1);
+
+      // Cek apakah tenant punya referral code
+      let hasReferral = false;
+      let refCodeName: string | null = null;
+      if (targetTenant.referralCodeId) {
+        hasReferral = true;
+        const refRows = await db.select().from(referralCodes).where(eq(referralCodes.id, targetTenant.referralCodeId)).limit(1);
+        if (refRows[0]) refCodeName = refRows[0].code;
+      }
+
+      // Harga: 55.000 jika referral, 60.000 jika normal
+      const pricePerMonth = hasReferral ? 55000 : 60000;
+      const totalAmount = pricePerMonth * months;
+
+      // Hitung perpanjangan tanggal
+      const nowStr = today();
+      const currentExpiry = targetTenant.subscriptionUntil || nowStr;
+      const baseDate = currentExpiry > nowStr ? currentExpiry : nowStr;
+      const newExpiry = addDays(baseDate, months * 30);
+
+      // Update tenant
+      await db
+        .update(tenants)
+        .set({
+          subscriptionUntil: newExpiry,
+          isTrial: "false",
+          status: "active",
+        })
+        .where(eq(tenants.id, tenantId));
+
+      invalidateTenantAuthCache(tenantId);
+
+      // Catat Kas Masuk Platform
+      const cashflowEntry = {
+        id: newId("pcf"),
+        type: "income",
+        category: "subscription",
+        amount: totalAmount,
+        date: today(),
+        tenantId: targetTenant.id,
+        referralCode: refCodeName,
+        durationMonths: months,
+        description: `Perpanjangan ${targetTenant.outletName} (${months} bln${hasReferral ? ` - Ref: ${refCodeName}` : ""})`,
+        proofUrl: paymentProofUrl ? String(paymentProofUrl).trim() : null,
+        notes: notes ? String(notes).trim() : null,
+        createdByUserId: user.userId,
+        createdAt: new Date().toISOString(),
+      };
+      await db.insert(platformCashflow).values(cashflowEntry);
+
+      return c.json({
+        success: true,
+        message: `Masa aktif ${targetTenant.outletName} berhasil diperpanjang hingga ${newExpiry}. Kas masuk tercatat Rp ${totalAmount.toLocaleString("id-ID")}.`,
+        data: {
+          tenantId,
+          outletName: targetTenant.outletName,
+          hasReferral,
+          referralCode: refCodeName,
+          durationMonths: months,
+          totalAmount,
+          newExpiry,
+          cashflowId: cashflowEntry.id,
+        },
+      });
+    } catch (err: any) {
+      return c.json({ success: false, message: err.message }, 500);
+    }
+  }
+);
+
+/**
+ * 11. POST /api/subscription/apply-referral
+ * Menerapkan (atau mengganti) kode referral pada outlet tertentu.
+ * Bisa dipanggil oleh tenant_owner (untuk outlet miliknya) atau superadmin.
+ */
+subscriptionRoutes.post("/apply-referral", async (c) => {
+  try {
+    const user = getUser(c);
+    const body = await c.req.json();
+    const targetTenantId = body.tenantId || user.tenantId;
+
+    if (!targetTenantId) {
+      return c.json({ success: false, message: "ID Outlet (tenantId) diperlukan" }, 400);
+    }
+
+    if (user.role !== "superadmin" && user.tenantId !== targetTenantId) {
+      return c.json(
+        { success: false, message: "Akses ditolak: Anda hanya dapat mengatur outlet Anda sendiri" },
+        403
+      );
+    }
+
+    const { referralCode } = body;
+    if (!referralCode || !String(referralCode).trim()) {
+      return c.json({ success: false, message: "Kode referral wajib diisi" }, 400);
+    }
+
+    const [targetTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, targetTenantId))
+      .limit(1);
+
+    if (!targetTenant) {
+      return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
+    }
+
+    const cleanCode = String(referralCode).trim().toUpperCase();
+    const valRes = await validateCode(cleanCode, targetTenant.id);
+    if (!valRes.valid || !valRes.code) {
+      return c.json(
+        {
+          success: false,
+          message: valRes.message || "Kode referral tidak valid atau sudah tidak aktif",
+        },
+        400
+      );
+    }
+
+    const newCode = valRes.code;
+
+    // Jika tenant sudah menggunakan kode ini
+    if (targetTenant.referralCodeId === newCode.id) {
+      return c.json({
+        success: true,
+        message: `Kode referral '${newCode.code}' sudah aktif pada outlet ini.`,
+        data: {
+          referralCode: newCode.code,
+          tenantId: targetTenant.id,
+          discountType: newCode.discountType,
+          discountValue: newCode.discountValue,
+        },
+      });
+    }
+
+    // Jika sebelumnya ada kode lama yang berbeda, kurangi kuota kode lama jika > 0
+    if (targetTenant.referralCodeId && targetTenant.referralCodeId !== newCode.id) {
+      await db
+        .update(referralCodes)
+        .set({
+          currentUsage: sql`GREATEST(0, ${referralCodes.currentUsage} - 1)`,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(referralCodes.id, targetTenant.referralCodeId));
+    }
+
+    // Tambahkan kuota pada kode baru
+    await db
+      .update(referralCodes)
+      .set({
+        currentUsage: sql`${referralCodes.currentUsage} + 1`,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(referralCodes.id, newCode.id));
+
+    // Update tenant
+    await db
+      .update(tenants)
+      .set({
+        referralCodeId: newCode.id,
+        source: "referral",
+      })
+      .where(eq(tenants.id, targetTenant.id));
+
+    // Hubungkan marketing profile ke akun user jika belum terhubung
+    if (newCode.marketingProfileId) {
+      const [ownerUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, targetTenant.userId))
+        .limit(1);
+
+      if (ownerUser && !ownerUser.marketingUserId) {
+        await db
+          .update(users)
+          .set({ marketingUserId: newCode.marketingProfileId })
+          .where(eq(users.id, ownerUser.id));
+      }
+    }
+
+    // Catat referral event
+    try {
+      await db.insert(referralEvents).values({
+        id: newId("refevt"),
+        referralCodeId: newCode.id,
+        tenantId: targetTenant.id,
+        eventType: "tenant_applied",
+        metadata: JSON.stringify({
+          outletName: targetTenant.outletName,
+          appliedByUserId: user.userId,
+          appliedAt: new Date().toISOString(),
+        }),
+        createdAt: new Date().toISOString(),
+      });
+    } catch (eventErr: any) {
+      console.warn("Gagal mencatat event referral:", eventErr.message);
+    }
+
+    invalidateTenantAuthCache(targetTenant.id);
+
+    return c.json({
+      success: true,
+      message: `Kode referral '${newCode.code}' berhasil diterapkan! Tarif perpanjangan outlet kini hemat menjadi Rp 55.000/bulan.`,
+      data: {
+        referralCode: newCode.code,
+        tenantId: targetTenant.id,
+        discountType: newCode.discountType,
+        discountValue: newCode.discountValue,
+      },
+    });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+/**
+ * 12. POST /api/subscription/remove-referral
+ * Mencopot kode referral dari outlet (kembali ke tarif normal Rp 60.000/bulan).
+ */
+subscriptionRoutes.post("/remove-referral", async (c) => {
+  try {
+    const user = getUser(c);
+    const body = await c.req.json();
+    const targetTenantId = body.tenantId || user.tenantId;
+
+    if (!targetTenantId) {
+      return c.json({ success: false, message: "ID Outlet (tenantId) diperlukan" }, 400);
+    }
+
+    if (user.role !== "superadmin" && user.tenantId !== targetTenantId) {
+      return c.json(
+        { success: false, message: "Akses ditolak: Anda hanya dapat mengatur outlet Anda sendiri" },
+        403
+      );
+    }
+
+    const [targetTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, targetTenantId))
+      .limit(1);
+
+    if (!targetTenant) {
+      return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
+    }
+
+    if (!targetTenant.referralCodeId) {
+      return c.json({ success: true, message: "Outlet tidak memiliki kode referral aktif." });
+    }
+
+    // Kurangi kuota kode referral jika > 0
+    await db
+      .update(referralCodes)
+      .set({
+        currentUsage: sql`GREATEST(0, ${referralCodes.currentUsage} - 1)`,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(referralCodes.id, targetTenant.referralCodeId));
+
+    // Lepas referral dari tenant
+    await db
+      .update(tenants)
+      .set({
+        referralCodeId: null,
+      })
+      .where(eq(tenants.id, targetTenant.id));
+
+    invalidateTenantAuthCache(targetTenant.id);
+
+    return c.json({
+      success: true,
+      message: "Kode referral berhasil dicopot. Tarif perpanjangan kembali ke tarif standar Rp 60.000/bulan.",
+    });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
 
 export default subscriptionRoutes;

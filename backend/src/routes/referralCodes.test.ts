@@ -32,8 +32,8 @@ describe("referralCodes routes integration tests", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.code).toBe("CLEANHEMAT");
-    expect(body.data.discountType).toBe("percent");
-    expect(body.data.discountValue).toBe(10);
+    expect(body.data.discountType).toBe("fixed");
+    expect(body.data.discountValue).toBe(5000); // Rp 5.000/bulan
   });
 
   it("GET /api/referral-codes/validate - menolak kode tidak terdaftar", async () => {

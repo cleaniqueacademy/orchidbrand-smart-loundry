@@ -11,6 +11,7 @@ import signupRoutes from "./routes/signup";
 import planRoutes from "./routes/plans";
 import platformSettingsRoutes from "./routes/platformSettings";
 import subscriptionRoutes from "./routes/subscription";
+import platformCashflowRoutes from "./routes/platformCashflow";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
 import { DEFAULT_PRESET_SERVICES } from "./constants/services";
 import { askLaundryAssistant } from "./services/aiService";
@@ -53,6 +54,8 @@ app.route("/api/plans", planRoutes);
 app.route("/api/platform-settings", platformSettingsRoutes);
 // Subscription & Invoices Routes
 app.route("/api/subscription", subscriptionRoutes);
+// Platform Cashflow & Operations Routes
+app.route("/api/platform/cashflow", platformCashflowRoutes);
 
 // 1. Health check
 app.get("/api/health", (c) => {

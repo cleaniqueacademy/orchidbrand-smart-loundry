@@ -15,5 +15,5 @@ export const DEFAULT_PRESET_SERVICES = [
   { name: "Cuci Selimut", unit: "pcs", pricePerUnit: 20000, minOrder: 1, durationHours: 48 },
 ] as const;
 
-/** Harga bulanan default platform (rupiah) jika belum dikonfigurasi via plans */
-export const DEFAULT_MONTHLY_PRICE = 150_000;
+/** Harga bulanan default platform (rupiah): Rp 60.000/bulan flat */
+export const DEFAULT_MONTHLY_PRICE = 60_000;

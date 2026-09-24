@@ -12,9 +12,17 @@ import {
   Sparkles,
   Gift,
   RefreshCw,
+  Tag,
+  Edit2,
+  Trash2,
+  X,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { api } from "../../../utils/api";
 import { SubscriptionSummary, SubscriptionInvoice } from "../../../types";
+import { useToast } from "../../common/ToastContext";
+import { useConfirm } from "../../common/ConfirmContext";
 import { RenewSubscriptionModal } from "./RenewSubscriptionModal";
 import { UploadPaymentProofModal } from "./UploadPaymentProofModal";
 
@@ -23,6 +31,8 @@ interface SubscriptionTabProps {
 }
 
 export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) => {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +40,12 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SubscriptionInvoice | null>(null);
+
+  // Referral code management state
+  const [isEditingReferral, setIsEditingReferral] = useState(false);
+  const [referralInput, setReferralInput] = useState("");
+  const [applyingReferral, setApplyingReferral] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -56,6 +72,78 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
   useEffect(() => {
     fetchData();
   }, [tenantId]);
+
+  const handleApplyReferral = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanCode = referralInput.trim().toUpperCase();
+    if (!cleanCode) {
+      setReferralError("Silakan masukkan kode referral.");
+      return;
+    }
+
+    setApplyingReferral(true);
+    setReferralError(null);
+
+    try {
+      const res = await api.post<{ success: boolean; message?: string }>("/api/subscription/apply-referral", {
+        tenantId: summary?.tenantId || tenantId,
+        referralCode: cleanCode,
+      });
+
+      if (res.success) {
+        toast.success(
+          "Kode Referral Berhasil Diterapkan!",
+          res.message || "Tarif perpanjangan outlet kini hemat menjadi Rp 55.000/bulan."
+        );
+        setIsEditingReferral(false);
+        setReferralInput("");
+        await fetchData();
+      } else {
+        setReferralError(res.message || "Kode referral tidak valid atau sudah kedaluwarsa.");
+        toast.error("Gagal Menerapkan", res.message || "Kode referral tidak valid.");
+      }
+    } catch (err: any) {
+      setReferralError(err.message || "Terjadi kesalahan jaringan.");
+      toast.error("Kesalahan Jaringan", err.message);
+    } finally {
+      setApplyingReferral(false);
+    }
+  };
+
+  const handleRemoveReferral = async () => {
+    if (!summary?.referralCodeUsed) return;
+    const ok = await confirm({
+      title: "Copot Kode Referral?",
+      description: (
+        <span>
+          Apakah Anda yakin ingin melepas kode referral{" "}
+          <strong>{summary.referralCodeUsed}</strong>? Tarif perpanjangan bulanan
+          outlet akan kembali ke tarif normal <strong>Rp 60.000 / bulan</strong>.
+        </span>
+      ),
+      confirmText: "Ya, Copot Kode",
+      cancelText: "Batal",
+      variant: "warning",
+    });
+
+    if (!ok) return;
+
+    try {
+      const res = await api.post<{ success: boolean; message?: string }>("/api/subscription/remove-referral", {
+        tenantId: summary.tenantId || tenantId,
+      });
+
+      if (res.success) {
+        toast.info("Kode Referral Dicopot", res.message || "Tarif outlet kini kembali ke standar Rp 60.000/bulan.");
+        setIsEditingReferral(false);
+        await fetchData();
+      } else {
+        toast.error("Gagal Mencopot", res.message || "Terjadi kesalahan.");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message);
+    }
+  };
 
   const handleOpenUpload = (invoice: SubscriptionInvoice) => {
     setSelectedInvoice(invoice);
@@ -198,19 +286,97 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
               Diskon & Kode Promo
             </span>
             <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
+              <Tag className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">
-              {summary?.referralCodeUsed ? summary.referralCodeUsed : "Standar"}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
+                {summary?.referralCodeUsed ? summary.referralCodeUsed : "Standar"}
+              </h3>
+              {!isEditingReferral && (
+                summary?.referralCodeUsed ? (
+                  <div className="flex items-center gap-1.5 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReferralInput(summary.referralCodeUsed || "");
+                        setReferralError(null);
+                        setIsEditingReferral(true);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                    >
+                      Ganti
+                    </button>
+                    <span className="text-slate-300">·</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveReferral}
+                      className="text-rose-500 hover:text-rose-700 hover:underline cursor-pointer"
+                    >
+                      Copot
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReferralInput("");
+                      setReferralError(null);
+                      setIsEditingReferral(true);
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                  >
+                    + Terapkan
+                  </button>
+                )
+              )}
+            </div>
             <span className="text-xs text-slate-500 block mt-0.5">
               {summary?.referralCodeUsed
-                ? "Mendapatkan diskon perpanjangan otomatis"
-                : "Dapat menggunakan kode promo saat perpanjang"}
+                ? "Diskon perpanjangan aktif (Rp 55.000/bln)"
+                : "Tarif standar Rp 60.000/bln (hemat dengan referral)"}
             </span>
           </div>
+
+          {/* Form inline bila edit aktif */}
+          {isEditingReferral && (
+            <form onSubmit={handleApplyReferral} className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={referralInput}
+                  onChange={(e) => {
+                    setReferralInput(e.target.value.toUpperCase());
+                    if (referralError) setReferralError(null);
+                  }}
+                  placeholder="Kode referral..."
+                  className="flex-1 px-3 py-1.5 text-xs font-mono font-bold uppercase border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  autoFocus
+                  disabled={applyingReferral}
+                />
+                <button
+                  type="submit"
+                  disabled={applyingReferral || !referralInput.trim()}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition cursor-pointer flex items-center gap-1"
+                >
+                  {applyingReferral ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                  <span>Simpan</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingReferral(false)}
+                  disabled={applyingReferral}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {referralError && (
+                <div className="text-[11px] text-rose-600 font-medium">{referralError}</div>
+              )}
+            </form>
+          )}
         </div>
       </div>
 

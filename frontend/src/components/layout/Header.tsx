@@ -30,6 +30,7 @@ const tabBreadcrumbs: Record<TabType, string> = {
   customers: "Pelanggan",
   services: "Layanan",
   reports: "Laporan",
+  finance: "Keuangan & Laporan",
   tenants: "Cabang",
   users: "Pengguna",
   logs: "Log Sistem",
@@ -109,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <nav className="flex items-center gap-1.5 text-xs text-zinc-500 min-w-0">
             <span className="hidden sm:inline-block font-medium text-zinc-400">
-              {currentUserRole === "superadmin" ? "Platform SaaS" : "Laundry POS"}
+              {currentUserRole === "superadmin" ? "Laundry Cleanique" : "Laundry POS"}
             </span>
             <ChevronRight className="hidden sm:inline-block w-3.5 h-3.5 text-zinc-300" />
             <span className="font-semibold text-zinc-900">

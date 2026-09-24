@@ -43,8 +43,28 @@ export const RegisterPage: React.FC = () => {
     message?: string;
   }>({ valid: null });
 
-  // Inisialisasi kode referral dari query param ?ref= jika ada
+  const [planPrice, setPlanPrice] = useState<number>(60000);
+  const [trialDays, setTrialDays] = useState<number>(7);
+
+  // Inisialisasi data paket aktif & kode referral dari query param ?ref= jika ada
   useEffect(() => {
+    // Ambil info paket langganan aktif dari backend
+    api.get<{ success: boolean; data: any[] }>("/api/plans/public")
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const standard = res.data.find((p: any) => p.code === "standard") || res.data[0];
+          if (standard?.pricePerMonth) {
+            setPlanPrice(Number(standard.pricePerMonth));
+          }
+          if (standard?.trialDays) {
+            setTrialDays(Number(standard.trialDays));
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Gagal mengambil info paket publik:", err);
+      });
+
     const urlRef = getReferralQueryParam();
     if (urlRef) {
       setFormData((prev) => ({ ...prev, referralCode: urlRef.toUpperCase() }));
@@ -387,10 +407,10 @@ export const RegisterPage: React.FC = () => {
           {/* Kolom Kanan: Rincian Paket & Manfaat */}
           <div className="lg:col-span-5 space-y-6">
             <RegisterPriceSummary
-              basePrice={150000}
+              basePrice={planPrice}
               discountType={refStatus.valid ? refStatus.discountType : undefined}
               discountValue={refStatus.valid ? refStatus.discountValue : 0}
-              trialDays={7}
+              trialDays={trialDays}
             />
 
             {/* Jaminan & Keamanan */}

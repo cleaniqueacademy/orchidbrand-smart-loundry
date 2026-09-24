@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Tag,
   Plus,
@@ -15,10 +15,15 @@ import {
   TrendingUp,
   BarChart2,
   Users,
+  Store,
+  Clock,
+  Phone,
+  MapPin,
 } from "lucide-react";
 import { ReferralCode, User } from "../../../types";
 import { useReferralCodes, TenantActivationItem } from "../../../hooks/useReferralCodes";
 import { useMarketing } from "../../../hooks/useMarketing";
+import { authHeaders } from "../../../utils/api";
 import { ReferralCodeFormModal } from "./ReferralCodeFormModal";
 import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
 import { ReferralCodeTenantActivationList } from "./ReferralCodeTenantActivationList";
@@ -56,6 +61,38 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
   const [statsCode, setStatsCode] = useState<ReferralCode | null>(null);
   const [statsData, setStatsData] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+
+  // Tracking Registered Tenants per Referral Code
+  const [trackList, setTrackList] = useState<any[]>([]);
+  const [trackedTenantsModal, setTrackedTenantsModal] = useState<{
+    code: string;
+    tenants: any[];
+  } | null>(null);
+
+  const fetchTracking = async () => {
+    try {
+      const res = await fetch("/api/referral-codes/track", {
+        headers: authHeaders(),
+      });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setTrackList(json.data);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchTracking();
+  }, [codes]);
+
+  const trackMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const item of trackList) {
+      map[item.id] = item;
+      map[item.code] = item;
+    }
+    return map;
+  }, [trackList]);
 
   const isSuperadmin = currentUser?.role === "superadmin";
   const isMarketing = currentUser?.role === "marketing";
@@ -223,6 +260,7 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                 <th className="py-3.5 px-4">Kode & Nama Kupon</th>
                 <th className="py-3.5 px-4">Diskon Pelanggan</th>
                 <th className="py-3.5 px-4">Komisi Affiliate</th>
+                <th className="py-3.5 px-4 text-center">Outlet Terdaftar</th>
                 <th className="py-3.5 px-4">Kuota / Pemakaian</th>
                 <th className="py-3.5 px-4">Masa Berlaku</th>
                 <th className="py-3.5 px-4">Cakupan Outlet</th>
@@ -233,13 +271,13 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     Memuat daftar kode referral...
                   </td>
                 </tr>
               ) : filteredCodes.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     Belum ada kode referral yang ditemukan
                   </td>
                 </tr>
@@ -283,6 +321,25 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                             ? `${code.commissionValue}%`
                             : `Rp ${code.commissionValue.toLocaleString("id-ID")}`}
                         </span>
+                      </td>
+
+                      {/* Outlet Terdaftar */}
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const info = trackMap[code.id] || trackMap[code.code];
+                            setTrackedTenantsModal({
+                              code: code.code,
+                              tenants: info?.tenants || [],
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 transition cursor-pointer"
+                          title="Lihat daftar cabang yang mendaftar menggunakan kode ini"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          <span>{trackMap[code.id]?.totalTenants ?? code.currentUsage ?? 0} Outlet</span>
+                        </button>
                       </td>
 
                       {/* Kuota */}
@@ -490,6 +547,93 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
             ) : (
               <div className="py-4 text-center text-xs text-slate-400">Data statistik belum tersedia</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Daftar Tenant Terdaftar Berdasarkan Kode Referral */}
+      {trackedTenantsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Outlet Terdaftar via Kode: <span className="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{trackedTenantsModal.code}</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Total {trackedTenantsModal.tenants.length} outlet terdaftar menggunakan kode ini.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTrackedTenantsModal(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {trackedTenantsModal.tenants.length === 0 ? (
+              <div className="py-10 text-center text-xs text-slate-400">
+                Belum ada outlet yang mendaftar menggunakan kode referral ini.
+              </div>
+            ) : (
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 pr-1">
+                {trackedTenantsModal.tenants.map((t: any) => (
+                  <div key={t.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="font-bold text-xs text-slate-900 truncate">
+                          {t.outletName}
+                        </span>
+                        {t.isTrial && (
+                          <span className="bg-blue-100 text-blue-700 text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-full">
+                            TRIAL
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10.5px] text-slate-400 mt-1">
+                        {t.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {t.phone}
+                          </span>
+                        )}
+                        {t.city && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {t.city}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 block">
+                        Hemat: Rp 55.000/bln
+                      </span>
+                      <span className="text-[9.5px] text-slate-400 mt-1 block">
+                        Aktif s/d: {t.subscriptionUntil ? new Date(t.subscriptionUntil).toLocaleDateString("id-ID") : "—"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-slate-100 text-right">
+              <button
+                type="button"
+                onClick={() => setTrackedTenantsModal(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

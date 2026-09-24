@@ -76,10 +76,10 @@ describe("subscriptionService integration tests", () => {
 
   it("getApplicablePrice menghitung harga dan diskon referral", async () => {
     const calc = await getApplicablePrice(testTenantId);
-    expect(calc.basePrice).toBeGreaterThan(0);
-    // CLEANHEMAT memberikan diskon 10%
-    expect(calc.discountAmount).toBe(calc.basePrice * 0.1);
-    expect(calc.finalPrice).toBe(calc.basePrice - calc.discountAmount);
+    expect(calc.basePrice).toBe(60000); // Rp 60.000/bulan flat
+    // CLEANHEMAT memberikan diskon fixed Rp 5.000/bulan
+    expect(calc.discountAmount).toBe(5000);
+    expect(calc.finalPrice).toBe(55000); // 60.000 - 5.000
   });
 
   it("createSubscriptionInvoice membuat invoice baru dengan status unpaid", async () => {
