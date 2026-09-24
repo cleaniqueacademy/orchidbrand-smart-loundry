@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, ShieldCheck, Zap, Gift } from "lucide-react";
+import { Check, Gift, Sparkles, ShieldCheck } from "lucide-react";
 
 interface RegisterPriceSummaryProps {
   basePrice: number;
@@ -24,54 +24,55 @@ export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
   const finalPriceAfterTrial = Math.max(0, basePrice - discountAmount);
 
   return (
-    <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/10 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-pink-950/30 rounded-3xl p-6 border border-indigo-200/60 dark:border-indigo-800/40 shadow-xl backdrop-blur-md">
+    <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-emerald-500/5 p-4 sm:p-5 shadow-xs">
       {/* Badge Trial Gratis */}
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold rounded-full shadow-md shadow-emerald-500/20 mb-4">
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold rounded-full shadow-sm mb-3">
         <Gift className="w-3.5 h-3.5" />
         <span>GRATIS {trialDays} HARI PERTAMA</span>
       </div>
 
-      <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-        Masa Uji Coba Penuh
+      <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+        <Sparkles className="w-4 h-4 text-emerald-600" />
+        Akses Uji Coba Penuh
       </h3>
-      <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-        Coba seluruh fitur kasir POS, nota digital, dan WhatsApp notifikasi otomatis tanpa risiko.
+      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+        Nikmati seluruh fitur kasir POS, cetak struk thermal, dan WhatsApp notifikasi otomatis tanpa biaya pendaftaran.
       </p>
 
       {/* Rincian Harga */}
-      <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-slate-800/80 space-y-3">
-        <div className="flex justify-between items-center text-sm text-slate-600 dark:text-slate-400">
+      <div className="mt-4 pt-3.5 border-t border-slate-200/80 space-y-2 text-xs">
+        <div className="flex justify-between items-center text-slate-600">
           <span>Biaya hari ini ({trialDays} hari pertama)</span>
-          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
+          <span className="font-bold text-emerald-600 text-sm">
             Rp 0 (Gratis)
           </span>
         </div>
 
-        <div className="flex justify-between items-center text-sm text-slate-600 dark:text-slate-400">
+        <div className="flex justify-between items-center text-slate-600">
           <span>Biaya langganan normal</span>
-          <span className={discountAmount > 0 ? "line-through text-slate-400" : "font-medium"}>
+          <span className={discountAmount > 0 ? "line-through text-slate-400" : "font-semibold text-slate-800"}>
             Rp {basePrice.toLocaleString("id-ID")}/bln
           </span>
         </div>
 
         {discountAmount > 0 && (
-          <div className="flex justify-between items-center text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+          <div className="flex justify-between items-center text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-1 rounded-lg">
             <span>Diskon Promo Referral</span>
             <span>- Rp {discountAmount.toLocaleString("id-ID")}</span>
           </div>
         )}
 
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-baseline">
+        <div className="pt-2.5 border-t border-slate-200/90 flex justify-between items-baseline">
           <div>
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">
+            <span className="text-xs font-semibold text-slate-700 block">
               Biaya setelah trial berakhir
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-[10px] text-slate-400">
               (Dapat dibatalkan kapan saja)
             </span>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
+            <span className="text-lg sm:text-xl font-extrabold text-emerald-700">
               Rp {finalPriceAfterTrial.toLocaleString("id-ID")}
             </span>
             <span className="text-xs text-slate-500 font-medium">/bulan</span>
@@ -80,24 +81,22 @@ export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
       </div>
 
       {/* Keuntungan Paket */}
-      <div className="mt-6 space-y-2.5">
-        <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
-          <div className="w-4 h-4 rounded-full bg-indigo-500/20 text-indigo-600 flex items-center justify-center shrink-0">
-            <Check className="w-2.5 h-2.5" />
-          </div>
-          <span>Akses instan setelah pendaftaran selesai</span>
+      <div className="mt-4 pt-3 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
+        <div className="flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Akses instan setelah registrasi</span>
         </div>
-        <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
-          <div className="w-4 h-4 rounded-full bg-indigo-500/20 text-indigo-600 flex items-center justify-center shrink-0">
-            <Check className="w-2.5 h-2.5" />
-          </div>
-          <span>Tidak memerlukan kartu kredit untuk mendaftar</span>
+        <div className="flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Tanpa perlu kartu kredit</span>
         </div>
-        <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
-          <div className="w-4 h-4 rounded-full bg-indigo-500/20 text-indigo-600 flex items-center justify-center shrink-0">
-            <Check className="w-2.5 h-2.5" />
-          </div>
-          <span>Dukungan CS WhatsApp penuh</span>
+        <div className="flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>WhatsApp support prioritas</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Data aman terisolasi</span>
         </div>
       </div>
     </div>
