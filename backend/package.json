@@ -11,6 +11,7 @@
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
+    "@google/genai": "^2.24.0",
     "@hono/zod-validator": "^0.4.3",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "drizzle-orm": "^0.40.0",

@@ -2133,6 +2133,7 @@ app.post(
         data: aiResult,
       });
     } catch (error: any) {
+      console.error("[/api/ai/chat ERROR]:", error);
       return c.json({ success: false, message: error.message }, 500);
     }
   }

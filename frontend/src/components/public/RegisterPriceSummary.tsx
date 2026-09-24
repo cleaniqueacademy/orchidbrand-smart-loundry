@@ -2,17 +2,17 @@ import React from "react";
 import { Check, ShieldCheck, Zap, Gift } from "lucide-react";
 
 interface RegisterPriceSummaryProps {
-  basePrice?: number;
+  basePrice: number;
   discountType?: "percent" | "fixed";
   discountValue?: number;
-  trialDays?: number;
+  trialDays: number;
 }
 
 export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
-  basePrice = 60000,
+  basePrice,
   discountType,
   discountValue = 0,
-  trialDays = 7,
+  trialDays,
 }) => {
   let discountAmount = 0;
   if (discountType === "percent" && discountValue > 0) {
@@ -41,7 +41,7 @@ export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
       {/* Rincian Harga */}
       <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-slate-800/80 space-y-3">
         <div className="flex justify-between items-center text-sm text-slate-600 dark:text-slate-400">
-          <span>Biaya hari ini (7 hari pertama)</span>
+          <span>Biaya hari ini ({trialDays} hari pertama)</span>
           <span className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
             Rp 0 (Gratis)
           </span>

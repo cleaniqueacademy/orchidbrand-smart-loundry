@@ -1,4 +1,5 @@
 import { db, initPostgresTables } from "./index";
+import { seedMarketingUsers } from "./seedMarketingUsers";
 import {
   users,
   tenants,
@@ -608,6 +609,8 @@ export async function seedInitialData(force = true) {
         createdAt: today,
       },
     ]);
+
+    await seedMarketingUsers();
 
     console.log("✅ Seeding PostgreSQL Laundry Cleanique berhasil 100%!");
     console.log("=================================================");

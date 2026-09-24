@@ -13,9 +13,13 @@ import {
   CheckCircle2,
   Clock,
   Briefcase,
+  Store,
+  Users,
+  ExternalLink,
+  X,
 } from "lucide-react";
 import { User, MarketingProfile } from "../../../types";
-import { useMarketing } from "../../../hooks/useMarketing";
+import { useMarketing, MarketingReferralCode } from "../../../hooks/useMarketing";
 import { MarketingFormModal } from "./MarketingFormModal";
 import { CommissionPayoutTable } from "./CommissionPayoutTable";
 import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
@@ -48,6 +52,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
   );
 
   const [shareCode, setShareCode] = useState<any>(null);
+  const [selectedCodeForTenants, setSelectedCodeForTenants] = useState<MarketingReferralCode | null>(null);
 
   useEffect(() => {
     if (isSuperadmin) {
@@ -279,7 +284,19 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
       {isMarketing && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Store className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-slate-400">Total Outlet Memakai Kode</span>
+                <h3 className="text-2xl font-bold text-blue-700">
+                  {meData?.totalTenantsCount ?? 0} Outlet
+                </h3>
+              </div>
+            </div>
+
             <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
                 <DollarSign className="w-6 h-6" />
@@ -297,7 +314,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-400">Sudah Ditransfer ke Rekening</span>
+                <span className="text-xs font-semibold text-slate-400">Sudah Ditransfer</span>
                 <h3 className="text-2xl font-bold text-emerald-600 font-mono">
                   Rp {(meData?.commissionsSummary?.totalWithdrawn || 0).toLocaleString("id-ID")}
                 </h3>
@@ -309,7 +326,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 <Clock className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-400">Saldo Menunggu Pencairan</span>
+                <span className="text-xs font-semibold text-slate-400">Saldo Menunggu</span>
                 <h3 className="text-2xl font-bold text-amber-600 font-mono">
                   Rp {(meData?.commissionsSummary?.pendingCommission || 0).toLocaleString("id-ID")}
                 </h3>
@@ -343,28 +360,62 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
 
           {/* Active Referral Codes Section */}
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-800">Kode Referral Aktif Anda</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Kode Referral Aktif Anda</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Bagikan kode referral Anda ke pemilik laundry untuk mendapatkan komisi tetap per bulan.
+                </p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {meData?.codes && meData.codes.length > 0 ? (
                 meData.codes.map((c) => (
                   <div
                     key={c.id}
-                    className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center justify-between gap-3"
+                    className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex flex-col justify-between gap-3"
                   >
                     <div>
-                      <span className="font-mono font-bold text-blue-700 text-sm">{c.code}</span>
-                      <p className="text-xs text-slate-600 mt-0.5">{c.name}</p>
-                      <span className="text-[11px] text-slate-400 mt-1 block">
-                        Pemakaian: {c.currentUsage} kali
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-blue-700 text-sm tracking-wide bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 shadow-2xs">
+                          {c.code}
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md text-[11px]">
+                          <Users className="w-3 h-3" />
+                          {c.tenantCount ?? c.currentUsage ?? 0} Outlet
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 font-medium mt-2">{c.name}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-500">
+                        <span>Diskon: {c.discountType === "percent" ? `${c.discountValue}%` : `Rp ${(c.discountValue || 0).toLocaleString("id-ID")}`}</span>
+                        <span>•</span>
+                        <span>Komisi: {c.commissionType === "percent" ? `${c.commissionValue}%` : `Rp ${(c.commissionValue || 0).toLocaleString("id-ID")}`}</span>
+                        <span>•</span>
+                        <span>Pemakaian: {c.currentUsage || 0}x</span>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setShareCode(c)}
-                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      Bagikan
-                    </button>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-100/60">
+                      {(c.tenantCount ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCodeForTenants(c)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          Lihat Outlet ({c.tenantCount})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShareCode(c)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer shrink-0"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        Bagikan
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -375,12 +426,226 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
             </div>
           </div>
 
+          {/* Dedicated Section: Daftar Outlet yang Menggunakan Kode Referral Anda */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Store className="w-4 h-4 text-indigo-600" />
+                  Daftar Outlet yang Menggunakan Kode Referral Anda
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Total {meData?.totalTenantsCount || 0} outlet aktif yang terdaftar menggunakan kode referral milik Anda
+                </p>
+              </div>
+            </div>
+
+            {(!meData?.tenants || meData.tenants.length === 0) ? (
+              <div className="py-10 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-600">Belum ada outlet yang mendaftar dengan kode Anda</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Bagikan kode referral Anda ke pemilik laundry untuk mulai mengumpulkan komisi bulanan.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">Nama Outlet</th>
+                      <th className="py-3 px-4">Kota / Lokasi</th>
+                      <th className="py-3 px-4">Kontak WhatsApp</th>
+                      <th className="py-3 px-4">Kode Referral</th>
+                      <th className="py-3 px-4">Status Langganan</th>
+                      <th className="py-3 px-4">Bergabung Pada</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {meData.tenants.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-50/60 transition">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-800">{t.outletName}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">ID: {t.id}</div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          {t.city || "-"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {t.phone ? (
+                            <a
+                              href={`https://wa.me/${t.phone.replace(/^0/, "62").replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 font-medium"
+                            >
+                              <Phone className="w-3 h-3" />
+                              {t.phone}
+                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                            {t.referralCode || "-"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col">
+                            <span className={`inline-flex items-center gap-1 font-semibold text-[10.5px] px-2 py-0.5 rounded-full w-fit ${
+                              t.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+                            }`}>
+                              {t.isTrial ? "Trial 7 Hari" : "Aktif"}
+                            </span>
+                            {t.subscriptionUntil && (
+                              <span className="text-[10px] text-slate-400 mt-0.5">
+                                s/d {new Date(t.subscriptionUntil).toLocaleDateString("id-ID")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 text-[11px]">
+                          {t.createdAt ? new Date(t.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                          }) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* Riwayat Komisi Self */}
           <div className="space-y-2">
             <h3 className="text-sm font-bold text-slate-800">Riwayat Komisi Transaksi</h3>
             <CommissionPayoutTable commissions={commissions} isSuperadmin={false} />
           </div>
         </>
+      )}
+
+      {/* Modal Form Edit / Create */}
+      <MarketingFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        onSubmit={handleFormSubmit}
+        initialData={selectedProfileForEdit}
+      />
+
+      {/* Share Box Modal */}
+      <ReferralCodeShareBox
+        isOpen={!!shareCode}
+        onClose={() => setShareCode(null)}
+        code={shareCode}
+      />
+
+      {/* Modal Tracked Tenants per specific Referral Code */}
+      {selectedCodeForTenants && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Store className="w-5 h-5 text-blue-600" />
+                  Outlet Pengguna Kode:{" "}
+                  <span className="font-mono text-blue-700 font-black">
+                    {selectedCodeForTenants.code}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Daftar cabang laundry yang mendaftar menggunakan kode referral ini
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCodeForTenants(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto py-4 flex-1 space-y-3">
+              {(!selectedCodeForTenants.tenants || selectedCodeForTenants.tenants.length === 0) ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  Belum ada tenant yang mendaftar menggunakan kode ini.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 rounded-xl border border-slate-100 overflow-hidden">
+                  {selectedCodeForTenants.tenants.map((t) => (
+                    <div
+                      key={t.id}
+                      className="p-4 hover:bg-slate-50/60 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-800 text-sm">{t.outletName}</div>
+                        <div className="text-slate-500 text-[11px] mt-0.5">
+                          Kota: {t.city || "-"}
+                        </div>
+                        {t.phone && (
+                          <div className="mt-1">
+                            <a
+                              href={`https://wa.me/${t.phone.replace(/^0/, "62").replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-[11px]"
+                            >
+                              <Phone className="w-3 h-3" />
+                              {t.phone}
+                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-right sm:self-center">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold ${
+                            t.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {t.isTrial ? "Trial 7 Hari" : "Aktif"}
+                        </span>
+                        {t.subscriptionUntil && (
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            Hingga: {new Date(t.subscriptionUntil).toLocaleDateString("id-ID")}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          Gabung:{" "}
+                          {t.createdAt
+                            ? new Date(t.createdAt).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedCodeForTenants(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Form Edit / Create */}

@@ -36,13 +36,9 @@ export const RegisterSuccessPage: React.FC = () => {
       <header className="w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
-              <Store className="w-5 h-5" />
-            </div>
+            <img src="/laundry-cleanique.png" alt="Laundry Cleanique" className="h-10 w-auto object-contain object-left" />
             <div>
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Laundry Cleanique
-              </span>
+              <span className="font-extrabold text-lg tracking-tight text-emerald-700 dark:text-emerald-300">Laundry Cleanique</span>
               <span className="text-xs text-slate-500 dark:text-slate-400 block -mt-1 font-medium">
                 Smart Laundry System
               </span>
@@ -113,7 +109,7 @@ export const RegisterSuccessPage: React.FC = () => {
               <div>
                 <span className="text-[11px] text-slate-400 block font-medium">Trial Gratis Hingga</span>
                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  {successData?.subscriptionUntil || "7 Hari ke Depan"}
+                  {successData?.subscriptionUntil || "Menunggu data aktivasi"}
                 </span>
               </div>
             </div>

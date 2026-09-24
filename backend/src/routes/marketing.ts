@@ -52,6 +52,34 @@ marketingRoutes.get("/me", requireRole(["marketing", "superadmin"]), async (c) =
       .where(eq(referralCodes.marketingProfileId, profile.id))
       .orderBy(desc(referralCodes.createdAt));
 
+    // Ambil daftar tenant yang menggunakan kode referral milik marketing ini
+    const allTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+    const codeIdSet = new Set(codes.map((c) => c.id));
+    const codeMap = new Map(codes.map((c) => [c.id, c.code]));
+
+    const associatedTenants = allTenants.filter(
+      (t) => t.referralCodeId && codeIdSet.has(t.referralCodeId)
+    );
+
+    const codesWithTenants = codes.map((rc) => {
+      const tenantList = allTenants.filter((t) => t.referralCodeId === rc.id);
+      return {
+        ...rc,
+        tenantCount: tenantList.length,
+        tenants: tenantList.map((t) => ({
+          id: t.id,
+          outletName: t.outletName,
+          phone: t.phone,
+          city: t.city,
+          status: t.status,
+          isTrial: t.isTrial === "true",
+          subscriptionUntil: t.subscriptionUntil,
+          referralCode: rc.code,
+          createdAt: t.createdAt,
+        })),
+      };
+    });
+
     // Ambil rekap komisi
     const commissions = await db
       .select()
@@ -73,7 +101,19 @@ marketingRoutes.get("/me", requireRole(["marketing", "superadmin"]), async (c) =
       success: true,
       data: {
         profile,
-        codes,
+        codes: codesWithTenants,
+        totalTenantsCount: associatedTenants.length,
+        tenants: associatedTenants.map((t) => ({
+          id: t.id,
+          outletName: t.outletName,
+          phone: t.phone,
+          city: t.city,
+          status: t.status,
+          isTrial: t.isTrial === "true",
+          subscriptionUntil: t.subscriptionUntil,
+          referralCode: t.referralCodeId ? codeMap.get(t.referralCodeId) || null : null,
+          createdAt: t.createdAt,
+        })),
         commissionsSummary: {
           totalEarned: profile.totalEarned,
           totalWithdrawn: profile.totalWithdrawn,

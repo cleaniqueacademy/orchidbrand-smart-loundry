@@ -111,12 +111,25 @@ referralRoutes.get("/", async (c) => {
  * GET /api/referral-codes/track
  * Melacak setiap kode referral (misal ILHAM-MARKETING) dan daftar tenant yang mendaftar dengannya
  */
-referralRoutes.get("/track", requireRole(["superadmin"]), async (c) => {
+referralRoutes.get("/track", requireRole(["superadmin", "marketing"]), async (c) => {
   try {
+    const user = getUser(c);
     const allCodes = await db.select().from(referralCodes).orderBy(desc(referralCodes.createdAt));
     const allTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt));
 
-    const results = allCodes.map((rc) => {
+    let targetCodes = allCodes;
+    if (user.role === "marketing") {
+      const [profile] = await db
+        .select()
+        .from(marketingProfiles)
+        .where(eq(marketingProfiles.userId, user.userId));
+
+      targetCodes = allCodes.filter((rc) =>
+        (profile && rc.marketingProfileId === profile.id) || rc.createdByUserId === user.userId
+      );
+    }
+
+    const results = targetCodes.map((rc) => {
       const associatedTenants = allTenants.filter(
         (t) => t.referralCodeId === rc.id
       );

@@ -2,9 +2,28 @@ import { useState, useEffect, useCallback } from "react";
 import { MarketingProfile, MarketingCommission, ReferralCode } from "../types";
 import { fetchApi } from "../utils/api";
 
+export interface MarketingTenantUser {
+  id: string;
+  outletName: string;
+  phone: string;
+  city: string;
+  status: string;
+  isTrial: boolean;
+  subscriptionUntil: string;
+  referralCode?: string | null;
+  createdAt: string;
+}
+
+export interface MarketingReferralCode extends ReferralCode {
+  tenantCount?: number;
+  tenants?: MarketingTenantUser[];
+}
+
 export interface MarketingDashboardData {
   profile?: MarketingProfile;
-  codes?: ReferralCode[];
+  codes?: MarketingReferralCode[];
+  totalTenantsCount?: number;
+  tenants?: MarketingTenantUser[];
   commissionsSummary?: {
     totalEarned: number;
     totalWithdrawn: number;

@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <div className="sticky top-0 z-20 no-print">
-      {currentUserRole !== "superadmin" && currentUser && (
+      {currentUserRole !== "superadmin" && currentUserRole !== "marketing" && currentUser && (
         <TrialBanner
           isTrial={Boolean(currentUser.isTrial)}
           daysRemaining={activeStatus.daysRemaining}

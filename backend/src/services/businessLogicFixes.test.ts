@@ -361,5 +361,95 @@ describe("Business Logic Fixes & AI Assistant Verification", () => {
       expect(body.data.reply).toContain("Rekening Bank");
       expect(body.data.reply).toContain("[ACTION:NAVIGATE:settings]");
     });
+
+    it("POST /api/ai/chat MENOLAK jika kasir (staff) menanyakan tentang Admin / wewenang admin", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "kasir nanya tentang admin apa saja fiturnya?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("Staf Kasir");
+      expect(body.data.reply).not.toContain("[ACTION:NAVIGATE:settings]");
+    });
+
+    it("POST /api/ai/chat MENOLAK jika kasir (staff) menanyakan pengaturan outlet / rekening / tambah kasir", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "Bagaimana cara tambah kasir baru dan setting jam buka toko?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("Staf Kasir");
+      expect(body.data.reply).not.toContain("[ACTION:NAVIGATE:settings]");
+    });
+
+    it("POST /api/ai/chat MENOLAK jika kasir (staff) menanyakan buku kas / pengeluaran / omset toko", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "Berapa omset toko hari ini dan bagaimana catat buku kas?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("Buku Kas");
+      expect(body.data.reply).not.toContain("[ACTION:NAVIGATE:cashflow]");
+    });
+
+    it("POST /api/ai/chat MENOLAK jika kasir (staff) menanyakan scan QR WhatsApp Baileys", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "Bagaimana cara scan QR WhatsApp Baileys di pengaturan?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("WhatsApp Gateway");
+      expect(body.data.reply).not.toContain("[ACTION:OPEN_MODAL:whatsapp]");
+    });
+
+    it("POST /api/ai/chat MENGIZINKAN kasir (staff) menanyakan operasional meja kasir dan nota", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "Bagaimana alur membuat nota pesanan baru kiloan di kasir?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).not.toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("Meja Kasir");
+      expect(body.data.reply).toContain("[ACTION:NAVIGATE:orders]");
+    });
   });
 });

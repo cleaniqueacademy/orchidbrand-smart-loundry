@@ -308,10 +308,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-bold text-zinc-900 truncate">
-                  {isSuperAdmin ? "Cleanique Pusat" : currentTenant?.outletName || "Cabang Laundry"}
+                  {isSuperAdmin
+                    ? "Cleanique Pusat"
+                    : isMarketing
+                    ? "Affiliate Partner"
+                    : currentTenant?.outletName || "Cabang Laundry"}
                 </div>
                 <div className="text-[11px] text-zinc-400 font-medium truncate">
-                  {isSuperAdmin ? "Super Admin" : "Owner Cabang"}
+                  {isSuperAdmin
+                    ? "Super Admin"
+                    : isMarketing
+                    ? "Mitra Marketing"
+                    : isStaff
+                    ? "Kasir Outlet"
+                    : "Owner Cabang"}
                 </div>
               </div>
             </div>
