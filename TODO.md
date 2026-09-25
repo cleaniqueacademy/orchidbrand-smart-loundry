@@ -91,7 +91,7 @@ Dokumen ini memetakan status pengerjaan fitur yang **SUDAH SELESAI (Completed)**
 
 - [x] **Super Admin (Laundry Cleanique Provider)**:
   - Mengelola ekosistem platform: Dashboard Platform, CRUD Cabang Toko (`tenants`), Manajemen Pengguna (`users`), Data Order (`orders`), Data Log (`logs`), dan Laporan Platform (`reports`).
-  - **Dashboard SaaS Bersih**: Menghilangkan feed pesanan cucian kiloan kasir dari dashboard overview Super Admin, digantikan dengan:
+  - **Dashboard Aplikasi Bersih**: Menghilangkan feed pesanan cucian kiloan kasir dari dashboard overview Super Admin, digantikan dengan:
     - **Pusat Diagnostik & Investigasi Masalah (Tech Support Hub)**: Akses cepat jika cabang/kasir meminta bantuan error aplikasi, nota hilang, nomor WA gagal kirim, atau selisih uang laci.
     - **Status Konektivitas Platform**: Indikator real-time Bun + Hono API backend, PostgreSQL database, dan WhatsApp Gateway.
     - **Monitoring Masa Aktif Langganan**: Alert otomatis untuk cabang dengan masa aktif kritis (≤ 7 hari) atau kedaluwarsa.

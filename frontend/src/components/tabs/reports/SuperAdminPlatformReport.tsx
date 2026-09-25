@@ -185,7 +185,7 @@ export const SuperAdminPlatformReport: React.FC<SuperAdminPlatformReportProps> =
             Laporan Langganan & Jaringan Cabang
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Monitoring masa aktif toko, status langganan SaaS, dan utilisasi pengguna platform.
+            Monitoring masa aktif toko, status langganan aplikasi, dan utilisasi pengguna platform.
           </p>
         </div>
 

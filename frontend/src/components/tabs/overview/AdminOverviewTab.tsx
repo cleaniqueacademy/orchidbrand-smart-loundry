@@ -70,7 +70,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             Dashboard Platform
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Ringkasan data jaringan cabang toko laundry dan status langganan SaaS platform.
+            Ringkasan data jaringan cabang toko laundry dan status langganan aplikasi platform.
           </p>
         </div>
 
@@ -408,7 +408,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                   Status Konektivitas Platform
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Kesehatan server dan database backend SaaS
+                  Kesehatan server dan database backend
                 </p>
               </div>
               <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">

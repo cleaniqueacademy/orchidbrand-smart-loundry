@@ -387,7 +387,7 @@ export default function App() {
         targetId: "sidebar-nav-invoices",
         title: "Paket Langganan & Billing",
         badge: "Langkah 2 dari 4",
-        description: "Kelola master paket langganan SaaS, harga referral affiliate, dan verifikasi bukti bayar langganan mitra.",
+        description: "Kelola master paket langganan, harga referral affiliate, dan verifikasi bukti bayar langganan mitra.",
         preferredPlacement: "right",
       },
       {

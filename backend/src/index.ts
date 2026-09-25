@@ -328,6 +328,62 @@ app.get("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) =
   }
 });
 
+// 2b. Single Tenant Detail (Superadmin or Tenant Owner/Staff of that tenant)
+app.get("/api/tenants/:id", authMiddleware, async (c) => {
+  try {
+    const user = getUser(c);
+    const id = c.req.param("id");
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    if (!tenant) {
+      return c.json({ success: false, message: "Tenant tidak ditemukan" }, 404);
+    }
+
+    if (user.role !== "superadmin" && user.tenantId !== id && tenant.userId !== user.userId) {
+      return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat melihat data outlet Anda sendiri" }, 403);
+    }
+
+    const allUsers = await db.select().from(users).where(eq(users.id, tenant.userId || ""));
+    const owner = allUsers[0];
+
+    const DEFAULT_TENANT_SERVICES = [
+      { id: "srv-1", name: "Cuci Komplit Reguler", unit: "kg", price: 8000 },
+      { id: "srv-2", name: "Cuci Setrika Express", unit: "kg", price: 12000 },
+      { id: "srv-3", name: "Setrika Saja", unit: "kg", price: 6000 },
+      { id: "srv-4", name: "Bedcover King", unit: "pcs", price: 35000 },
+      { id: "srv-5", name: "Bedcover Single", unit: "pcs", price: 25000 },
+      { id: "srv-6", name: "Cuci Sepatu", unit: "pasang", price: 25000 },
+      { id: "srv-7", name: "Cuci Karpet", unit: "meter", price: 15000 },
+      { id: "srv-8", name: "Cuci Selimut", unit: "pcs", price: 20000 },
+    ];
+
+    let parsedServices = DEFAULT_TENANT_SERVICES;
+    if (tenant.services) {
+      try {
+        const parsed = typeof tenant.services === "string" ? JSON.parse(tenant.services) : tenant.services;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsedServices = parsed;
+        }
+      } catch {
+        parsedServices = DEFAULT_TENANT_SERVICES;
+      }
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        ...tenant,
+        services: parsedServices,
+        owner: owner
+          ? { id: owner.id, name: owner.name, email: owner.email, role: owner.role }
+          : null,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
 app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const body = await c.req.json();
@@ -378,7 +434,10 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
     const id = c.req.param("id");
 
     if (user.role !== "superadmin" && user.tenantId !== id) {
-      return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengelola data outlet Anda sendiri" }, 403);
+      const [tRow] = await db.select().from(tenants).where(eq(tenants.id, id));
+      if (!tRow || tRow.userId !== user.userId) {
+        return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengelola data outlet Anda sendiri" }, 403);
+      }
     }
 
     const body = await c.req.json();

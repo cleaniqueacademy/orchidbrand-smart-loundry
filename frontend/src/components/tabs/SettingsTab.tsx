@@ -101,18 +101,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const effectiveTenantId =
     tenantId && tenantId !== "all"
       ? tenantId
-      : resolvedTenant?.id || (tenants && tenants[0]?.id) || "tenant-01";
+      : resolvedTenant?.id || (tenants && tenants[0]?.id) || currentUser?.tenantId || "tenant-01";
 
   const [ownerName, setOwnerName] = useState(currentUser?.name || "");
-  const [outletName, setOutletName] = useState(tenant?.outletName || "");
-  const [phone, setPhone] = useState(tenant?.phone || "");
-  const [address, setAddress] = useState(tenant?.address || "");
+  const [outletName, setOutletName] = useState(tenant?.outletName || resolvedTenant?.outletName || "");
+  const [phone, setPhone] = useState(tenant?.phone || resolvedTenant?.phone || "");
+  const [address, setAddress] = useState(tenant?.address || resolvedTenant?.address || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   // Cashier shift enable/disable state
+  const activeTenantObj = tenant || resolvedTenant;
   const [enableShift, setEnableShift] = useState<boolean>(
-    tenant?.enableCashierShift !== "false" && tenant?.enableCashierShift !== false
+    activeTenantObj?.enableCashierShift !== "false" && activeTenantObj?.enableCashierShift !== false
   );
   const [updatingShift, setUpdatingShift] = useState(false);
 
@@ -139,13 +140,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    if (tenant) {
-      setOutletName(tenant.outletName || "");
-      setPhone(tenant.phone || "");
-      setAddress(tenant.address || "");
-      setEnableShift(tenant.enableCashierShift !== "false" && tenant.enableCashierShift !== false);
+    const t = tenant || resolvedTenant;
+    if (t) {
+      setOutletName(t.outletName || "");
+      setPhone(t.phone || "");
+      setAddress(t.address || "");
+      setEnableShift(t.enableCashierShift !== "false" && t.enableCashierShift !== false);
     }
-  }, [tenant]);
+  }, [tenant, resolvedTenant]);
 
   useEffect(() => {
     if (currentUser?.name) {
@@ -156,10 +158,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Handle Save Profile
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenant) return;
+    const targetId = tenant?.id || resolvedTenant?.id || effectiveTenantId;
+    if (!targetId) return;
     setSavingProfile(true);
     try {
-      const ok = await onUpdateTenant(tenant.id, {
+      const ok = await onUpdateTenant(targetId, {
         outletName,
         phone,
         address,
@@ -180,11 +183,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   // Handle Toggle Cashier Shift Feature
   const handleToggleShift = async () => {
-    if (!tenant || updatingShift) return;
+    const targetId = tenant?.id || resolvedTenant?.id || effectiveTenantId;
+    if (!targetId || updatingShift) return;
     const nextVal = !enableShift;
     setUpdatingShift(true);
     try {
-      const ok = await onUpdateTenant(tenant.id, {
+      const ok = await onUpdateTenant(targetId, {
         enableCashierShift: String(nextVal),
       });
       if (ok) {
@@ -357,7 +361,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-zinc-900 text-sm">Status Langganan SaaS</h3>
+                  <h3 className="font-bold text-zinc-900 text-sm">Status Langganan</h3>
                   <p className="text-[11px] text-zinc-500">Masa aktif lisensi sistem outlet</p>
                 </div>
               </div>

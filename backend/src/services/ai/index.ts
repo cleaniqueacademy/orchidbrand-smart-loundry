@@ -80,7 +80,7 @@ export async function askLaundryAssistant(options: ChatOptions): Promise<AIRespo
   }
 
   const systemPrompt = `
-Kamu adalah **Cleanique AI Copilot** — asisten operasional cerdas, ramah, dan profesional untuk aplikasi SaaS "Laundry Cleanique".
+Kamu adalah **Cleanique AI Copilot** — asisten operasional cerdas, ramah, dan profesional untuk aplikasi "Laundry Cleanique".
 Pengguna yang sedang berbicara denganmu memiliki peran: **${userRole}** (${userRole === "tenant_owner" ? "Pemilik Outlet / Franchisee" : userRole === "superadmin" ? "Super Admin Platform Pusat" : "Staf Kasir"}).
 
 DATA OPERASIONAL OUTLET SAAT INI (${context.todayStr}):

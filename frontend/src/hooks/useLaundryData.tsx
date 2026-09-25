@@ -90,7 +90,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         }
       }
 
-      // 5. Tenants (Only for superadmin)
+      // 5. Tenants: Superadmin fetches all tenants; Non-superadmin fetches active tenant
       if (currentUser?.role === "superadmin") {
         const tenantsRes = await fetch(`${API_BASE}/tenants`, {
           headers: authHeaders(),
@@ -98,6 +98,23 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         if (tenantsRes.ok) {
           const json = await tenantsRes.json();
           if (json.success) setTenants(json.data);
+        }
+      } else {
+        const targetTenantId = tenantId && tenantId !== "all" ? tenantId : currentUser?.tenantId;
+        if (targetTenantId) {
+          try {
+            const tenantRes = await fetch(`${API_BASE}/tenants/${targetTenantId}`, {
+              headers: authHeaders(),
+            });
+            if (tenantRes.ok) {
+              const json = await tenantRes.json();
+              if (json.success && json.data) {
+                setTenants([json.data]);
+              }
+            }
+          } catch (tErr) {
+            console.warn("Failed fetching active tenant:", tErr);
+          }
         }
       }
 
@@ -128,7 +145,6 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
   // (for example after logout/login in the same browser tab).
   useEffect(() => {
     if (currentUser?.role !== "superadmin") {
-      setTenants([]);
       setUsers([]);
     }
   }, [currentUser?.role]);
@@ -691,6 +707,9 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       });
       const data = await res.json();
       if (data.success) {
+        setTenants((prev) =>
+          prev.map((t) => (t.id === id ? ({ ...t, ...tenantData } as Tenant) : t))
+        );
         await fetchData();
         return true;
       } else {

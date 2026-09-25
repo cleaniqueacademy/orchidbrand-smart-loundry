@@ -301,7 +301,7 @@ export function generateLocalFallbackReply(
         `3. 🛡️ **Pengguna:** Kelola akun Super Admin, Owner, Staf, & perpanjang lisensi.\n` +
         `4. 📝 **Pendaftar Mandiri:** Verifikasi pendaftar baru dari website publik.\n` +
         `5. 💳 **Verifikasi Tagihan:** Konfirmasi bukti bayar langganan cabang.\n` +
-        `6. 📦 **Paket & Harga:** Konfigurasi skema paket langganan SaaS.\n` +
+        `6. 📦 **Paket & Harga:** Konfigurasi skema paket langganan.\n` +
         `7. 🏷️ **Kode Referral & Mitra Marketing:** Manajemen affiliate dan komisi promosi.\n` +
         `8. ⚙️ **Setting Platform:** Konfigurasi rekening bank pusat & gateway WA HQ.\n` +
         `9. 📜 **Data Log:** Audit trail aktivitas sistem dan pengiriman pesan.\n\n` +
