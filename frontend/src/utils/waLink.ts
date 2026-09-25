@@ -49,7 +49,7 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
     text = `Halo Kak ${custName}! 🙏\nPemberitahuan bahwa pesanan laundry *${order.invoiceNo}* di *${outletName}* telah dibatalkan.\nJika ada pertanyaan silakan hubungi kami kembali. Terima kasih.`;
   } else {
     // Skenario Nota Diterima / Konfirmasi Pesanan Baru
-    text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺\nPesanan Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💵 *Total Biaya:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentText}\n\n🔍 *Cek Progres Cucian Mandiri:* \n${trackingUrl}\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
+    text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺\nPesanan Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💵 *Total Biaya:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentText}\n\n🔍 *Cek Progres Cucian Mandiri:* \n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
   }
 
   return { phone: cleanPhone, text };

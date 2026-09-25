@@ -1597,7 +1597,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
       const origin = c.req.header("origin") || "http://localhost:5173";
       const trackingUrl = `${origin}/track/${encodeURIComponent(invoiceNo)}`;
 
-      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}\n\n🔍 *Cek Progres Cucian Mandiri:* \n${trackingUrl}\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
+      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}\n\n🔍 *Cek Progres Cucian Mandiri:* \n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
 
       waData = {
         phone: cleanPhone,

@@ -127,7 +127,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const handleCopyPreviewText = () => {
     const textToCopy =
       previewMessageType === "nota_masuk"
-        ? `Halo Kak Sarah Wijaya! 👋 Terima kasih telah mencuci di *${displayOutletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital:\n\n📄 *No. Nota:* #ORD-20260925-001\n📅 *Waktu Masuk:* 25 Sep 2026, 14:15 WIB\n🧺 *Paket:* Cuci Kering Setrika (3.5 Kg)\n💵 *Total Biaya:* Rp 28.000\n💰 *Status Bayar:* LUNAS (QRIS / Tunai)\n⏱️ *Estimasi Selesai:* Besok, 17:00 WIB\n\n🔍 *Cek Status Cucian Real-time:*\nhttps://cleanique.app/track/ORD-20260925-001\n\n📍 *Lokasi:* ${displayAddress}\n📞 *Telp/WA:* ${displayPhone}\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`
+        ? `Halo Kak Sarah Wijaya! 👋 Terima kasih telah mencuci di *${displayOutletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital:\n\n📄 *No. Nota:* #ORD-20260925-001\n📅 *Waktu Masuk:* 25 Sep 2026, 14:15 WIB\n🧺 *Paket:* Cuci Kering Setrika (3.5 Kg)\n💵 *Total Biaya:* Rp 28.000\n💰 *Status Bayar:* LUNAS (QRIS / Tunai)\n⏱️ *Estimasi Selesai:* Besok, 17:00 WIB\n\n🔍 *Cek Status Cucian Real-time:*\nhttps://cleanique.app/track/ORD-20260925-001\n\n⏰ *Jam Operasional:*\n• Senin - Sabtu : 08.00 - 20.00 WIB\n\n📍 *Lokasi:* ${displayAddress}\n📞 *Telp/WA:* ${displayPhone}\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`
         : `Halo Kak Sarah Wijaya! 👋\n\nKabar gembira, cucian Anda di *${displayOutletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* #ORD-20260925-001\n🧺 *Paket:* Cuci Kering Setrika (3.5 Kg) - Bersih, Wangi & Rapi\n💰 *Status:* LUNAS\n\n🔍 *Detail Resi Pelanggan:*\nhttps://cleanique.app/track/ORD-20260925-001\n\n📍 *Alamat Ambil:* ${displayAddress}\n⏰ *Jam Operasional:* Senin - Sabtu : 08.00 - 20.00 WIB\n📞 *Kontak Toko:* ${displayPhone}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
     if (navigator?.clipboard) {
@@ -612,10 +612,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                         https://cleanique.app/track/ORD-20260925-001
                       </span>
                     </div>
-                    <div className="pt-1.5 border-t border-zinc-100 text-[10px] text-zinc-500 leading-snug">
-                      📍 <strong>Lokasi:</strong> {displayAddress}
-                      <br />
-                      📞 <strong>Telp/WA:</strong> {displayPhone}
+                    <div className="pt-1.5 border-t border-zinc-100 text-[10px] text-zinc-500 space-y-0.5 leading-snug">
+                      <div>⏰ <strong>Jam Operasional:</strong> Senin - Sabtu : 08.00 - 20.00 WIB</div>
+                      <div>📍 <strong>Lokasi:</strong> {displayAddress}</div>
+                      <div>📞 <strong>Telp/WA:</strong> {displayPhone}</div>
                     </div>
                   </>
                 ) : (
