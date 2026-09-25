@@ -288,27 +288,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={handleToggleCollapse}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs cursor-pointer hover:opacity-90 transition ${
-                isSuperAdmin
-                  ? "bg-gradient-to-br from-blue-700 via-blue-800 to-sky-600 text-white"
-                  : "bg-zinc-900 text-white"
-              }`}
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs cursor-pointer hover:opacity-90 transition p-1 bg-white border border-zinc-200/80 overflow-hidden"
               title="Perluas Sidebar (Klik untuk membuka menu)"
             >
-              {isSuperAdmin ? <Building2 className="w-4.5 h-4.5" /> : <Store className="w-4.5 h-4.5" />}
+              <img src="/logo.png" alt="Cleanique Logo" className="w-full h-full object-contain" />
             </button>
           </div>
         ) : (
           <div className="h-16 px-3.5 flex items-center justify-between border-b border-zinc-100 shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs ${
-                  isSuperAdmin
-                    ? "bg-gradient-to-br from-blue-700 via-blue-800 to-sky-600 text-white"
-                    : "bg-zinc-900 text-white"
-                }`}
-              >
-                {isSuperAdmin ? <Building2 className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-2xs bg-white border border-zinc-200/80 p-0.5 overflow-hidden">
+                <img src="/logo.png" alt="Cleanique Logo" className="w-full h-full object-contain" />
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-bold text-zinc-900 truncate">
