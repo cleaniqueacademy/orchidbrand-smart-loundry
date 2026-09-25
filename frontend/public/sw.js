@@ -1,5 +1,5 @@
 // Service Worker for Laundry Cleanique PWA
-const CACHE_NAME = "cleanique-cache-v1";
+const CACHE_NAME = "cleanique-cache-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -8,6 +8,8 @@ const STATIC_ASSETS = [
   "/favicon.png",
   "/icon-192.png",
   "/icon-512.png",
+  "/icon-512-maskable.png",
+  "/apple-touch-icon.png",
   "/laundry-cleanique.png",
   "/laundry-cleanique-outline.png"
 ];
