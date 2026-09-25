@@ -393,6 +393,32 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
 
         {/* Modal Body / Active Step Content */}
         <div className="relative z-10 px-5 sm:px-6 py-4 overflow-y-auto flex-1 space-y-4">
+          {/* Spotlight Quick Action Banner (Shown on Step 1) */}
+          {currentStep === 0 && onStartSpotlightTour && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/60 to-slate-900 border border-indigo-500/30 text-white shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 shrink-0">
+                  <Sparkles className="w-4 h-4 animate-pulse text-amber-300" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Tur Layar Interaktif</h4>
+                  <p className="text-[11px] text-indigo-200/80">Sorot langsung tombol Meja Kasir, Shift, WhatsApp & AI di layar.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onStartSpotlightTour();
+                }}
+                className="shrink-0 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                <span>Mulai Tur Layar</span>
+              </button>
+            </div>
+          )}
+
           {/* Step Hero Card */}
           <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-sm">
             <div className={`p-3.5 rounded-2xl border shrink-0 ${step.iconBg}`}>
@@ -443,29 +469,30 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
           </button>
 
           <div className="flex items-center gap-2">
+            {onStartSpotlightTour && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onStartSpotlightTour();
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-xs font-bold text-white shadow-md shadow-indigo-950/50 hover:from-indigo-500 hover:to-pink-500 active:scale-95 transition-all cursor-pointer"
+                title="Mulai tur interaktif langsung di atas elemen layar"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+                <span className="hidden sm:inline">Tur Spotlight Layar</span>
+                <span className="sm:hidden">Tur Layar</span>
+              </button>
+            )}
+
             {currentStep > 0 && (
               <button
                 type="button"
                 onClick={handlePrev}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/15 bg-white/5 text-xs font-bold text-slate-200 hover:bg-white/10 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/15 bg-white/5 text-xs font-bold text-slate-200 hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Sebelumnya</span>
-              </button>
-            )}
-
-            {isLast && onStartSpotlightTour && (
-              <button
-                type="button"
-                onClick={() => {
-                  onComplete();
-                  onStartSpotlightTour();
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-xs font-bold text-white shadow-md shadow-indigo-950/50 hover:from-indigo-500 hover:to-pink-500 active:scale-95 transition-all cursor-pointer"
-                title="Mulai tur interaktif langsung di atas elemen layar"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
-                <span>Tur Spotlight Layar</span>
               </button>
             )}
 

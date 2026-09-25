@@ -37,7 +37,6 @@ import { WhatsAppLogsModal } from "./components/modals/WhatsAppLogsModal";
 import { AIAssistantWidget } from "./components/ai/AIAssistantWidget";
 import { OnboardingTutorialModal } from "./components/common/OnboardingTutorialModal";
 import { SpotlightTourOverlay, TourStep } from "./components/common/SpotlightTourOverlay";
-import { OnboardingQuestBar, QuestTask } from "./components/common/OnboardingQuestBar";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
 import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
@@ -273,26 +272,25 @@ export default function App() {
           id: "shift",
           targetId: "tour-shift-btn",
           title: "Buka / Tutup Shift Kasir",
-          badge: "Langkah 1: Modal Kas Awal",
+          badge: "Langkah 1 dari 5",
           description: "Sebelum melayani pelanggan, pastikan Anda membuka shift dan memasukkan modal kas awal laci kasir untuk akurasi rekonsiliasi uang fisik di akhir hari.",
           tips: ["Selalu cek uang kembalian sebelum shift", "Rekonsiliasi otomatis saat tutup shift"],
           preferredPlacement: "bottom",
         },
         {
-          id: "order-btn",
-          targetId: "tour-new-order-btn",
-          title: "Input Transaksi Laundry Baru",
-          badge: "Langkah 2: Meja Kasir",
-          description: "Klik tombol 'Order Baru' untuk membuat invoice laundry baru, timbang kiloan atau pilih satuan, serta terima pembayaran cash/QRIS/transfer.",
-          actionRequiredTab: "orders",
+          id: "order-nav",
+          targetId: "sidebar-nav-orders",
+          title: "Meja Kasir & Input Transaksi",
+          badge: "Langkah 2 dari 5",
+          description: "Klik menu Kasir ini untuk mencatat pesanan kiloan/satuan baru, timbang pakaian, dan cetak nota struk kasir thermal 58mm/80mm.",
           tips: ["Bisa langsung cetak nota 58mm/80mm", "Nota digital otomatis dikirim via WhatsApp"],
-          preferredPlacement: "bottom",
+          preferredPlacement: "right",
         },
         {
           id: "whatsapp",
           targetId: "tour-whatsapp-btn",
           title: "Status WhatsApp Gateway",
-          badge: "Langkah 3: Notifikasi Otomatis",
+          badge: "Langkah 3 dari 5",
           description: "Indikator hijau menunjukkan sistem WhatsApp outlet terhubung dan siap mengirimkan notifikasi status cucian otomatis (Antrian, Proses, Siap Ambil, Selesai) ke nomor WhatsApp pelanggan.",
           tips: ["Pelanggan dapat melacak status cucian secara realtime via link invoice"],
           preferredPlacement: "bottom",
@@ -301,10 +299,18 @@ export default function App() {
           id: "ai-assistant",
           targetId: "tour-ai-widget",
           title: "Cleanique AI Copilot",
-          badge: "Langkah 4: Asisten Pintar 24/7",
+          badge: "Langkah 4 dari 5",
           description: "Butuh bantuan cara menghilangkan noda membandel, informasi paket, atau bingung fitur sistem? Klik tombol AI ini kapan saja untuk tanya asisten cerdas berbasis Gemini Flash.",
-          tips: ["Bisa di-dock ke samping layar agar tidak menutupi tabel", "Mendukung panduan instan dan tips operasional"],
+          tips: ["Bisa diciutkan ke pojok agar tidak menutupi tabel", "Mendukung panduan instan dan tips operasional"],
           preferredPlacement: "top",
+        },
+        {
+          id: "help-btn",
+          targetId: "header-btn-tutorial",
+          title: "Buka Panduan Kapan Saja",
+          badge: "Langkah 5 dari 5",
+          description: "Kapan pun Anda atau rekan kasir baru membutuhkan pelatihan ulang, klik tombol 'Panduan' di header ini untuk memutar tur interaktif kembali.",
+          preferredPlacement: "bottom",
         },
       ];
     }
@@ -312,35 +318,36 @@ export default function App() {
     if (currentUserRole === "tenant_owner") {
       return [
         {
-          id: "sidebar",
-          targetId: "tour-sidebar-nav",
-          title: "Navigasi Menu Utama Outlet",
-          badge: "Langkah 1: Kendali Penuh",
-          description: "Akses seluruh manajemen outlet Anda dari sini: pantau Ringkasan Omset, Meja Kasir (Pesanan), Arus Kas & Pengeluaran, Master Layanan & Harga, serta Pengaturan Toko.",
+          id: "shift",
+          targetId: "tour-shift-btn",
+          title: "Monitoring Shift & Kas Laci",
+          badge: "Langkah 1 dari 6",
+          description: "Pantau kasir yang sedang bertugas, modal kas awal, serta pantau rekonsiliasi kas saat shift ditutup untuk menghindari selisih uang kas fisik.",
+          tips: ["Transparansi uang kas fisik vs uang di sistem"],
+          preferredPlacement: "bottom",
+        },
+        {
+          id: "orders-nav",
+          targetId: "sidebar-nav-orders",
+          title: "Meja Kasir & Antrian Pesanan",
+          badge: "Langkah 2 dari 6",
+          description: "Pusat operasional: kelola seluruh antrian cucian pelanggan, timbang kiloan, update progress cuci/setrika, pelunasan tagihan, dan cetak nota kasir.",
           preferredPlacement: "right",
         },
         {
-          id: "shift",
-          targetId: "tour-shift-btn",
-          title: "Monitoring Shift Kasir",
-          badge: "Langkah 2: Keamanan Kas",
-          description: "Pantau kasir yang sedang bertugas, modal kas awal, serta pantau rekonsiliasi kas saat shift ditutup untuk menghindari selisih uang kas fisik.",
-          preferredPlacement: "bottom",
-        },
-        {
-          id: "order-btn",
-          targetId: "tour-new-order-btn",
-          title: "Meja Kasir & Transaksi",
-          badge: "Langkah 3: Order Masuk",
-          description: "Kelola seluruh antrian cucian pelanggan, update progress cuci/setrika, pelunasan tagihan, dan cetak nota kasir.",
-          actionRequiredTab: "orders",
-          preferredPlacement: "bottom",
+          id: "cashflow-nav",
+          targetId: "sidebar-nav-finance",
+          title: "Buku Kas & Pengeluaran Toko",
+          badge: "Langkah 3 dari 6",
+          description: "Catat pengeluaran operasional toko (deterjen, listrik, parfum, plastik) dan ekspor laporan keuangan laba-rugi ke file Excel / PDF.",
+          tips: ["Arus kas otomatis terintegrasi dengan penerimaan kasir"],
+          preferredPlacement: "right",
         },
         {
           id: "whatsapp",
           targetId: "tour-whatsapp-btn",
           title: "WhatsApp Gateway Outlet",
-          badge: "Langkah 4: Otomasi Pelanggan",
+          badge: "Langkah 4 dari 6",
           description: "Hubungkan nomor WhatsApp outlet Anda via scan QR (Baileys) atau atur template pesan notifikasi otomatis untuk meningkatkan loyalitas dan kepuasan pelanggan.",
           tips: ["Pelanggan dapat melacak status cucian secara realtime via link invoice"],
           preferredPlacement: "bottom",
@@ -349,10 +356,18 @@ export default function App() {
           id: "ai-assistant",
           targetId: "tour-ai-widget",
           title: "AI Business Copilot",
-          badge: "Langkah 5: Asisten Cerdas",
+          badge: "Langkah 5 dari 6",
           description: "Asisten AI cerdas untuk membantu Anda menganalisis performa bisnis, ide promo hemat deterjen, strategi pemasaran, hingga SOP penanganan komplain pakaian.",
-          tips: ["Klik atau sembunyikan ke samping kapan saja"],
+          tips: ["Tersedia bantuan 24/7 di pojok kanan bawah"],
           preferredPlacement: "top",
+        },
+        {
+          id: "tutorial-btn",
+          targetId: "header-btn-tutorial",
+          title: "Panduan Interaktif Sistem",
+          badge: "Langkah 6 dari 6",
+          description: "Klik tombol 'Panduan' ini kapan saja untuk memutar ulang tur panduan atau melatih staf kasir baru di outlet Anda.",
+          preferredPlacement: "bottom",
         },
       ];
     }
@@ -360,135 +375,40 @@ export default function App() {
     // Default / Superadmin
     return [
       {
-        id: "sidebar",
-        targetId: "tour-sidebar-nav",
-        title: "Pusat Kendali Platform Cleanique",
-        badge: "Langkah 1: Multi-Tenant",
-        description: "Akses master data seluruh mitra laundry: Manajemen Tenant, Paket Langganan, Invoice Billing, Kode Referral Affiliate, dan Pengaturan Platform.",
+        id: "tenants-nav",
+        targetId: "sidebar-nav-tenants",
+        title: "Manajemen Mitra Tenant",
+        badge: "Langkah 1 dari 4",
+        description: "Akses master data seluruh mitra laundry: status langganan, masa aktif paket, dan monitoring outlet.",
+        preferredPlacement: "right",
+      },
+      {
+        id: "plans-nav",
+        targetId: "sidebar-nav-invoices",
+        title: "Paket Langganan & Billing",
+        badge: "Langkah 2 dari 4",
+        description: "Kelola master paket langganan SaaS, harga referral affiliate, dan verifikasi bukti bayar langganan mitra.",
         preferredPlacement: "right",
       },
       {
         id: "ai-assistant",
         targetId: "tour-ai-widget",
         title: "Cleanique AI Assistant",
-        badge: "Langkah 2: AI Platform Support",
+        badge: "Langkah 3 dari 4",
         description: "Asisten AI untuk troubleshooting sistem, navigasi cepat menu platform, serta analisis perkembangan outlet mitra secara real-time.",
         tips: ["Tersedia bantuan teknis dan panduan operasional multi-cabang"],
         preferredPlacement: "top",
       },
+      {
+        id: "tutorial-btn",
+        targetId: "header-btn-tutorial",
+        title: "Panduan Platform",
+        badge: "Langkah 4 dari 4",
+        description: "Klik tombol 'Panduan' ini kapan saja untuk memutar ulang tur fitur pusat kendali platform.",
+        preferredPlacement: "bottom",
+      },
     ];
   }, [currentUserRole]);
-
-  const questTasks: QuestTask[] = useMemo(() => {
-    const isTutorialDone =
-      currentUser?.tutorialCompleted === true ||
-      currentUser?.tutorialCompleted === "true" ||
-      (currentUser?.id ? localStorage.getItem(`user_tutorial_done_${currentUser.id}`) === "true" : false);
-
-    if (currentUserRole === "staff") {
-      return [
-        {
-          id: "shift",
-          title: "Buka Shift Kasir Hari Ini",
-          description: "Pastikan modal kas awal tercatat dengan rapi sebelum transaksi.",
-          isCompleted: !!cashierShift.currentShift,
-          actionLabel: cashierShift.currentShift ? undefined : "Buka Shift",
-          onAction: () => setShowOpenShiftModal(true),
-        },
-        {
-          id: "order",
-          title: "Input Pesanan Laundry Pertama",
-          description: "Catat transaksi baru di meja kasir dan cetak/kirim nota digital.",
-          isCompleted: orders.length > 0,
-          actionLabel: "Buka Kasir",
-          onAction: () => {
-            setActiveTab("orders");
-          },
-        },
-        {
-          id: "wa",
-          title: "Periksa Sambungan WhatsApp Gateway",
-          description: "Pastikan nomor WA outlet aktif mengirimkan struk nota ke pelanggan.",
-          isCompleted: waGateway.waData?.status === "connected",
-          actionLabel: waGateway.waData?.status === "connected" ? undefined : "Cek WA",
-          onAction: () => setShowWhatsAppModal(true),
-        },
-        {
-          id: "tour",
-          title: "Selesaikan Tur Panduan Sistem",
-          description: "Kenali tombol-tombol utama dan fitur unggulan Cleanique POS.",
-          isCompleted: isTutorialDone,
-          actionLabel: "Mulai Tur",
-          onAction: startSpotlightTour,
-        },
-      ];
-    }
-
-    if (currentUserRole === "tenant_owner") {
-      return [
-        {
-          id: "profile",
-          title: "Lengkapi Profil & Alamat Outlet",
-          description: "Atur nama outlet, kontak, dan alamat pada struk nota.",
-          isCompleted: !!currentActiveTenant?.outletName && currentActiveTenant.outletName !== "Laundry Bersih Sejahtera",
-          actionLabel: "Pengaturan",
-          onAction: () => setActiveTab("settings"),
-        },
-        {
-          id: "shift",
-          title: "Buka Shift Kasir Pertama",
-          description: "Coba alur pembukaan shift kasir untuk akurasi arus kas harian.",
-          isCompleted: !!cashierShift.currentShift,
-          actionLabel: cashierShift.currentShift ? undefined : "Buka Shift",
-          onAction: () => setShowOpenShiftModal(true),
-        },
-        {
-          id: "order",
-          title: "Input Pesanan Laundry Perdana",
-          description: "Uji coba input transaksi kiloan atau satuan di meja kasir.",
-          isCompleted: orders.length > 0,
-          actionLabel: "Meja Kasir",
-          onAction: () => setActiveTab("orders"),
-        },
-        {
-          id: "wa",
-          title: "Hubungkan WhatsApp Gateway Outlet",
-          description: "Scan QR WhatsApp untuk mengaktifkan notifikasi otomatis pelanggan.",
-          isCompleted: waGateway.waData?.status === "connected",
-          actionLabel: waGateway.waData?.status === "connected" ? undefined : "Setup WA",
-          onAction: () => setShowWhatsAppModal(true),
-        },
-        {
-          id: "tour",
-          title: "Selesaikan Tur Panduan Lengkap",
-          description: "Pelajari seluruh fitur operasional, arus kas, dan laporan.",
-          isCompleted: isTutorialDone,
-          actionLabel: "Mulai Tur",
-          onAction: startSpotlightTour,
-        },
-      ];
-    }
-
-    // Default / Superadmin
-    return [
-      {
-        id: "tenants",
-        title: "Periksa Data Cabang Tenant",
-        description: "Review daftar mitra laundry aktif dan status langganan.",
-        isCompleted: true,
-        actionLabel: "Buka Tenant",
-        onAction: () => setActiveTab("tenants"),
-      },
-      {
-        id: "tour",
-        title: "Jalankan Tur Platform",
-        description: "Pengenalan navigasi fitur pusat kontrol multi-tenant.",
-        isCompleted: isTutorialDone,
-        actionLabel: "Mulai Tur",
-        onAction: startSpotlightTour,
-      },
-    ];
-  }, [currentUser, currentUserRole, cashierShift.currentShift, orders.length, waGateway.waData?.status, currentActiveTenant]);
 
   // Modal UI States
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -1038,13 +958,6 @@ export default function App() {
         onClose={() => setIsTourOpen(false)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-      />
-
-      {/* Onboarding Checklist Quest Bar (Pattern 5: Checklist / Quest Bar) */}
-      <OnboardingQuestBar
-        role={currentUserRole}
-        tasks={questTasks}
-        onStartTour={startSpotlightTour}
       />
     </div>
   );

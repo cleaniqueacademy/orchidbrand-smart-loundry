@@ -77,6 +77,8 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
     const updateRect = () => {
       const el = document.getElementById(step.targetId);
       if (el) {
+        // Smoothly scroll target into view if needed
+        el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
         const r = el.getBoundingClientRect();
         // Hanya rekam jika elemen terlihat di layar
         if (r.width > 0 && r.height > 0) {
@@ -92,15 +94,17 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
       setTargetRect(null);
     };
 
-    // Initial update + micro delay for tab render
+    // Initial update + micro delays for tab & layout stabilization
     updateRect();
-    const timeout = setTimeout(updateRect, 150);
+    const timeout = setTimeout(updateRect, 100);
+    const timeout2 = setTimeout(updateRect, 300);
 
     window.addEventListener("resize", updateRect);
     window.addEventListener("scroll", updateRect, true);
 
     return () => {
       clearTimeout(timeout);
+      clearTimeout(timeout2);
       window.removeEventListener("resize", updateRect);
       window.removeEventListener("scroll", updateRect, true);
     };
@@ -114,37 +118,64 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
   const spotlightW = targetRect ? targetRect.width + padding * 2 : 0;
   const spotlightH = targetRect ? targetRect.height + padding * 2 : 0;
 
-  // Calculate Popover Position (Clamp within viewport)
+  // Calculate Popover Position & Directional Arrow Notch
   const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
   const windowHeight = typeof window !== "undefined" ? window.innerHeight : 768;
+  const popoverWidth = Math.min(390, windowWidth - 32);
 
   let popoverStyle: React.CSSProperties = {
     position: "fixed",
     zIndex: 9995,
+    width: `${popoverWidth}px`,
   };
 
+  let arrowPlacement: "top" | "bottom" | "left" | "right" = "top";
+  let arrowStyle: React.CSSProperties = {};
+
   if (targetRect) {
-    const popoverWidth = Math.min(380, windowWidth - 32);
-    const spaceBelow = windowHeight - (spotlightY + spotlightH);
-    const spaceAbove = spotlightY;
+    const targetCenterX = targetRect.x + targetRect.width / 2;
+    const targetCenterY = targetRect.y + targetRect.height / 2;
 
-    // Default: Below target if enough space, otherwise above
-    if (spaceBelow >= 240 || spaceBelow >= spaceAbove) {
-      popoverStyle.top = `${spotlightY + spotlightH + 14}px`;
+    const spaceAbove = targetRect.y;
+    const spaceBelow = windowHeight - (targetRect.y + targetRect.height);
+    const spaceRight = windowWidth - (targetRect.x + targetRect.width);
+
+    const preferred = step.preferredPlacement;
+
+    if (preferred === "right" && spaceRight >= popoverWidth + 24) {
+      // Place to the right of the target (e.g. for Sidebar menu items)
+      popoverStyle.left = `${targetRect.x + targetRect.width + 18}px`;
+      let topPos = targetCenterY - 80;
+      topPos = Math.max(16, Math.min(topPos, windowHeight - 320));
+      popoverStyle.top = `${topPos}px`;
+      arrowPlacement = "left";
+      arrowStyle = {
+        top: `${Math.max(16, Math.min(targetCenterY - topPos, 240))}px`,
+        left: "-7px",
+      };
+    } else if (preferred === "top" || (spaceAbove >= 260 && spaceBelow < 260)) {
+      // Place above target (e.g. for bottom corner items like AI Copilot)
+      popoverStyle.bottom = `${windowHeight - targetRect.y + 14}px`;
+      let leftPos = targetCenterX - popoverWidth / 2;
+      leftPos = Math.max(16, Math.min(leftPos, windowWidth - popoverWidth - 16));
+      popoverStyle.left = `${leftPos}px`;
+      arrowPlacement = "bottom";
+      arrowStyle = {
+        bottom: "-7px",
+        left: `${Math.max(24, Math.min(targetCenterX - leftPos, popoverWidth - 24))}px`,
+      };
     } else {
-      popoverStyle.bottom = `${windowHeight - spotlightY + 14}px`;
+      // Default: Place below target (e.g. for Header buttons like Shift, WhatsApp, Panduan)
+      popoverStyle.top = `${targetRect.y + targetRect.height + 14}px`;
+      let leftPos = targetCenterX - popoverWidth / 2;
+      leftPos = Math.max(16, Math.min(leftPos, windowWidth - popoverWidth - 16));
+      popoverStyle.left = `${leftPos}px`;
+      arrowPlacement = "top";
+      arrowStyle = {
+        top: "-7px",
+        left: `${Math.max(24, Math.min(targetCenterX - leftPos, popoverWidth - 24))}px`,
+      };
     }
-
-    // Horizontal alignment
-    let leftPos = spotlightX + spotlightW / 2 - popoverWidth / 2;
-    if (leftPos + popoverWidth > windowWidth - 16) {
-      leftPos = windowWidth - popoverWidth - 16;
-    }
-    if (leftPos < 16) {
-      leftPos = 16;
-    }
-    popoverStyle.left = `${leftPos}px`;
-    popoverStyle.width = `${popoverWidth}px`;
   } else {
     // Center fallback if target element is not found on screen
     popoverStyle = {
@@ -153,8 +184,7 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
       left: "50%",
       transform: "translate(-50%, -50%)",
       zIndex: 9995,
-      maxWidth: "420px",
-      width: "calc(100% - 32px)",
+      width: `${popoverWidth}px`,
     };
   }
 
@@ -191,7 +221,6 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
           width="100%" height="100%"
           fill="rgba(5, 17, 25, 0.78)"
           mask="url(#spotlight-tour-mask)"
-          onClick={onClose}
         />
       </svg>
 
@@ -222,8 +251,24 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
       <div
         ref={popoverRef}
         style={popoverStyle}
-        className="bg-gradient-to-b from-[#0f2432] via-[#091b26] to-[#06121b] border border-emerald-500/30 text-white rounded-2xl shadow-2xl shadow-black/80 p-4 sm:p-5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3"
+        className="relative bg-gradient-to-b from-[#0f2432] via-[#091b26] to-[#06121b] border border-emerald-500/30 text-white rounded-2xl shadow-2xl shadow-black/80 p-4 sm:p-5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3"
       >
+        {/* Directional Arrow Notch pointing directly to target element */}
+        {targetRect && (
+          <div
+            style={arrowStyle}
+            className={`absolute w-3.5 h-3.5 bg-[#0e2230] border-emerald-500/40 rotate-45 pointer-events-none z-10 ${
+              arrowPlacement === "top"
+                ? "border-t border-l"
+                : arrowPlacement === "bottom"
+                ? "border-b border-r"
+                : arrowPlacement === "left"
+                ? "border-b border-l"
+                : "border-t border-r"
+            }`}
+          />
+        )}
+
         {/* Popover Header */}
         <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
           <div className="flex items-center gap-2">
