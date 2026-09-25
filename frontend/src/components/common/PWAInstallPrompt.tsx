@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Check,
   ChevronRight,
+  ChevronLeft,
   Store,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [isPwaTabOpen, setIsPwaTabOpen] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [activeGuideTab, setActiveGuideTab] = useState<"ios" | "android" | "desktop">(() => {
     if (typeof window === "undefined") return "android";
@@ -211,19 +213,80 @@ export const PWAInstallPrompt: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Re-Open Button when Toast is Dismissed */}
+      {/* Side Docked PWA Install Tab on Corner Screen Edge (Only Arrow icon visible when closed) */}
       {!showToast && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          type="button"
-          onClick={() => setShowToast(true)}
-          aria-label="Buka opsi pasang aplikasi PWA"
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-30 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-slate-900/90 px-3 py-1.5 text-[11px] font-bold text-emerald-300 shadow-xl backdrop-blur-md hover:bg-slate-800 hover:text-white transition-all"
+        <aside
+          aria-label="PWA Install Shortcut"
+          className="fixed right-0 bottom-6 sm:bottom-8 z-30 flex items-center group animate-fade-in"
+          onMouseLeave={() => setIsPwaTabOpen(false)}
         >
-          <Download className="h-3.5 w-3.5 text-emerald-400" />
-          <span>Install PWA</span>
-        </motion.button>
+          <div
+            className={`flex items-stretch bg-gradient-to-l from-emerald-800 via-teal-900 to-slate-900 text-white rounded-l-2xl shadow-xl shadow-emerald-950/40 border-y border-l border-emerald-500/30 overflow-hidden transition-all duration-300 ease-out ${
+              isPwaTabOpen
+                ? "translate-x-0"
+                : "translate-x-[calc(100%-36px)] group-hover:translate-x-0"
+            }`}
+          >
+            {/* Arrow Peek Handle - Always visible on the corner edge when closed */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPwaTabOpen((prev) => !prev);
+              }}
+              className="w-9 px-2 py-2.5 hover:bg-white/10 text-emerald-300 hover:text-white flex flex-col items-center justify-center border-r border-emerald-500/20 cursor-pointer relative shrink-0 transition-colors"
+              title={isPwaTabOpen ? "Sembunyikan tab PWA (Hanya arrow)" : "Pasang Aplikasi Cleanique (PWA)"}
+              aria-label={isPwaTabOpen ? "Sembunyikan tab PWA" : "Pasang Aplikasi Cleanique (PWA)"}
+            >
+              {isPwaTabOpen ? (
+                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronLeft className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                </div>
+              )}
+            </button>
+
+            {/* Main Action Trigger (Expands when hovered or when arrow is clicked) */}
+            <button
+              type="button"
+              onClick={() => {
+                handleInstallClick();
+                setIsPwaTabOpen(false);
+              }}
+              className="flex items-center gap-2 pl-2.5 pr-3 py-2.5 hover:bg-white/10 active:scale-95 transition-all text-left cursor-pointer shrink-0"
+              title="Pasang Cleanique sebagai aplikasi PWA"
+            >
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Download className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col pr-1">
+                <span className="text-[11px] font-bold tracking-wide text-white leading-none">
+                  Install PWA
+                </span>
+                <span className="text-[9px] text-emerald-300 font-medium leading-tight mt-0.5">
+                  Aplikasi Kasir POS
+                </span>
+              </div>
+            </button>
+
+            {/* Guide Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowGuideModal(true);
+                setIsPwaTabOpen(false);
+              }}
+              className="px-2.5 py-2.5 hover:bg-white/10 text-slate-300 hover:text-white transition flex items-center justify-center border-l border-emerald-500/20 cursor-pointer text-[10px] font-semibold"
+              title="Buka panduan instalasi PWA"
+              aria-label="Buka panduan instalasi PWA"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-white" />
+            </button>
+          </div>
+        </aside>
       )}
 
       {/* ========================================================================= */}

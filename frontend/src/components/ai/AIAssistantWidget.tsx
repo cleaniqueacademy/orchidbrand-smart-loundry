@@ -221,17 +221,19 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isSideTabOpen, setIsSideTabOpen] = useState(false);
   const [isDockedToSide, setIsDockedToSide] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem("cleanique_ai_docked");
-      return saved === "true";
+      return saved === null ? true : saved === "true";
     } catch {
-      return false;
+      return true;
     }
   });
 
   const toggleDock = (dock: boolean) => {
     setIsDockedToSide(dock);
+    setIsSideTabOpen(false);
     try {
       localStorage.setItem("cleanique_ai_docked", dock ? "true" : "false");
     } catch {}
@@ -638,33 +640,51 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   return (
     <>
-      {/* Side Docked Tab on Right Screen Edge */}
+      {/* Side Docked Tab on Right Screen Edge (Corner - Only Arrow icon visible when closed) */}
       {!isOpen && isDockedToSide && (
         <aside
+          id="tour-ai-widget"
           aria-label="Cleanique AI Assistant Side Dock"
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center group animate-fade-in"
+          className="fixed right-0 bottom-20 sm:bottom-24 z-40 flex items-center group animate-fade-in"
+          onMouseLeave={() => setIsSideTabOpen(false)}
         >
-          <div className="flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/20 overflow-hidden transition-all duration-300 hover:translate-x-0 translate-x-1 sm:translate-x-0">
-            {/* Undock / Restore button */}
+          <div
+            className={`flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/25 overflow-hidden transition-all duration-300 ease-out ${
+              isSideTabOpen
+                ? "translate-x-0"
+                : "translate-x-[calc(100%-36px)] group-hover:translate-x-0"
+            }`}
+          >
+            {/* Arrow Peek Handle - Always visible at the corner edge when closed */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                toggleDock(false);
+                setIsSideTabOpen((prev) => !prev);
               }}
-              className="px-2 py-3.5 hover:bg-white/20 text-white/70 hover:text-white transition flex items-center justify-center border-r border-white/15 cursor-pointer"
-              title="Kembalikan ke tombol melayang"
-              aria-label="Kembalikan ke tombol melayang"
+              className="w-9 px-2 py-3 hover:bg-white/20 text-white flex flex-col items-center justify-center border-r border-white/15 cursor-pointer relative shrink-0 transition-colors"
+              title={isSideTabOpen ? "Sembunyikan tab ke samping (Hanya arrow)" : "Buka Tanya AI Cleanique"}
+              aria-label={isSideTabOpen ? "Sembunyikan tab ke samping" : "Buka Tanya AI Cleanique"}
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              {isSideTabOpen ? (
+                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronLeft className="w-4 h-4 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                </div>
+              )}
             </button>
 
-            {/* Main Trigger Tab */}
+            {/* Main Trigger Tab (Expands when hovered or when arrow is clicked) */}
             <button
               type="button"
-              onClick={() => setIsOpen(true)}
-              className="flex items-center gap-2 pl-2.5 pr-3 py-3.5 hover:bg-white/10 active:scale-95 transition-all text-left cursor-pointer"
-              title="Klik untuk buka Tanya AI Cleanique"
+              onClick={() => {
+                setIsOpen(true);
+                setIsSideTabOpen(false);
+              }}
+              className="flex items-center gap-2.5 pl-2.5 pr-3 py-3 hover:bg-white/10 active:scale-95 transition-all text-left cursor-pointer shrink-0"
+              title="Klik untuk buka dialog Tanya AI Cleanique"
             >
               <div className="relative">
                 <Bot className="w-4 h-4 text-white" />
@@ -673,12 +693,26 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col pr-1">
                 <span className="text-[11px] font-bold tracking-wide leading-none flex items-center gap-1">
                   Tanya AI <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
                 </span>
                 <span className="text-[9px] text-indigo-200 leading-tight mt-0.5">Bantuan Pintar</span>
               </div>
+            </button>
+
+            {/* Undock / Restore to floating pill */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDock(false);
+              }}
+              className="px-2 py-3 hover:bg-white/20 text-white/60 hover:text-white transition flex items-center justify-center border-l border-white/15 cursor-pointer text-[10px]"
+              title="Lepas dock ke tombol melayang"
+              aria-label="Lepas dock ke tombol melayang"
+            >
+              <Minimize2 className="w-3 h-3" />
             </button>
           </div>
         </aside>
