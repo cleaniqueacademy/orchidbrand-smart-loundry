@@ -31,6 +31,7 @@ interface ShadcnDataTableProps<T> {
   onDatePresetChange?: (preset: DateFilterPreset) => void;
   customFilters?: React.ReactNode;
   emptyMessage?: string;
+  emptyContent?: React.ReactNode;
   initialPageSize?: number;
 }
 
@@ -45,6 +46,7 @@ export function ShadcnDataTable<T>({
   onDatePresetChange,
   customFilters,
   emptyMessage = "Tidak ada data yang ditemukan",
+  emptyContent,
   initialPageSize = 10,
 }: ShadcnDataTableProps<T>) {
   // Column Visibility State
@@ -214,9 +216,9 @@ export function ShadcnDataTable<T>({
                 <tr>
                   <td
                     colSpan={activeColumns.length}
-                    className="py-12 text-center text-zinc-400 text-xs"
+                    className="py-8 text-center text-zinc-400 text-xs"
                   >
-                    {emptyMessage}
+                    {emptyContent || emptyMessage}
                   </td>
                 </tr>
               ) : (

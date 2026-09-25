@@ -21,6 +21,7 @@ import {
   ColumnDef,
   filterByDatePreset,
 } from "../common/ShadcnDataTable";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -489,6 +490,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
         {!isSuperAdmin && (
           <button
+            id="tour-new-order-btn"
             onClick={onOpenOrderModal}
             className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-medium px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start shadow-sm transition cursor-pointer"
           >
@@ -622,6 +624,19 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           </div>
         }
         emptyMessage="Tidak ada pesanan yang sesuai."
+        emptyContent={
+          <EmptyStateWalkthrough
+            title="Belum Ada Pesanan Laundry Aktif 🧺"
+            description="Pelanggan baru datang? Catat cucian kiloan atau satuan dengan cepat, pilih layanan, dan langsung cetak nota struk thermal."
+            actionLabel={!isSuperAdmin ? "+ Buat Order Baru Pertama" : undefined}
+            onAction={!isSuperAdmin ? onOpenOrderModal : undefined}
+            tips={[
+              "Bisa langsung timbang kiloan atau input item satuan (bedcover, sepatu).",
+              "Nota otomatis terkirim ke WhatsApp pelanggan jika nomor WA diisi.",
+              "Pastikan kasir sudah melakukan Buka Shift di pojok kanan atas.",
+            ]}
+          />
+        }
         initialPageSize={10}
       />
 

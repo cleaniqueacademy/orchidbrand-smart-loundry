@@ -686,7 +686,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
       {/* Floating Action Button with Quick Dock option */}
       {!isOpen && !isDockedToSide && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center group shadow-xl shadow-indigo-500/25 rounded-full border border-white/25 overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white transition-all duration-200 hover:shadow-indigo-500/40">
+        <div id="tour-ai-widget" className="fixed bottom-6 right-6 z-40 flex items-center group shadow-xl shadow-indigo-500/25 rounded-full border border-white/25 overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white transition-all duration-200 hover:shadow-indigo-500/40">
           <button
             type="button"
             onClick={() => setIsOpen(true)}

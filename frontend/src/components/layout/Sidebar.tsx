@@ -337,7 +337,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation Content */}
-        <div className={`flex-1 ${isCollapsed ? "px-2" : "px-3"} py-3 overflow-y-auto space-y-4`}>
+        <div id="tour-sidebar-nav" className={`flex-1 ${isCollapsed ? "px-2" : "px-3"} py-3 overflow-y-auto space-y-4`}>
           {isSuperAdmin ? (
             /* Grup Manajemen Laundry Cleanique untuk Super Admin */
             <div>

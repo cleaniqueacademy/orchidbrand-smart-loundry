@@ -25,6 +25,7 @@ export interface OnboardingTutorialModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
+  onStartSpotlightTour?: () => void;
   currentUserRole?: Role;
   userName?: string;
   outletName?: string;
@@ -46,6 +47,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
   isOpen,
   onClose,
   onComplete,
+  onStartSpotlightTour,
   currentUserRole = "staff",
   userName = "Mitra",
   outletName = "Cleanique Laundry",
@@ -452,15 +454,30 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
               </button>
             )}
 
+            {isLast && onStartSpotlightTour && (
+              <button
+                type="button"
+                onClick={() => {
+                  onComplete();
+                  onStartSpotlightTour();
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-xs font-bold text-white shadow-md shadow-indigo-950/50 hover:from-indigo-500 hover:to-pink-500 active:scale-95 transition-all cursor-pointer"
+                title="Mulai tur interaktif langsung di atas elemen layar"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+                <span>Tur Spotlight Layar</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-xs font-bold text-white shadow-md shadow-emerald-950/50 hover:from-emerald-500 hover:to-teal-600 active:scale-95 transition-all"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-xs font-bold text-white shadow-md shadow-emerald-950/50 hover:from-emerald-500 hover:to-teal-600 active:scale-95 transition-all cursor-pointer"
             >
               {isLast ? (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
-                  <span>Selesai & Mulai Bekerja</span>
+                  <span>Selesai & Bekerja</span>
                 </>
               ) : (
                 <>

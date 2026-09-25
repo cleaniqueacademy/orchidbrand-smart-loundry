@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Cashier Shift Status (Only for Staff & Owner if feature enabled) */}
           {currentUserRole !== "superadmin" && enableCashierShift !== false && (
-            <div>
+            <div id="tour-shift-btn">
               {currentShift ? (
                 <button
                   type="button"
@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenWhatsAppModal && currentUserRole !== "superadmin" && (
             <button
               type="button"
-              id="header-btn-whatsapp-settings"
+              id="tour-whatsapp-btn"
               onClick={onOpenWhatsAppModal}
               className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${
                 waData?.waMode === "baileys"
