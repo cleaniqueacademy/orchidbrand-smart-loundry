@@ -155,8 +155,8 @@ export const PWAInstallPrompt: React.FC = () => {
 
               <div className="flex items-start gap-3.5">
                 {/* Brand / App Icon */}
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-950/40">
-                  <Store className="h-6 w-6" />
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-md shadow-emerald-950/40 border border-emerald-500/20">
+                  <img src="/logo.png" alt="Cleanique Logo" className="h-full w-full object-contain" />
                   <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] text-slate-950">
                     <Sparkles className="h-2.5 w-2.5" />
                   </span>
@@ -241,8 +241,8 @@ export const PWAInstallPrompt: React.FC = () => {
               {/* Header */}
               <div className="flex items-start justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-emerald-100 p-2.5 text-emerald-700">
-                    <Download className="h-5 w-5" />
+                  <div className="rounded-2xl bg-white p-1 border border-slate-200 shadow-xs h-11 w-11 flex items-center justify-center shrink-0">
+                    <img src="/logo.png" alt="Cleanique Logo" className="h-full w-full object-contain" />
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-slate-900">

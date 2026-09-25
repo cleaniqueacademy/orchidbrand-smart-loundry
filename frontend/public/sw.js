@@ -3,6 +3,9 @@ const CACHE_NAME = "cleanique-cache-v1";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
+  "/logo.png",
+  "/favicon.ico",
+  "/favicon.png",
   "/icon-192.png",
   "/icon-512.png",
   "/laundry-cleanique.png",
