@@ -7,7 +7,6 @@ import {
   User as UserIcon,
   Calculator,
   ArrowRight,
-  Layers,
   CheckCircle2,
   Clock,
   Shield,
@@ -15,6 +14,9 @@ import {
   Check,
   Tag,
   CreditCard,
+  CheckCheck,
+  Copy,
+  Smartphone,
 } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -113,6 +115,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     tenant?.enableCashierShift !== "false" && tenant?.enableCashierShift !== false
   );
   const [updatingShift, setUpdatingShift] = useState(false);
+
+  // Preview WhatsApp notification states
+  const [previewMessageType, setPreviewMessageType] = useState<"nota_masuk" | "siap_ambil">("nota_masuk");
+  const [copiedPreview, setCopiedPreview] = useState(false);
+
+  const displayOutletName = outletName.trim() || tenant?.outletName || "Laundry Cleanique - Cabang Melati";
+  const displayAddress = address.trim() || tenant?.address || "Jl. Melati Raya No. 45, Jakarta Selatan";
+  const displayPhone = phone.trim() || tenant?.phone || "081234567890";
+
+  const handleCopyPreviewText = () => {
+    const textToCopy =
+      previewMessageType === "nota_masuk"
+        ? `Halo Kak Sarah Wijaya! 👋 Terima kasih telah mencuci di *${displayOutletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital:\n\n📄 *No. Nota:* #ORD-20260925-001\n📅 *Waktu Masuk:* 25 Sep 2026, 14:15 WIB\n🧺 *Paket:* Cuci Kering Setrika (3.5 Kg)\n💵 *Total Biaya:* Rp 28.000\n💰 *Status Bayar:* LUNAS (QRIS / Tunai)\n⏱️ *Estimasi Selesai:* Besok, 17:00 WIB\n\n🔍 *Cek Status Cucian Real-time:*\nhttps://cleanique.app/track/ORD-20260925-001\n\n📍 *Lokasi:* ${displayAddress}\n📞 *Telp/WA:* ${displayPhone}\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`
+        : `Halo Kak Sarah Wijaya! 👋\n\nKabar gembira, cucian Anda di *${displayOutletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* #ORD-20260925-001\n🧺 *Paket:* Cuci Kering Setrika (3.5 Kg) - Bersih, Wangi & Rapi\n💰 *Status:* LUNAS\n\n🔍 *Detail Resi Pelanggan:*\nhttps://cleanique.app/track/ORD-20260925-001\n\n📍 *Alamat Ambil:* ${displayAddress}\n⏰ *Jam Operasional:* Senin - Sabtu : 08.00 - 20.00 WIB\n📞 *Kontak Toko:* ${displayPhone}\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(textToCopy);
+      setCopiedPreview(true);
+      setTimeout(() => setCopiedPreview(false), 2000);
+      toast.success("Teks Disalin", "Contoh format pesan notifikasi WhatsApp disalin ke clipboard.");
+    }
+  };
 
   useEffect(() => {
     if (tenant) {
@@ -515,29 +539,152 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Pengalihan Layanan Terpusat */}
+        {/* Card 2: Preview Notifikasi Chat WhatsApp Otomatis (Menampilkan Identitas Tenant) */}
         <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shadow-2xs">
-                  <Layers className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs">
+                  <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-zinc-900 text-sm">Katalog Tarif & Layanan</h3>
-                  <p className="text-[11px] text-zinc-500">Dikelola terpusat di menu Layanan</p>
+                  <h3 className="font-bold text-zinc-900 text-sm">Preview Notifikasi WhatsApp</h3>
+                  <p className="text-[11px] text-zinc-500">Pesan otomatis dengan identitas cabang Anda</p>
                 </div>
+              </div>
+              <div className="flex items-center bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/60 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMessageType("nota_masuk")}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                    previewMessageType === "nota_masuk"
+                      ? "bg-white text-zinc-900 shadow-2xs"
+                      : "text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  Nota Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMessageType("siap_ambil")}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition cursor-pointer ${
+                    previewMessageType === "siap_ambil"
+                      ? "bg-white text-zinc-900 shadow-2xs"
+                      : "text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  Siap Diambil
+                </button>
               </div>
             </div>
 
-            <div className="mt-3.5 space-y-2.5 text-xs text-zinc-600 leading-relaxed">
-              <p>
-                Kelola master layanan (tarif, SLA, unit) langsung dari tab <strong>Master Layanan</strong> di pengaturan ini.
-              </p>
+            {/* WhatsApp Chat Bubble Mockup */}
+            <div className="mt-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/70 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-[10.5px] text-zinc-500 border-b border-zinc-200/60 pb-1.5">
+                <span className="font-medium flex items-center gap-1 text-emerald-900">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                  Kirim Dari: <strong className="font-bold text-zinc-900">{displayOutletName}</strong>
+                </span>
+                <span className="font-mono text-zinc-400 text-[10px]">Tampilan Pelanggan</span>
+              </div>
+
+              {/* Chat Message Bubble */}
+              <div className="bg-white rounded-xl rounded-tl-xs p-3.5 shadow-2xs border border-zinc-200/70 text-[11px] text-zinc-800 space-y-2 leading-relaxed font-sans">
+                {previewMessageType === "nota_masuk" ? (
+                  <>
+                    <p>
+                      Halo Kak <strong>Sarah Wijaya</strong>! 👋 Terima kasih telah mempercayakan pakaian Anda di <strong>{displayOutletName}</strong>.
+                    </p>
+                    <p className="text-zinc-600">
+                      Pesanan cucian Anda telah kami terima dengan rincian nota digital:
+                    </p>
+                    <div className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-200/60 space-y-1 font-mono text-[10.5px]">
+                      <div>📄 <strong>No. Nota:</strong> #ORD-20260925-001</div>
+                      <div>📅 <strong>Waktu Masuk:</strong> 25 Sep 2026, 14:15 WIB</div>
+                      <div>🧺 <strong>Paket:</strong> Cuci Kering Setrika (3.5 Kg)</div>
+                      <div>💵 <strong>Total Biaya:</strong> Rp 28.000</div>
+                      <div>💰 <strong>Status Bayar:</strong> <span className="text-emerald-700 font-bold">LUNAS (QRIS / Tunai)</span></div>
+                      <div>⏱️ <strong>Estimasi Selesai:</strong> Besok, 17:00 WIB</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-zinc-500 font-semibold mb-0.5">🔍 Cek Status Cucian Real-time:</div>
+                      <span className="text-blue-700 font-mono text-[10.5px] underline break-all cursor-pointer">
+                        https://cleanique.app/track/ORD-20260925-001
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-zinc-100 text-[10px] text-zinc-500 leading-snug">
+                      📍 <strong>Lokasi:</strong> {displayAddress}
+                      <br />
+                      📞 <strong>Telp/WA:</strong> {displayPhone}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Halo Kak <strong>Sarah Wijaya</strong>! 👋
+                    </p>
+                    <p className="font-semibold text-emerald-800">
+                      Kabar gembira, cucian Anda di <strong>{displayOutletName}</strong> sudah SELESAI & SIAP DIAMBIL 🧺✨
+                    </p>
+                    <div className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-200/60 space-y-1 font-mono text-[10.5px]">
+                      <div>📄 <strong>No. Nota:</strong> #ORD-20260925-001</div>
+                      <div>🧺 <strong>Paket:</strong> Cuci Kering Setrika (3.5 Kg) - Bersih & Rapi</div>
+                      <div>💰 <strong>Status:</strong> <span className="text-emerald-700 font-bold">LUNAS</span></div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-zinc-500 font-semibold mb-0.5">🔍 Detail Resi Pelanggan:</div>
+                      <span className="text-blue-700 font-mono text-[10.5px] underline break-all cursor-pointer">
+                        https://cleanique.app/track/ORD-20260925-001
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-zinc-100 text-[10px] text-zinc-500 space-y-0.5 leading-snug">
+                      <div>📍 <strong>Alamat Ambil:</strong> {displayAddress}</div>
+                      <div>⏰ <strong>Jam Operasional:</strong> Senin - Sabtu : 08.00 - 20.00 WIB</div>
+                      <div>📞 <strong>Kontak Toko:</strong> {displayPhone}</div>
+                    </div>
+                  </>
+                )}
+
+                {/* Bubble Timestamp & Status */}
+                <div className="flex items-center justify-end gap-1 text-[9.5px] text-zinc-400 font-mono pt-1">
+                  <span>14:20</span>
+                  <CheckCheck className="w-3.5 h-3.5 text-sky-500" />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Note: setActiveTab kept for backwards compat but services is now in settings sub-tab */}
+          {/* Footer Card Controls */}
+          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleCopyPreviewText}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition cursor-pointer shadow-2xs"
+            >
+              {copiedPreview ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-700">Teks Disalin!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Salin Format Pesan</span>
+                </>
+              )}
+            </button>
+
+            {onOpenWhatsAppModal && (
+              <button
+                type="button"
+                onClick={onOpenWhatsAppModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-850 border border-emerald-200 text-xs font-semibold transition cursor-pointer shadow-2xs"
+              >
+                <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Pengaturan Gateway WA</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
