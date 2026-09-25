@@ -19,6 +19,8 @@ import {
   Calendar,
   CheckCircle2,
   User,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { TabType } from "../../types";
@@ -46,6 +48,7 @@ export interface AIAssistantWidgetProps {
   onOpenOpenShiftModal?: () => void;
   onOpenCloseShiftModal?: () => void;
   onOpenExpenseModal?: (type?: "income" | "expense") => void;
+  onOpenTutorialModal?: () => void;
 }
 
 type PromptCategory = "all" | "menus" | "settings" | "pos" | "shift" | "tips";
@@ -214,9 +217,26 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   onOpenOpenShiftModal,
   onOpenCloseShiftModal,
   onOpenExpenseModal,
+  onOpenTutorialModal,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isDockedToSide, setIsDockedToSide] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("cleanique_ai_docked");
+      return saved === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleDock = (dock: boolean) => {
+    setIsDockedToSide(dock);
+    try {
+      localStorage.setItem("cleanique_ai_docked", dock ? "true" : "false");
+    } catch {}
+  };
+
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory>("all");
@@ -302,6 +322,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       } else if (action.target === "expense") {
         onOpenExpenseModal?.("expense");
         setActionNotice("Membuka form Pengeluaran Toko...");
+      } else if (action.target === "tutorial") {
+        onOpenTutorialModal?.();
+        setActionNotice("Membuka panduan tutorial sistem...");
       }
       setTimeout(() => setActionNotice(null), 2500);
     }
@@ -342,6 +365,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
           return { label: "Tutup & Rekonsiliasi Shift", icon: <DollarSign className="w-3.5 h-3.5 text-rose-400" /> };
         case "expense":
           return { label: "Catat Pengeluaran Toko", icon: <DollarSign className="w-3.5 h-3.5" /> };
+        case "tutorial":
+          return { label: "Buka Panduan Tutorial", icon: <HelpCircle className="w-3.5 h-3.5 text-amber-400" /> };
         default:
           return { label: `Buka ${action.target}`, icon: <ArrowRight className="w-3.5 h-3.5" /> };
       }
@@ -613,23 +638,86 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   return (
     <>
-      {/* Floating Action Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-full shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-200 border border-white/20"
-          title="Tanya Asisten AI Cleanique"
+      {/* Side Docked Tab on Right Screen Edge */}
+      {!isOpen && isDockedToSide && (
+        <aside
+          aria-label="Cleanique AI Assistant Side Dock"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center group animate-fade-in"
         >
-          <div className="relative">
-            <Bot className="w-5 h-5 text-white" />
-            <span className="absolute -top-1 -right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
+          <div className="flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/20 overflow-hidden transition-all duration-300 hover:translate-x-0 translate-x-1 sm:translate-x-0">
+            {/* Undock / Restore button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDock(false);
+              }}
+              className="px-2 py-3.5 hover:bg-white/20 text-white/70 hover:text-white transition flex items-center justify-center border-r border-white/15 cursor-pointer"
+              title="Kembalikan ke tombol melayang"
+              aria-label="Kembalikan ke tombol melayang"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Main Trigger Tab */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="flex items-center gap-2 pl-2.5 pr-3 py-3.5 hover:bg-white/10 active:scale-95 transition-all text-left cursor-pointer"
+              title="Klik untuk buka Tanya AI Cleanique"
+            >
+              <div className="relative">
+                <Bot className="w-4 h-4 text-white" />
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold tracking-wide leading-none flex items-center gap-1">
+                  Tanya AI <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                </span>
+                <span className="text-[9px] text-indigo-200 leading-tight mt-0.5">Bantuan Pintar</span>
+              </div>
+            </button>
           </div>
-          <span className="text-xs font-bold tracking-wide">Tanya AI</span>
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-        </button>
+        </aside>
+      )}
+
+      {/* Floating Action Button with Quick Dock option */}
+      {!isOpen && !isDockedToSide && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center group shadow-xl shadow-indigo-500/25 rounded-full border border-white/25 overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white transition-all duration-200 hover:shadow-indigo-500/40">
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="flex items-center gap-2.5 pl-4 pr-3 py-3 hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+            title="Tanya Asisten AI Cleanique"
+          >
+            <div className="relative">
+              <Bot className="w-5 h-5 text-white" />
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </div>
+            <span className="text-xs font-bold tracking-wide">Tanya AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+          </button>
+
+          {/* Dock to side toggle */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleDock(true);
+            }}
+            className="px-2.5 py-3 hover:bg-white/20 text-white/80 hover:text-white border-l border-white/15 transition flex items-center justify-center cursor-pointer"
+            title="Sembunyikan tombol ke samping layar agar tidak menutupi tabel"
+            aria-label="Sembunyikan ke samping"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Main Chat Panel - Mobile Fullscreen Layering */}
@@ -662,8 +750,20 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
             <div className="flex items-center gap-1 text-white/80">
               <button
+                type="button"
+                onClick={() => {
+                  toggleDock(true);
+                  setIsOpen(false);
+                }}
+                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+                title="Sembunyikan ke samping layar"
+                aria-label="Sembunyikan ke samping layar"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
                 onClick={clearChat}
-                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
+                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
                 title="Bersihkan Percakapan"
               >
                 <Trash2 className="w-3.5 h-3.5" />

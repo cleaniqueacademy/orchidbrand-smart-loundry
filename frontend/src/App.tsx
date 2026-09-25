@@ -35,6 +35,7 @@ import { OpenShiftModal } from "./components/modals/OpenShiftModal";
 import { CloseShiftModal } from "./components/modals/CloseShiftModal";
 import { WhatsAppLogsModal } from "./components/modals/WhatsAppLogsModal";
 import { AIAssistantWidget } from "./components/ai/AIAssistantWidget";
+import { OnboardingTutorialModal } from "./components/common/OnboardingTutorialModal";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { useLaundryData } from "./hooks/useLaundryData";
 import { useWhatsAppGateway } from "./hooks/useWhatsAppGateway";
@@ -118,7 +119,30 @@ export default function App() {
     handleLogout,
     handleSelectTenant,
     refreshUserSession,
+    markTutorialComplete,
   } = useAuthSession();
+
+  // Onboarding Tutorial Modal State (Otomatis muncul untuk akun pertama kali)
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      const isDoneLocal = localStorage.getItem(`user_tutorial_done_${currentUser.id}`) === "true";
+      const isDoneDB = currentUser.tutorialCompleted === true || currentUser.tutorialCompleted === "true";
+      if (!isDoneLocal && !isDoneDB) {
+        setShowTutorialModal(true);
+      }
+    }
+  }, [currentUser]);
+
+  const handleCompleteTutorial = async () => {
+    setShowTutorialModal(false);
+    await markTutorialComplete();
+    toast.success(
+      "Tutorial Selesai!",
+      "Selamat bekerja! Anda dapat membuka kembali panduan ini kapan saja lewat tombol 'Panduan' di header atas."
+    );
+  };
 
   // Route Guard berdasarkan Role:
   // 1. Super Admin: Laundry Cleanique & Troubleshooting Hub
@@ -416,6 +440,7 @@ export default function App() {
           enableCashierShift={isShiftEnabled}
           onOpenShiftModal={() => setShowOpenShiftModal(true)}
           onCloseShiftModal={() => setShowCloseShiftModal(true)}
+          onOpenTutorialModal={() => setShowTutorialModal(true)}
         />
 
         {/* Dynamic Tab Body */}
@@ -726,6 +751,17 @@ export default function App() {
         onOpenOpenShiftModal={() => setShowOpenShiftModal(true)}
         onOpenCloseShiftModal={() => setShowCloseShiftModal(true)}
         onOpenExpenseModal={handleOpenExpenseModal}
+        onOpenTutorialModal={() => setShowTutorialModal(true)}
+      />
+
+      {/* Onboarding Interactive Tutorial Modal */}
+      <OnboardingTutorialModal
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+        onComplete={handleCompleteTutorial}
+        currentUserRole={currentUserRole}
+        userName={currentUser?.name}
+        outletName={currentActiveTenant?.outletName || "Laundry Cleanique"}
       />
     </div>
   );

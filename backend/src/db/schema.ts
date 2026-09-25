@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   isTrial: text("is_trial").notNull().default("false"), // 'true' | 'false'
   signupRequestId: text("signup_request_id"), // Link ke signup_requests jika daftar mandiri
   marketingUserId: text("marketing_user_id"), // Link ke marketing user jika akun ini dibuat marketing
+  tutorialCompleted: text("tutorial_completed").notNull().default("false"), // 'true' | 'false'
+  metadata: text("metadata"), // JSON metadata opsional
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

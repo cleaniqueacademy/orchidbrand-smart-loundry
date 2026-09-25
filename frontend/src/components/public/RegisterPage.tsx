@@ -198,18 +198,18 @@ export const RegisterPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* LEFT COLUMN: HERO & BRANDING (Desktop Only)                               */}
       {/* ========================================================================= */}
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-y-auto bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] p-8 xl:p-12 text-slate-100 border-r border-white/5">
+      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] p-6 xl:p-10 2xl:p-12 text-slate-100 border-r border-white/5">
         {/* Ambient Glows */}
         <div className="pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-emerald-500/15 blur-[140px]" />
         <div className="pointer-events-none absolute -bottom-32 right-0 h-[450px] w-[450px] rounded-full bg-teal-400/15 blur-[150px]" />
         <div className="pointer-events-none absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
 
         {/* Top Header Logo */}
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex items-center justify-between shrink-0">
           <img
             src="/laundry-cleanique-outline.png"
             alt="Laundry Cleanique"
-            className="h-10 xl:h-11 w-auto object-contain filter drop-shadow-md"
+            className="h-9 xl:h-10 w-auto object-contain filter drop-shadow-md"
           />
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md shadow-xs">
             <span className="relative flex h-2 w-2">
@@ -221,60 +221,60 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Middle Hero Content */}
-        <div className="relative z-10 my-auto max-w-lg py-6 xl:py-8 space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1.5 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
+        <div className="relative z-10 my-auto max-w-lg py-3 xl:py-6 space-y-4 xl:space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
             Free Trial 7 Hari Penuh Tanpa Biaya Awal
           </div>
 
-          <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-white leading-[1.18]">
+          <h1 className="text-2xl xl:text-3xl 2xl:text-4xl font-extrabold tracking-tight text-white leading-[1.2]">
             Mulai Kelola Bisnis Laundry Anda{" "}
             <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
               dengan Lebih Teratur.
             </span>
           </h1>
 
-          <p className="text-sm xl:text-base leading-relaxed text-slate-300/85 max-w-md">
+          <p className="text-xs xl:text-sm leading-relaxed text-slate-300/85 max-w-md">
             Daftarkan outlet Anda dalam 2 menit. Nikmati kemudahan kasir POS cepat, cetak struk thermal 58/80mm, serta pengiriman nota otomatis ke WhatsApp pelanggan.
           </p>
 
           {/* Benefits List */}
-          <div className="space-y-3 pt-1">
+          <div className="space-y-2.5 pt-0.5">
             <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-200">
-              <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-3.5 w-3.5" />
+              <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Check className="h-3 w-3" />
               </div>
               <span>Setup instan akun Owner & database cabang terisolasi</span>
             </div>
             <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-200">
-              <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-3.5 w-3.5" />
+              <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Check className="h-3 w-3" />
               </div>
               <span>Gratis 7 hari pertama, tanpa perlu kartu kredit</span>
             </div>
             <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-200">
-              <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-3.5 w-3.5" />
+              <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Check className="h-3 w-3" />
               </div>
               <span>Gateway WhatsApp terintegrasi via scan QR langsung</span>
             </div>
             <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-200">
-              <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-3.5 w-3.5" />
+              <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Check className="h-3 w-3" />
               </div>
               <span>Portal publik cek resi mandiri bagi pelanggan</span>
             </div>
           </div>
 
           {/* Quick Trigger to Welcoming Screen */}
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               type="button"
               onClick={() => {
                 setWelcomeStep(0);
                 setShowWelcomeModal(true);
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-emerald-300 hover:bg-white/10 hover:border-emerald-400/40 transition-all backdrop-blur-xs"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-white/10 hover:border-emerald-400/40 transition-all backdrop-blur-xs cursor-pointer"
             >
               <HelpCircle className="h-4 w-4" />
               <span>Lihat Panduan & Informasi Lengkap Paket</span>
@@ -284,7 +284,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Desktop Footer */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-slate-400">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>Enkripsi 256-Bit SSL • Data Terisolasi Multi-Tenant</span>

@@ -509,6 +509,8 @@ app.post("/api/auth/login", async (c) => {
       subscriptionUntil: foundUser.subscriptionUntil || userTenant?.subscriptionUntil || null,
       tenantId: userTenant ? userTenant.id : foundUser.tenantId || null,
       tenantName: userTenant ? userTenant.outletName : null,
+      tutorialCompleted: foundUser.tutorialCompleted === "true",
+      metadata: foundUser.metadata || null,
     };
 
     if (foundUser.status === "inactive" && foundUser.role !== "superadmin") {
@@ -612,6 +614,8 @@ app.get("/api/auth/status", async (c) => {
         subscriptionUntil: foundUser.subscriptionUntil,
         tenantId: userTenant ? userTenant.id : null,
         tenantName: userTenant ? userTenant.outletName : null,
+        tutorialCompleted: foundUser.tutorialCompleted === "true",
+        metadata: foundUser.metadata || null,
       },
       statusInfo: {
         isInactive,
@@ -703,7 +707,7 @@ app.put("/api/users/:id", authMiddleware, async (c) => {
     const user = getUser(c);
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { name, email, role, password, tenantId, status, subscriptionUntil } = body;
+    const { name, email, role, password, tenantId, status, subscriptionUntil, tutorialCompleted, metadata } = body;
 
     if (user.role !== "superadmin" && user.userId !== id) {
       return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengedit akun Anda sendiri" }, 403);
@@ -714,6 +718,12 @@ app.put("/api/users/:id", authMiddleware, async (c) => {
     if (email !== undefined) updatePayload.email = email;
     if (password !== undefined && String(password).trim()) {
       updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
+    }
+    if (tutorialCompleted !== undefined) {
+      updatePayload.tutorialCompleted = tutorialCompleted === true || tutorialCompleted === "true" ? "true" : "false";
+    }
+    if (metadata !== undefined) {
+      updatePayload.metadata = typeof metadata === "string" ? metadata : JSON.stringify(metadata);
     }
 
     // Hanya superadmin yang boleh mengubah role, status, masa aktif, atau asosiasi tenant
@@ -731,6 +741,17 @@ app.put("/api/users/:id", authMiddleware, async (c) => {
     }
 
     return c.json({ success: true, message: "Data pengguna berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Tandai tutorial onboarding selesai untuk user yang sedang login
+app.post("/api/users/tutorial-complete", authMiddleware, async (c) => {
+  try {
+    const user = getUser(c);
+    await db.update(users).set({ tutorialCompleted: "true" }).where(eq(users.id, user.userId));
+    return c.json({ success: true, message: "Tutorial berhasil diselesaikan" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }

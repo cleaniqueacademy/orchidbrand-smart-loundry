@@ -166,6 +166,8 @@ export interface User {
   isTrial?: string | boolean;
   signupRequestId?: string | null;
   marketingUserId?: string | null;
+  tutorialCompleted?: boolean | string;
+  metadata?: string | null;
 }
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";

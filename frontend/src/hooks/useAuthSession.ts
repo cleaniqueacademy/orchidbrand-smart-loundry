@@ -139,6 +139,22 @@ export function useAuthSession() {
     }
   };
 
+  const markTutorialComplete = async () => {
+    if (!currentUser) return;
+    try {
+      localStorage.setItem(`user_tutorial_done_${currentUser.id}`, "true");
+      const updatedUser: User = { ...currentUser, tutorialCompleted: true };
+      setCurrentUser(updatedUser);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(updatedUser));
+      await fetch(`${API_BASE}/users/tutorial-complete`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+    } catch (e) {
+      console.error("Gagal menyimpan status tutorial:", e);
+    }
+  };
+
   return {
     currentUser,
     setCurrentUser,
@@ -150,5 +166,6 @@ export function useAuthSession() {
     handleLogout,
     handleSelectTenant,
     refreshUserSession,
+    markTutorialComplete,
   };
 }

@@ -42,6 +42,8 @@ export async function initPostgresTables() {
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_trial TEXT NOT NULL DEFAULT 'false';`;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_request_id TEXT;`;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_user_id TEXT;`;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_completed TEXT NOT NULL DEFAULT 'false';`;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS metadata TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS tenants (

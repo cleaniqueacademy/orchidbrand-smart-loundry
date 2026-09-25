@@ -160,23 +160,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[1.12fr_1fr]">
+    <main className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[1.12fr_1fr] lg:h-screen lg:overflow-hidden">
       {/* ========================================================================= */}
       {/* LEFT COLUMN: HERO & BRANDING SHOWCASE (Desktop Only)                     */}
       {/* ========================================================================= */}
-      <section className="relative hidden lg:flex flex-col justify-between overflow-y-auto bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] p-8 xl:p-12 text-slate-100 border-r border-white/5">
+      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] p-6 xl:p-10 2xl:p-12 text-slate-100 border-r border-white/5">
         {/* Ambient Glows */}
         <div className="pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-emerald-500/15 blur-[140px]" />
         <div className="pointer-events-none absolute -bottom-32 right-0 h-[450px] w-[450px] rounded-full bg-teal-400/15 blur-[150px]" />
         <div className="pointer-events-none absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
 
         {/* Top Header: Logo & System Indicator */}
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <img
               src="/laundry-cleanique-outline.png"
               alt="Laundry Cleanique"
-              className="h-10 xl:h-11 w-auto object-contain filter drop-shadow-md"
+              className="h-9 xl:h-10 w-auto object-contain filter drop-shadow-md"
             />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md shadow-xs">
@@ -189,61 +189,61 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Hero Middle Content */}
-        <div className="relative z-10 my-auto max-w-xl py-6 xl:py-8 space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1.5 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
+        <div className="relative z-10 my-auto max-w-xl py-3 xl:py-6 space-y-4 xl:space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
             Smart Laundry Management Platform
           </div>
 
-          <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-white leading-[1.18]">
+          <h1 className="text-2xl xl:text-3xl 2xl:text-4xl font-extrabold tracking-tight text-white leading-[1.2]">
             Kendalikan Operasional & Kasir Laundry{" "}
             <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
               dalam Satu Layar.
             </span>
           </h1>
 
-          <p className="text-sm xl:text-base leading-relaxed text-slate-300/85 max-w-lg">
+          <p className="text-xs xl:text-sm leading-relaxed text-slate-300/85 max-w-lg">
             Sistem terintegrasi untuk kasir POS cepat, cetak struk thermal 58/80mm, pelacakan resi online, serta notifikasi otomatis WhatsApp ke pelanggan.
           </p>
 
           {/* Interactive Feature Cards */}
-          <div className="grid grid-cols-2 gap-3.5 pt-1">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition-all duration-300 hover:border-emerald-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-emerald-950/20">
-              <div className="flex items-center gap-2.5 mb-1.5">
-                <div className="rounded-xl bg-emerald-500/20 p-2 text-emerald-300">
+          <div className="grid grid-cols-2 gap-3 pt-0.5">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-md transition-all duration-300 hover:border-emerald-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-emerald-950/20">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="rounded-xl bg-emerald-500/20 p-1.5 text-emerald-300">
                   <Store className="h-4 w-4" />
                 </div>
                 <span className="text-xs font-bold text-white">Kasir POS & Shift</span>
               </div>
-              <p className="text-xs text-slate-300/75 leading-relaxed">
+              <p className="text-[11px] xl:text-xs text-slate-300/75 leading-relaxed">
                 Timbang kiloan/satuan instan, quick pay QRIS/Tunai, dan rekonsiliasi kas laci.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition-all duration-300 hover:border-teal-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-teal-950/20">
-              <div className="flex items-center gap-2.5 mb-1.5">
-                <div className="rounded-xl bg-teal-500/20 p-2 text-teal-300">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-md transition-all duration-300 hover:border-teal-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-teal-950/20">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="rounded-xl bg-teal-500/20 p-1.5 text-teal-300">
                   <MessageCircle className="h-4 w-4" />
                 </div>
                 <span className="text-xs font-bold text-white">WhatsApp Otomatis</span>
               </div>
-              <p className="text-xs text-slate-300/75 leading-relaxed">
+              <p className="text-[11px] xl:text-xs text-slate-300/75 leading-relaxed">
                 Struk digital langsung ke WA pelanggan saat order dibuat & selesai dicuci.
               </p>
             </div>
           </div>
 
           {/* Live WhatsApp Notification Preview */}
-          <div className="rounded-2xl border border-emerald-500/20 bg-slate-900/70 p-4 backdrop-blur-lg shadow-xl shadow-black/30">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pb-2.5 border-b border-white/5">
+          <div className="rounded-2xl border border-emerald-500/20 bg-slate-900/70 p-3.5 backdrop-blur-lg shadow-xl shadow-black/30">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pb-2 border-b border-white/5">
               <span className="flex items-center gap-1.5 font-medium text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Pratinjau Pesan Pelanggan
               </span>
               <span className="text-slate-400 text-[10px]">Baru saja</span>
             </div>
-            <div className="mt-2.5 flex items-start gap-3">
-              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                <MessageCircle className="h-4 w-4" />
+            <div className="mt-2 flex items-start gap-2.5">
+              <div className="h-7 w-7 rounded-full bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                <MessageCircle className="h-3.5 w-3.5" />
               </div>
               <div className="text-xs text-slate-200 leading-relaxed">
                 <span className="font-semibold text-white">Cleanique Outlet:</span> Halo Kak Budi, cucian Anda nota{" "}
@@ -257,7 +257,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Desktop Footer */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-slate-400">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>Enkripsi 256-Bit SSL • Multi-Tenant Enterprise Security</span>
