@@ -180,10 +180,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md shadow-xs">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-            </span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
             <span>Platform Cloud v2.0 • Online</span>
           </div>
         </div>
@@ -191,7 +188,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Hero Middle Content */}
         <div className="relative z-10 my-auto max-w-xl py-3 xl:py-6 space-y-4 xl:space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
             Smart Laundry Management Platform
           </div>
 
@@ -279,7 +276,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               className="h-11 w-auto object-contain mb-2.5 drop-shadow-sm"
             />
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-semibold text-emerald-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
               Sistem Operasional & Kasir Laundry
             </div>
           </div>

@@ -387,7 +387,7 @@ export const SystemLogsTab: React.FC<SystemLogsTabProps> = ({
             </div>
             <div className="text-xl font-bold text-zinc-900">Bun + Hono API</div>
             <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Operational (Port 3001)</span>
             </div>
           </div>
@@ -399,7 +399,7 @@ export const SystemLogsTab: React.FC<SystemLogsTabProps> = ({
             </div>
             <div className="text-xl font-bold text-zinc-900">PostgreSQL (Drizzle)</div>
             <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Connected & Persisten</span>
             </div>
           </div>

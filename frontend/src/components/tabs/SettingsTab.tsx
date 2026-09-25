@@ -424,7 +424,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </div>
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      waStatus === "connected" ? "bg-emerald-500 animate-pulse" : "bg-zinc-300"
+                      waStatus === "connected" ? "bg-emerald-500" : "bg-zinc-300"
                     }`}
                     title={waStatus === "connected" ? "Terhubung" : "Belum Terhubung"}
                   />

@@ -160,7 +160,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
               isActive ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-rose-500"}`} />
               {isActive ? "Aktif" : "Nonaktif"}
             </span>
             <span className={`text-[9px] font-semibold ${isExpired ? "text-rose-500" : diffDays <= 7 ? "text-amber-500" : "text-zinc-400"}`}>

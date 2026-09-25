@@ -29,12 +29,9 @@ export const EmptyStateWalkthrough: React.FC<EmptyStateWalkthroughProps> = ({
       {/* Icon with glowing ambient badge */}
       <div className="relative mb-3.5">
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-indigo-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 shadow-md shadow-emerald-500/10">
-          {icon || <Sparkles className="w-6 h-6 text-emerald-500 animate-pulse" />}
+          {icon || <Sparkles className="w-6 h-6 text-emerald-500" />}
         </div>
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-        </span>
+        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 border border-white" />
       </div>
 
       {/* Badge */}

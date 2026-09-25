@@ -213,7 +213,7 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
                       Pesanan Dibatalkan
                     </span>
                   ) : order.status === "ready" ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 animate-pulse">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Cucian Siap Diambil!
                     </span>
                   ) : order.status === "completed" ? (
@@ -265,7 +265,7 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
                                 isDone
                                   ? "bg-emerald-500 text-zinc-950 font-black"
                                   : isCurrent
-                                  ? "bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500 animate-pulse"
+                                  ? "bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500"
                                   : "bg-zinc-800 text-zinc-500"
                               }`}
                             >

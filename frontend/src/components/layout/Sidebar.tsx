@@ -20,6 +20,7 @@ import {
   UserPlus,
   Layers,
   Sliders,
+  HelpCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TabType, Role, Tenant, User } from "../../types";
@@ -39,6 +40,7 @@ interface SidebarProps {
   onToggleRole: (newRole: Role) => void;
   onOpenTenantModal: () => void;
   onOpenWhatsAppModal?: () => void;
+  onOpenTutorialModal?: () => void;
   waData?: WAStatusData;
   onLogout?: () => void;
   isOpen: boolean;
@@ -62,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   onOpenTenantModal,
   onOpenWhatsAppModal,
+  onOpenTutorialModal,
   onLogout,
   isOpen,
   onClose,
@@ -418,6 +421,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
                 </div>
                 {!isCollapsed && <span className="truncate">Pengaturan WhatsApp</span>}
+              </motion.button>
+            </div>
+          )}
+
+          {/* Menu Bantuan / Panduan Sistem */}
+          {onOpenTutorialModal && (
+            <div>
+              {isCollapsed ? (
+                <div className="h-px bg-zinc-100 my-2 mx-1" />
+              ) : (
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
+                  Bantuan
+                </div>
+              )}
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                type="button"
+                id="sidebar-btn-tutorial"
+                onClick={() => {
+                  onOpenTutorialModal();
+                  onClose();
+                }}
+                className={`w-full group flex items-center ${
+                  isCollapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2"
+                } rounded-xl text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-indigo-50/80 border border-transparent hover:border-indigo-200 transition-colors shadow-2xs cursor-pointer`}
+                title="Panduan & Tutorial Sistem"
+              >
+                <div className="w-5 h-5 rounded-md bg-indigo-500/10 flex items-center justify-center shrink-0 text-indigo-600 group-hover:bg-indigo-500/20">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                </div>
+                {!isCollapsed && <span className="truncate">Panduan & Tutorial</span>}
               </motion.button>
             </div>
           )}

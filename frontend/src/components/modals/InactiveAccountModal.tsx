@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   MessageCircle,
@@ -92,13 +92,10 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                 {isInactiveStatus ? (
                   <ShieldAlert className="w-9 h-9" />
                 ) : (
-                  <AlertTriangle className="w-9 h-9 animate-pulse" />
+                  <AlertTriangle className="w-9 h-9" />
                 )}
               </div>
-              <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600" />
-              </span>
+              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 rounded-full bg-rose-600 border-2 border-white" />
             </div>
 
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 mb-2">

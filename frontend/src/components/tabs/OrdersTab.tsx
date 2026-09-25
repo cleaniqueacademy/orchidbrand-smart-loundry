@@ -128,7 +128,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="font-mono font-bold text-zinc-900 text-xs">{order.invoiceNo}</span>
               {late && (
-                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
                   Telat SLA
                 </span>
               )}

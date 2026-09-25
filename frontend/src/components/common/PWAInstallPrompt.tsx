@@ -242,7 +242,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               ) : (
                 <div className="flex flex-col items-center gap-1">
-                  <ChevronLeft className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <ChevronLeft className="w-4 h-4 text-emerald-400" />
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
                 </div>
               )}

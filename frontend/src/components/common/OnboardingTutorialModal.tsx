@@ -398,7 +398,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/60 to-slate-900 border border-indigo-500/30 text-white shadow-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 shrink-0">
-                  <Sparkles className="w-4 h-4 animate-pulse text-amber-300" />
+                  <Sparkles className="w-4 h-4 text-amber-300" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white">Tur Layar Interaktif</h4>
@@ -479,7 +479,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-xs font-bold text-white shadow-md shadow-indigo-950/50 hover:from-indigo-500 hover:to-pink-500 active:scale-95 transition-all cursor-pointer"
                 title="Mulai tur interaktif langsung di atas elemen layar"
               >
-                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
                 <span className="hidden sm:inline">Tur Spotlight Layar</span>
                 <span className="sm:hidden">Tur Layar</span>
               </button>

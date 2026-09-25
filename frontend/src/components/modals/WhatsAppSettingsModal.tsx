@@ -269,12 +269,12 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                 <div>
                   {waData.status === "connected" ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       Terhubung
                     </span>
                   ) : waData.status === "qrcode" ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
                       Scan QR
                     </span>
                   ) : (

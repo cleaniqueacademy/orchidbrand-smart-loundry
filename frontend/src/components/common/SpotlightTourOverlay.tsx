@@ -237,11 +237,8 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
           }}
           className="fixed z-[9992] pointer-events-none rounded-2xl ring-3 ring-emerald-400/90 shadow-[0_0_25px_rgba(16,185,129,0.55)] transition-all duration-200"
         >
-          {/* Beacon / Pulsing Dot on top-right corner of target */}
-          <span className="absolute -top-2 -right-2 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white shadow-xs" />
-          </span>
+          {/* Static Beacon Dot on top-right corner of target */}
+          <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs" />
         </div>
       )}
 

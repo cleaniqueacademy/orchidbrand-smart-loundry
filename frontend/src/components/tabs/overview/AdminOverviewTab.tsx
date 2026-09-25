@@ -415,7 +415,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                 </p>
               </div>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Sistem Normal
               </span>
             </div>

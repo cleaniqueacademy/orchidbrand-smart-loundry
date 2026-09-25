@@ -1,4 +1,4 @@
-﻿import { User } from "../types";
+import { User } from "../types";
 
 export interface UserActiveStatus {
   isActive: boolean;
@@ -93,7 +93,7 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
   } else if (isExpired) {
     badge = {
       label: "Kedaluwarsa",
-      className: "bg-rose-50 text-rose-700 border-rose-300 animate-pulse",
+      className: "bg-rose-50 text-rose-700 border-rose-300",
       dotColor: "bg-rose-600",
       description: `Masa aktif telah berakhir pada ${formattedExpiry}`,
     };

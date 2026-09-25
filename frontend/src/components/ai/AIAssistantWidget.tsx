@@ -670,7 +670,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               ) : (
                 <div className="flex flex-col items-center gap-1">
-                  <ChevronLeft className="w-4 h-4 animate-pulse" />
+                  <ChevronLeft className="w-4 h-4" />
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
                 </div>
               )}
@@ -688,14 +688,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             >
               <div className="relative">
                 <Bot className="w-4 h-4 text-white" />
-                <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-indigo-700" />
               </div>
               <div className="flex flex-col pr-1">
                 <span className="text-[11px] font-bold tracking-wide leading-none flex items-center gap-1">
-                  Tanya AI <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                  Tanya AI <Sparkles className="w-3 h-3 text-amber-300" />
                 </span>
                 <span className="text-[9px] text-indigo-200 leading-tight mt-0.5">Bantuan Pintar</span>
               </div>
@@ -729,13 +726,10 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
           >
             <div className="relative">
               <Bot className="w-5 h-5 text-white" />
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-indigo-700" />
             </div>
             <span className="text-xs font-bold tracking-wide">Tanya AI</span>
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           </button>
 
           {/* Dock to side toggle */}

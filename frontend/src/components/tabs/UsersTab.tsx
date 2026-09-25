@@ -508,7 +508,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
                             (selectedUser.status || "active") === "active"
-                              ? "bg-emerald-600 animate-pulse"
+                              ? "bg-emerald-600"
                               : "bg-rose-600"
                           }`}
                         />

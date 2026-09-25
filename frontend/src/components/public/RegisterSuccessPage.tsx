@@ -63,7 +63,7 @@ export const RegisterSuccessPage: React.FC = () => {
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100/80 text-emerald-800 text-xs font-bold rounded-full mb-3">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
           <span>Pendaftaran Berhasil & Akun Aktif</span>
         </div>
 

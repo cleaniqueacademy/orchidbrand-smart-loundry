@@ -556,6 +556,7 @@ export default function App() {
         }}
         onOpenTenantModal={() => setShowTenantModal(true)}
         onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
+        onOpenTutorialModal={() => setShowTutorialModal(true)}
         waData={waGateway.waData}
         onLogout={handleLogout}
         isOpen={isMobileSidebarOpen}
