@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -15,7 +17,14 @@ import {
   Sparkles,
   ShieldCheck,
   Check,
-  RotateCcw,
+  Gift,
+  HelpCircle,
+  X,
+  ChevronRight,
+  Laptop,
+  Smartphone,
+  Receipt,
+  MessageCircle,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { getReferralQueryParam, navigateTo } from "../../utils/routeUtils";
@@ -65,6 +74,8 @@ export const RegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [welcomeStep, setWelcomeStep] = useState<number>(0);
   const [refValidation, setRefValidation] = useState<ReferralValidation>({
     loading: false,
     valid: null,
@@ -81,10 +92,9 @@ export const RegisterPage: React.FC = () => {
         if (item) setPlan(item);
       })
       .catch(() => {
-        // Fallback default jika endpoint bermasalah
         setPlan({
           name: "Standard",
-          pricePerMonth: 99000,
+          pricePerMonth: 60000,
           trialDays: 7,
         });
       });
@@ -181,10 +191,10 @@ export const RegisterPage: React.FC = () => {
   };
 
   const trialDays = plan?.trialDays || 7;
-  const basePrice = plan?.pricePerMonth || 99000;
+  const basePrice = plan?.pricePerMonth || 60000;
 
   return (
-    <main className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[1fr_1.25fr]">
+    <main className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[0.95fr_1.3fr] lg:h-screen lg:overflow-hidden">
       {/* ========================================================================= */}
       {/* LEFT COLUMN: HERO & BRANDING (Desktop Only)                               */}
       {/* ========================================================================= */}
@@ -211,10 +221,10 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Middle Hero Content */}
-        <div className="relative z-10 my-auto max-w-xl py-6 xl:py-8 space-y-6">
+        <div className="relative z-10 my-auto max-w-lg py-6 xl:py-8 space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1.5 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-            Free Trial 7 Hari Tanpa Biaya Awal
+            Free Trial 7 Hari Penuh Tanpa Biaya Awal
           </div>
 
           <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-white leading-[1.18]">
@@ -224,7 +234,7 @@ export const RegisterPage: React.FC = () => {
             </span>
           </h1>
 
-          <p className="text-sm xl:text-base leading-relaxed text-slate-300/85 max-w-lg">
+          <p className="text-sm xl:text-base leading-relaxed text-slate-300/85 max-w-md">
             Daftarkan outlet Anda dalam 2 menit. Nikmati kemudahan kasir POS cepat, cetak struk thermal 58/80mm, serta pengiriman nota otomatis ke WhatsApp pelanggan.
           </p>
 
@@ -255,6 +265,22 @@ export const RegisterPage: React.FC = () => {
               <span>Portal publik cek resi mandiri bagi pelanggan</span>
             </div>
           </div>
+
+          {/* Quick Trigger to Welcoming Screen */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWelcomeStep(0);
+                setShowWelcomeModal(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-emerald-300 hover:bg-white/10 hover:border-emerald-400/40 transition-all backdrop-blur-xs"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span>Lihat Panduan & Informasi Lengkap Paket</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Desktop Footer */}
@@ -268,37 +294,37 @@ export const RegisterPage: React.FC = () => {
       </aside>
 
       {/* ========================================================================= */}
-      {/* RIGHT COLUMN: REGISTRATION FORM (Mobile & Desktop)                        */}
+      {/* RIGHT COLUMN: REGISTRATION FORM (Ringkas & Bebas Scroll Panjang)           */}
       {/* ========================================================================= */}
-      <section className="flex flex-col justify-start items-center bg-[#f8fafc] px-4 py-8 sm:px-8 md:px-10 lg:py-12 overflow-y-auto min-h-screen">
+      <section className="flex flex-col justify-center items-center bg-[#f8fafc] px-4 py-6 sm:px-8 md:px-10 lg:py-6 overflow-y-auto lg:h-screen">
         <div className="w-full max-w-2xl my-auto">
           {/* Mobile Top Brand Header */}
-          <div className="mb-6 flex flex-col items-center text-center lg:hidden">
+          <div className="mb-4 flex flex-col items-center text-center lg:hidden">
             <img
               src="/laundry-cleanique.png"
               alt="Laundry Cleanique"
-              className="h-11 w-auto object-contain mb-2.5 drop-shadow-sm"
+              className="h-10 w-auto object-contain mb-2 drop-shadow-sm"
             />
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-semibold text-emerald-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-              Registrasi Outlet Baru • Free Trial
+              Registrasi Outlet Baru • Free Trial 7 Hari
             </div>
           </div>
 
-          {/* Form Header with Login Link */}
-          <div className="mb-6 flex items-start justify-between gap-4">
+          {/* Form Header with Login Link & Welcome Trigger */}
+          <div className="mb-3.5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-snug">
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">
                 Buat Akun Outlet
               </h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Isi data outlet dan akun pengelola untuk memulai masa uji coba 7 hari gratis.
+              <p className="mt-0.5 text-xs text-slate-500 leading-normal">
+                Isi data outlet & nikmati trial 7 hari gratis tanpa biaya awal.
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigateTo("/")}
-              className="shrink-0 text-xs sm:text-sm font-bold text-emerald-700 hover:text-emerald-800 hover:underline px-3 py-1.5 rounded-xl hover:bg-emerald-50/80 transition-colors"
+              className="shrink-0 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline px-3 py-1.5 rounded-xl hover:bg-emerald-50 transition-colors"
             >
               Sudah punya akun? Masuk
             </button>
@@ -308,37 +334,29 @@ export const RegisterPage: React.FC = () => {
           {error && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50/95 p-3.5 text-xs sm:text-sm text-rose-800 shadow-xs"
+              className="mb-3 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50/95 p-3 text-xs text-rose-800 shadow-xs"
             >
               <div className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 font-bold">⚠️</div>
               <span className="leading-snug">{error}</span>
             </div>
           )}
 
-          {/* REGISTRATION FORM CARD */}
+          {/* COMPACT REGISTRATION FORM CARD */}
           <form
             onSubmit={submit}
-            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.06)] space-y-6"
+            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.06)] space-y-3.5"
           >
-            {/* SECTION 1: IDENTITAS OUTLET & PEMILIK */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-extrabold text-emerald-800">
-                  1
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Identitas Outlet & Pemilik
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* 2-COLUMN INPUT GRID (4 di Kiri, 4 di Kanan agar Ringkas & Rapi) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* === KOLOM 1: IDENTITAS OUTLET & KONTAK === */}
+              <div className="space-y-3">
                 {/* Nama Outlet */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Nama Outlet Laundry
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <Store className="h-4 w-4" />
                     </div>
                     <input
@@ -348,18 +366,18 @@ export const RegisterPage: React.FC = () => {
                       value={form.outletName}
                       onChange={(e) => update("outletName", e.target.value)}
                       placeholder="Contoh: Cleanique Melati"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
 
                 {/* Nama Pemilik */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Nama Lengkap Pemilik
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <UserRound className="h-4 w-4" />
                     </div>
                     <input
@@ -368,19 +386,19 @@ export const RegisterPage: React.FC = () => {
                       disabled={loading}
                       value={form.ownerName}
                       onChange={(e) => update("ownerName", e.target.value)}
-                      placeholder="Nama lengkap Anda"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      placeholder="Nama lengkap pengelola"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
 
                 {/* Nomor WhatsApp */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Nomor WhatsApp Aktif
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <Phone className="h-4 w-4" />
                     </div>
                     <input
@@ -390,18 +408,18 @@ export const RegisterPage: React.FC = () => {
                       value={form.phone}
                       onChange={(e) => update("phone", e.target.value)}
                       placeholder="08xxxxxxxxxx"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
 
                 {/* Email Login */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Alamat Email Login
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <Mail className="h-4 w-4" />
                     </div>
                     <input
@@ -412,32 +430,21 @@ export const RegisterPage: React.FC = () => {
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
                       placeholder="nama@outlet.com"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* SECTION 2: LOKASI & KATA SANDI */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-extrabold text-emerald-800">
-                  2
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Lokasi & Keamanan Akun
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* === KOLOM 2: LOKASI, KEAMANAN & KODE REFERRAL === */}
+              <div className="space-y-3">
                 {/* Kota */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Kota / Kabupaten
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <input
@@ -446,18 +453,18 @@ export const RegisterPage: React.FC = () => {
                       value={form.city}
                       onChange={(e) => update("city", e.target.value)}
                       placeholder="Contoh: Surabaya"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
 
                 {/* Alamat */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Alamat Lengkap Outlet
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <input
@@ -466,86 +473,82 @@ export const RegisterPage: React.FC = () => {
                       value={form.address}
                       onChange={(e) => update("address", e.target.value)}
                       placeholder="Jl. Mawar No. 10"
-                      className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Kata Sandi */}
-              <div className="mt-3.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Kata Sandi Baru (Min. 8 Karakter)
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Lock className="h-4 w-4" />
+                {/* Kata Sandi */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kata Sandi Baru (Min. 8 Karakter)
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Lock className="h-4 w-4" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      disabled={loading}
+                      value={form.password}
+                      onChange={(e) => update("password", e.target.value)}
+                      placeholder="Minimal 8 karakter"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-10 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Sembunyikan sandi" : "Lihat sandi"}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
                   </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                    disabled={loading}
-                    value={form.password}
-                    onChange={(e) => update("password", e.target.value)}
-                    placeholder="Buat kata sandi yang aman"
-                    className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-11 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                </div>
+
+                {/* Kode Referral */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kode Referral (Opsional)
+                  </label>
+                  <div className="flex gap-1.5">
+                    <div className="relative flex-1">
+                      <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Tag className="h-4 w-4" />
+                      </div>
+                      <input
+                        type="text"
+                        disabled={loading}
+                        value={form.referralCode}
+                        onChange={(e) => update("referralCode", e.target.value.toUpperCase())}
+                        placeholder="Kode kupon promo"
+                        className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loading || !form.referralCode.trim() || refValidation.loading}
+                      onClick={() => validateReferralCode()}
+                      className="h-10 sm:h-11 px-3.5 rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-800 font-bold text-xs hover:bg-emerald-100/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center gap-1"
+                    >
+                      {refValidation.loading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <span>Terapkan</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* SECTION 3: KODE REFERRAL / PROMO */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-extrabold text-emerald-800">
-                  3
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Kode Referral / Kupon Diskon (Opsional)
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Tag className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="text"
-                    disabled={loading}
-                    value={form.referralCode}
-                    onChange={(e) => update("referralCode", e.target.value.toUpperCase())}
-                    placeholder="Masukkan kode promo jika ada"
-                    className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm font-mono text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                  />
-                </div>
-                <button
-                  type="button"
-                  disabled={loading || !form.referralCode.trim() || refValidation.loading}
-                  onClick={() => validateReferralCode()}
-                  className="h-11 sm:h-12 px-4 rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-800 font-bold text-xs sm:text-sm hover:bg-emerald-100/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center gap-1.5"
-                >
-                  {refValidation.loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <span>Terapkan</span>
-                  )}
-                </button>
-              </div>
-
-              {/* Referral Validation Status Badge */}
-              <div className="mt-2.5">
+            {/* REFERRAL BADGE IF ACTIVE / ERROR */}
+            {refValidation.valid !== null && (
+              <div className="pt-0.5">
                 <ReferralBadge
                   loading={refValidation.loading}
                   valid={refValidation.valid}
@@ -555,23 +558,42 @@ export const RegisterPage: React.FC = () => {
                   message={refValidation.message}
                 />
               </div>
-            </div>
+            )}
 
-            {/* SECTION 4: PRATINJAU HARGA & TRIAL */}
-            <div className="pt-2 border-t border-slate-100">
-              <RegisterPriceSummary
-                basePrice={basePrice}
-                discountType={refValidation.valid ? refValidation.discountType : undefined}
-                discountValue={refValidation.valid ? refValidation.discountValue : 0}
-                trialDays={trialDays}
-              />
+            {/* RINGKASAN HARGA SATU BARIS (Menggantikan Kartu Harga Besar) */}
+            <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-50/90 border border-emerald-200/90 px-3.5 py-2.5 text-xs shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-xs shrink-0">
+                  <Gift className="h-4 w-4" />
+                </span>
+                <div className="leading-tight">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>Masa Trial {trialDays} Hari:</span>
+                    <span className="text-emerald-700 font-extrabold text-sm">Rp 0 (Gratis)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Setelah trial: Rp {basePrice.toLocaleString("id-ID")}/bulan • Tanpa kartu kredit
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setWelcomeStep(1); // Langsung ke step rincian harga
+                  setShowWelcomeModal(true);
+                }}
+                className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-200 hover:bg-emerald-100/60 hover:border-emerald-300 transition-colors shrink-0 shadow-2xs"
+              >
+                <span>Rincian Paket</span>
+                <ChevronRight className="h-3 w-3" />
+              </button>
             </div>
 
             {/* SUBMIT BUTTON */}
             <button
               type="submit"
               disabled={loading}
-              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 px-4 text-sm sm:text-base font-bold text-white shadow-md shadow-emerald-900/15 transition-all duration-200 hover:from-emerald-700 hover:to-teal-800 hover:shadow-lg hover:shadow-emerald-900/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65"
+              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 px-4 text-sm font-bold text-white shadow-md shadow-emerald-900/15 transition-all duration-200 hover:from-emerald-700 hover:to-teal-800 hover:shadow-lg hover:shadow-emerald-900/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65"
             >
               {loading ? (
                 <>
@@ -587,19 +609,276 @@ export const RegisterPage: React.FC = () => {
             </button>
 
             {/* TERMS & PRIVACY */}
-            <p className="text-center text-[11px] leading-relaxed text-slate-400">
-              Dengan membuat akun, Anda menyetujui Ketentuan Layanan & Kebijakan Privasi Laundry Cleanique.
+            <p className="text-center text-[10px] sm:text-[11px] leading-tight text-slate-400">
+              Dengan mendaftar, Anda menyetujui Ketentuan Layanan & Kebijakan Privasi Laundry Cleanique.
             </p>
           </form>
 
           {/* BOTTOM GUARANTEE NOTE */}
-          <div className="mt-6 text-center">
-            <p className="text-[11px] leading-relaxed text-slate-400">
-              Butuh bantuan pendaftaran? Hubungi Tim Customer Care Cleanique melalui WhatsApp resmi.
-            </p>
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setWelcomeStep(0);
+                setShowWelcomeModal(true);
+              }}
+              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
+            >
+              Pelajari Fitur Lengkap & Keuntungan Kemitraan Cleanique →
+            </button>
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* WELCOMING & PRICING MODAL SCREEN (Dengan Tombol Next-Next Interaktif)     */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {showWelcomeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-xl rounded-3xl bg-white p-5 sm:p-7 shadow-2xl text-slate-800 border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden"
+            >
+              {/* Modal Top Bar */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-2xl bg-emerald-100 p-2 text-emerald-700">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                      Panduan & Info Kemitraan
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Langkah 0{welcomeStep + 1} dari 03 • Informasi Resmi Cleanique
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowWelcomeModal(false)}
+                  className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Dynamic Body based on Step */}
+              <div className="py-4 overflow-y-auto flex-1">
+                {/* === STEP 0: FITUR UNGGULAN & SISTEM POS === */}
+                {welcomeStep === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-3.5"
+                  >
+                    <div className="rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-4 border border-emerald-200/80">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5 mb-1">
+                        <Store className="h-3.5 w-3.5 text-emerald-600" />
+                        Selamat Datang di Laundry Cleanique
+                      </span>
+                      <h4 className="text-lg font-extrabold text-slate-900 leading-snug">
+                        Satu Akun untuk Semua Kebutuhan Kasir & Operasional
+                      </h4>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        Dirancang khusus untuk mempermudah bisnis laundry kiloan & satuan agar lebih rapi, terhindar dari selisih kas, dan otomatis memberi tahu pelanggan.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                      <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Receipt className="h-4 w-4 text-emerald-700" />
+                          <span className="font-bold text-slate-800">Kasir POS Cepat</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] leading-relaxed">
+                          Timbang kiloan, catat satuan, hitung total instan, dan cetak struk thermal 58/80mm ber-QR Code.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <MessageCircle className="h-4 w-4 text-teal-700" />
+                          <span className="font-bold text-slate-800">WhatsApp Gateway</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] leading-relaxed">
+                          Kirim struk digital otomatis dan notifikasi saat cucian siap diambil ke nomor WhatsApp pelanggan.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Store className="h-4 w-4 text-emerald-700" />
+                          <span className="font-bold text-slate-800">Shift & Rekonsiliasi Kas</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] leading-relaxed">
+                          Buka/tutup shift kasir, hitung uang fisik laci vs sistem, dan lacak selisih secara akurat 100%.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Smartphone className="h-4 w-4 text-teal-700" />
+                          <span className="font-bold text-slate-800">Cek Resi Mandiri Online</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] leading-relaxed">
+                          Pelanggan cukup scan QR pada nota untuk melihat progres cucian secara live tanpa perlu chat manual.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* === STEP 1: TRANSPARANSI HARGA & FREE TRIAL 7 HARI === */}
+                {welcomeStep === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-3"
+                  >
+                    <div className="rounded-2xl bg-emerald-50 p-3 border border-emerald-200 text-xs text-emerald-900 leading-relaxed">
+                      <p className="font-bold flex items-center gap-1.5 mb-0.5">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        Transparansi Biaya Tanpa Jebakan:
+                      </p>
+                      <p className="text-emerald-800 text-[11px]">
+                        Semua outlet baru langsung mendapatkan masa trial 7 hari penuh dengan biaya <strong>Rp 0 (Gratis)</strong>. Tidak memerlukan kartu kredit untuk memulai.
+                      </p>
+                    </div>
+
+                    {/* Komponen Ringkasan Harga Lengkap */}
+                    <RegisterPriceSummary
+                      basePrice={basePrice}
+                      discountType={refValidation.valid ? refValidation.discountType : undefined}
+                      discountValue={refValidation.valid ? refValidation.discountValue : 0}
+                      trialDays={trialDays}
+                    />
+                  </motion.div>
+                )}
+
+                {/* === STEP 2: SETUP INSTAN DALAM 2 MENIT === */}
+                {welcomeStep === 2 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-3.5"
+                  >
+                    <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                      <h4 className="text-base font-extrabold text-slate-900 leading-snug">
+                        3 Langkah Mudah Memulai Hari Ini:
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Tidak ada verifikasi manual berhari-hari. Akun Anda langsung aktif seketika setelah formulir dikirim.
+                      </p>
+
+                      <div className="mt-4 space-y-3 text-xs text-slate-700">
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                            1
+                          </span>
+                          <div>
+                            <p className="font-bold text-slate-900">Kirim Formulir Pendaftaran</p>
+                            <p className="text-slate-500 text-[11px] mt-0.5">
+                              Lengkapi nama outlet, kontak WhatsApp, dan alamat email Anda di formulir utama.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                            2
+                          </span>
+                          <div>
+                            <p className="font-bold text-slate-900">Masuk & Sambungkan WhatsApp</p>
+                            <p className="text-slate-500 text-[11px] mt-0.5">
+                              Login ke dashboard, hubungkan nomor WhatsApp toko Anda via scan QR di menu Pengaturan.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                            3
+                          </span>
+                          <div>
+                            <p className="font-bold text-slate-900">Mulai Terima Order Perdana</p>
+                            <p className="text-slate-500 text-[11px] mt-0.5">
+                              Sesuaikan tarif kiloan/satuan dan cetak nota kasir pertama Anda dengan mudah!
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-emerald-50/80 p-3 border border-emerald-200/90 text-xs text-emerald-900 flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-emerald-700 shrink-0" />
+                      <span>Data bisnis Anda dienkripsi 256-bit dan terisolasi aman antar cabang.</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Modal Stepper Dots & Navigation Buttons (Next / Prev / Finish) */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                {/* Stepper Dots Indicator */}
+                <div className="flex items-center gap-1.5">
+                  {[0, 1, 2].map((idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      aria-label={`Langkah ${idx + 1}`}
+                      onClick={() => setWelcomeStep(idx)}
+                      className={`h-2 rounded-full transition-all duration-200 ${
+                        welcomeStep === idx
+                          ? "w-6 bg-emerald-600"
+                          : "w-2 bg-slate-200 hover:bg-slate-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Buttons Navigation */}
+                <div className="flex items-center gap-2">
+                  {welcomeStep > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setWelcomeStep((prev) => prev - 1)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>Sebelumnya</span>
+                    </button>
+                  )}
+
+                  {welcomeStep < 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setWelcomeStep((prev) => prev + 1)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+                    >
+                      <span>Selanjutnya</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowWelcomeModal(false)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all"
+                    >
+                      <span>Mulai Isi Formulir</span>
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 };
