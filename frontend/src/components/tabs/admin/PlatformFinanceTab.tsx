@@ -305,7 +305,7 @@ export const PlatformFinanceTab: React.FC = () => {
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
+                  <tr key={i} className="opacity-60">
                     <td className="py-4 px-4"><div className="h-4 bg-zinc-200 rounded w-24" /></td>
                     <td className="py-4 px-3"><div className="h-4 bg-zinc-200 rounded w-16" /></td>
                     <td className="py-4 px-3"><div className="h-4 bg-zinc-200 rounded w-20" /></td>

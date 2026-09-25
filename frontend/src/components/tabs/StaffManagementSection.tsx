@@ -121,7 +121,7 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
 
       {/* Staff List */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-pulse">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-75">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-zinc-200 shrink-0" />

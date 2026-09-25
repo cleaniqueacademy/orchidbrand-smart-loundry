@@ -505,13 +505,6 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                             : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100"
                         } ${selectedUser.role === "superadmin" ? "cursor-default" : "cursor-pointer"}`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            (selectedUser.status || "active") === "active"
-                              ? "bg-emerald-600"
-                              : "bg-rose-600"
-                          }`}
-                        />
                         <span>
                           {(selectedUser.status || "active") === "active" ? "Aktif" : "Nonaktif"}
                         </span>

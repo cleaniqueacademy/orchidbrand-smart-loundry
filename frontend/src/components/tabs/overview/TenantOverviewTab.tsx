@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -407,7 +407,6 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                 >
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span className="font-semibold text-zinc-900 text-xs">
                         {order.customer?.name || "Pelanggan Umum"}
                       </span>

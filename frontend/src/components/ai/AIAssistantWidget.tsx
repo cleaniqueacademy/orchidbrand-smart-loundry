@@ -652,7 +652,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             className={`flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/25 overflow-hidden transition-all duration-300 ease-out ${
               isSideTabOpen
                 ? "translate-x-0"
-                : "translate-x-[calc(100%-36px)] group-hover:translate-x-0"
+                : "translate-x-[calc(100%-34px)] group-hover:translate-x-0"
             }`}
           >
             {/* Arrow Peek Handle - Always visible at the corner edge when closed */}
@@ -662,17 +662,14 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                 e.stopPropagation();
                 setIsSideTabOpen((prev) => !prev);
               }}
-              className="w-9 px-2 py-3 hover:bg-white/20 text-white flex flex-col items-center justify-center border-r border-white/15 cursor-pointer relative shrink-0 transition-colors"
+              className="w-[34px] px-2 py-3 hover:bg-white/20 text-white flex items-center justify-center border-r border-white/15 cursor-pointer relative shrink-0 transition-colors"
               title={isSideTabOpen ? "Sembunyikan tab ke samping (Hanya arrow)" : "Buka Tanya AI Cleanique"}
               aria-label={isSideTabOpen ? "Sembunyikan tab ke samping" : "Buka Tanya AI Cleanique"}
             >
               {isSideTabOpen ? (
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                </div>
+                <ChevronLeft className="w-4 h-4" />
               )}
             </button>
 
@@ -688,7 +685,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             >
               <div className="relative">
                 <Bot className="w-4 h-4 text-white" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-indigo-700" />
               </div>
               <div className="flex flex-col pr-1">
                 <span className="text-[11px] font-bold tracking-wide leading-none flex items-center gap-1">
@@ -726,7 +722,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
           >
             <div className="relative">
               <Bot className="w-5 h-5 text-white" />
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-indigo-700" />
             </div>
             <span className="text-xs font-bold tracking-wide">Tanya AI</span>
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />

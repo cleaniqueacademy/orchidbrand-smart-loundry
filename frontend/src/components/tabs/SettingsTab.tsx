@@ -54,7 +54,7 @@ interface SettingsTabProps {
 }
 
 const SubTabSkeleton: React.FC = () => (
-  <div className="space-y-4 animate-pulse">
+  <div className="space-y-4 opacity-75">
     <div className="h-6 bg-zinc-200/80 rounded-lg w-48 mb-3" />
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div className="h-20 bg-zinc-100 rounded-xl border border-zinc-200/60 p-3 space-y-2">

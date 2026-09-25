@@ -133,7 +133,6 @@ export const Header: React.FC<HeaderProps> = ({
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/90 hover:bg-emerald-100 transition shadow-2xs cursor-pointer text-xs"
                   title={`Shift sedang aktif (Kas Awal: Rp ${currentShift.startingCash.toLocaleString("id-ID")}). Klik untuk tutup shift & rekonsiliasi.`}
                 >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span className="text-[11px] font-semibold">Shift Aktif</span>
                 </button>
               ) : (
@@ -189,9 +188,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[11px] font-semibold">
                 {waData?.status === "connected" ? "WA Aktif" : "WA"}
               </span>
-              {waData?.status === "connected" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-              )}
             </button>
           )}
 

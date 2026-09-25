@@ -180,7 +180,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md shadow-xs">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
             <span>Platform Cloud v2.0 • Online</span>
           </div>
         </div>
@@ -257,7 +256,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <span>Enkripsi 256-Bit SSL • Multi-Tenant Enterprise Security</span>
+            <span>PT Indotech Berkah Abadi</span>
           </div>
           <span className="text-slate-500 font-medium">© 2026 Laundry Cleanique</span>
         </div>

@@ -207,7 +207,7 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({ 
   // Loading Skeleton
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
+      <div className="space-y-4 opacity-75">
         <div className="bg-zinc-100 rounded-2xl border border-zinc-200/80 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-2">

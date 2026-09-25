@@ -224,7 +224,7 @@ export const PWAInstallPrompt: React.FC = () => {
             className={`flex items-stretch bg-gradient-to-l from-emerald-800 via-teal-900 to-slate-900 text-white rounded-l-2xl shadow-xl shadow-emerald-950/40 border-y border-l border-emerald-500/30 overflow-hidden transition-all duration-300 ease-out ${
               isPwaTabOpen
                 ? "translate-x-0"
-                : "translate-x-[calc(100%-36px)] group-hover:translate-x-0"
+                : "translate-x-[calc(100%-34px)] group-hover:translate-x-0"
             }`}
           >
             {/* Arrow Peek Handle - Always visible on the corner edge when closed */}
@@ -234,17 +234,14 @@ export const PWAInstallPrompt: React.FC = () => {
                 e.stopPropagation();
                 setIsPwaTabOpen((prev) => !prev);
               }}
-              className="w-9 px-2 py-2.5 hover:bg-white/10 text-emerald-300 hover:text-white flex flex-col items-center justify-center border-r border-emerald-500/20 cursor-pointer relative shrink-0 transition-colors"
+              className="w-[34px] px-2 py-2.5 hover:bg-white/10 text-emerald-300 hover:text-white flex items-center justify-center border-r border-emerald-500/20 cursor-pointer relative shrink-0 transition-colors"
               title={isPwaTabOpen ? "Sembunyikan tab PWA (Hanya arrow)" : "Pasang Aplikasi Cleanique (PWA)"}
               aria-label={isPwaTabOpen ? "Sembunyikan tab PWA" : "Pasang Aplikasi Cleanique (PWA)"}
             >
               {isPwaTabOpen ? (
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <ChevronLeft className="w-4 h-4 text-emerald-400" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                </div>
+                <ChevronLeft className="w-4 h-4 text-emerald-400" />
               )}
             </button>
 

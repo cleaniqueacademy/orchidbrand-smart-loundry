@@ -227,18 +227,15 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                     </td>
                     <td className="py-3 px-5 text-center">
                       {isInactive || isExpired ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span className="inline-flex items-center text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                           {isInactive ? "Nonaktif" : "Kedaluwarsa"}
                         </span>
                       ) : isExpiringSoon ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span className="inline-flex items-center text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                           Kritis ({daysLeft}h)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                           Aktif
                         </span>
                       )}
@@ -414,8 +411,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                   Kesehatan server dan database backend SaaS
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                 Sistem Normal
               </span>
             </div>

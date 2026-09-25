@@ -309,7 +309,7 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
             <tbody className="divide-y divide-zinc-100">
               {loading && servicesList.length === 0 ? (
                 Array.from({ length: 4 }).map((_, idx) => (
-                  <tr key={idx} className="animate-pulse">
+                  <tr key={idx} className="opacity-60">
                     <td className="py-4 px-4"><div className="h-4 bg-zinc-200 rounded w-36" /></td>
                     <td className="py-4 px-3"><div className="h-4 bg-zinc-200 rounded w-12" /></td>
                     <td className="py-4 px-4 text-right"><div className="h-4 bg-zinc-200 rounded w-20 ml-auto" /></td>
@@ -328,8 +328,7 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
               ) : (
                 paginatedServices.map((service) => (
                   <tr key={service.id} className="hover:bg-zinc-50/70 transition">
-                    <td className="py-3 px-4 font-semibold text-zinc-900 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                    <td className="py-3 px-4 font-semibold text-zinc-900">
                       <span>{service.name}</span>
                     </td>
                     <td className="py-3 px-3 text-zinc-600 font-mono uppercase font-semibold text-[11px]">

@@ -110,9 +110,8 @@ export const StaffOverviewTab: React.FC<StaffOverviewTabProps> = ({
               Meja Kerja Kasir & Operasional
             </h1>
             {enableCashierShift !== false && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Shift Staff</span>
+              <span className="inline-flex items-center text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                Shift Staff
               </span>
             )}
           </div>
