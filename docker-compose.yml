@@ -45,17 +45,11 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: cleanique_laundry_frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
-    environment:
-      - PORT=5173
-      - VITE_PROXY_TARGET=http://backend:5000
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
+      - "0.0.0.0:8081:80"
     depends_on:
       - backend
     networks:
