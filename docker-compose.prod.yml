@@ -44,24 +44,24 @@ services:
     container_name: cleanique_frontend
     restart: always
     ports:
-      # Port aplikasi web di VPS (default port 80 HTTP atau port custom misalnya 8080)
-      - "${APP_PORT:-80}:80"
+      # Port aplikasi web di VPS (default port 8081, diproxy oleh Nginx reverse proxy host)
+      - "${APP_PORT:-8081}:80"
     depends_on:
       - backend
     networks:
       - cleanique_net
 
-  landing:
-    build:
-      context: ./landing
-      dockerfile: Dockerfile.prod
-    container_name: cleanique_landing
-    restart: always
-    ports:
-      # Landing page publieksite; dashboard tetap memakai APP_PORT.
-      - "${LANDING_PORT:-4174}:80"
-    networks:
-      - cleanique_net
+  # landing:
+  #   build:
+  #     context: ./landing
+  #     dockerfile: Dockerfile.prod
+  #   container_name: cleanique_landing
+  #   restart: always
+  #   ports:
+  #     # Landing page publieksite; dashboard tetap memakai APP_PORT.
+  #     - "${LANDING_PORT:-4174}:80"
+  #   networks:
+  #     - cleanique_net
 
 volumes:
   cleanique_postgres_data:
