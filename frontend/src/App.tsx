@@ -208,8 +208,12 @@ export default function App() {
     }
   }, [currentUserRole, activeTab]);
 
-  // Cashier Shift Composable & Modals
-  const cashierShift = useCashierShift(tenantId, currentUser?.id || null);
+  // Cashier Shift Composable & Modals (Hanya staff & tenant_owner yang mengelola kasir; superadmin bukan kasir)
+  const isCashierRole = currentUserRole === "staff" || currentUserRole === "tenant_owner";
+  const cashierShift = useCashierShift(
+    currentUser && isCashierRole ? tenantId : null,
+    currentUser && isCashierRole ? currentUser.id : null
+  );
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [selectedOrderForWaLogs, setSelectedOrderForWaLogs] = useState<Order | null>(null);
@@ -246,8 +250,10 @@ export default function App() {
     handleResetPassword,
   } = useLaundryData({ tenantId, currentUser });
 
-  // WhatsApp Gateway Composable (always target a valid tenant ID)
-  const effectiveTenantId = tenantId === "all" ? (tenants[0]?.id || "tenant-01") : tenantId;
+  // WhatsApp Gateway Composable (hanya target outlet aktif saat user telah terautentikasi)
+  const effectiveTenantId = currentUser
+    ? (tenantId === "all" ? (tenants[0]?.id || "tenant-01") : tenantId)
+    : "";
   const currentActiveTenant = tenants.find((t) => t.id === effectiveTenantId) || tenants[0];
   const isShiftEnabled =
     currentActiveTenant?.enableCashierShift !== "false" &&
@@ -835,6 +841,7 @@ export default function App() {
         tenantId={effectiveTenantId}
         waData={waGateway.waData}
         onSendBaileys={waGateway.sendDirectMessage}
+        onNavigateToSettings={() => setActiveTab("settings")}
         onCreateOrder={handleCreateOrder}
         onUpdateOrder={handleUpdateOrder}
         onCreateExpense={handleCreateExpense}
@@ -956,7 +963,10 @@ export default function App() {
           setIsTourOpen(false);
           handleCompleteTutorial();
         }}
-        onClose={() => setIsTourOpen(false)}
+        onClose={() => {
+          setIsTourOpen(false);
+          handleCompleteTutorial();
+        }}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />

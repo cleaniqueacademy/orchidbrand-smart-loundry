@@ -366,8 +366,8 @@ subscriptionRoutes.post(
       // Hitung perpanjangan tanggal
       const nowStr = today();
       const currentExpiry = targetTenant.subscriptionUntil || nowStr;
-      const baseDate = currentExpiry > nowStr ? currentExpiry : nowStr;
-      const newExpiry = addDays(baseDate, months * 30);
+      const baseDate = currentExpiry > nowStr ? new Date(`${currentExpiry}T00:00:00`) : new Date();
+      const newExpiry = addDays(months * 30, baseDate);
 
       // Update tenant
       await db

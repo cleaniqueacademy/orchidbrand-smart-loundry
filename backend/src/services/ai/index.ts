@@ -21,8 +21,8 @@ export { checkRoleAccessViolation, sanitizeResponseForRole } from "./rbacGuard";
 export async function askLaundryAssistant(options: ChatOptions): Promise<AIResponse> {
   const { message, tenantId, user, history = [] } = options;
 
-  const context = await getOperationalContext(tenantId);
   const userRole = user.role || "staff";
+  const context = await getOperationalContext(tenantId, userRole);
 
   // =========================================================================
   // STEP 0: STRICT DETERMINISTIC RBAC PRE-GUARD
@@ -90,6 +90,20 @@ DATA OPERASIONAL OUTLET SAAT INI (${context.todayStr}):
 - Antrian Cucian Sedang Diproses: ${context.processCount} pesanan
 - Cucian Selesai & Siap Diambil: ${context.readyCount} pesanan
 - Pesanan Belum Lunas (Piutang): ${context.unpaidCount} pesanan
+${context.businessHealth ? `
+ANALISA KESEHATAN BISNIS & EFISIENSI OPERASIONAL OUTLET (KHUSUS PEMILIK OUTLET):
+- Skor Kesehatan Bisnis: ${context.businessHealth.healthScore} / 100 (${context.businessHealth.ratingText})
+- Total Cucian Kiloan (Cuci): ${context.businessHealth.totalWashKg} Kg
+- Total Omset Lunas: Rp ${context.businessHealth.monthlyRevenue.toLocaleString("id-ID")}
+- Beban Pengeluaran Efektif (termasuk amortisasi sewa): Rp ${context.businessHealth.monthlyExpense.toLocaleString("id-ID")}
+- Laba Bersih: Rp ${context.businessHealth.monthlyNetProfit.toLocaleString("id-ID")} (Margin Laba: ${context.businessHealth.netMarginPct}%)
+- Rasio HPP Bahan Kimia vs Omset: ${context.businessHealth.chemicalRatioPct}% (Standar ideal laundry: 12-18%)
+- Audit Pemakaian Bahan vs Realisasi Belanja:
+${context.businessHealth.materials.map(m => `  • ${m.name}: Estimasi SOP ${m.estimatedQty} ${m.unitLabel} (Rp ${m.estimatedCost.toLocaleString("id-ID")}) | Belanja di buku kas: Rp ${m.actualCost.toLocaleString("id-ID")} -> ${m.statusText}`).join("\n")}
+- Status Sewa Tempat: ${context.businessHealth.rent.hasRent ? `Sisa ${context.businessHealth.rent.remainingMonths} bulan lagi (s/d ${context.businessHealth.rent.endDate}) | Beban sewa bulanan: Rp ${context.businessHealth.rent.monthlyAmortization.toLocaleString("id-ID")}/bln` : "Tidak ada catatan beban sewa berjangka"}
+- Saran / Rekomendasi Bisnis:
+${context.businessHealth.recommendations.map(r => `  • ${r}`).join("\n")}
+` : ""}
 
 PANDUAN PENGETAHUAN MENU & PENGATURAN DASHBOARD:
 1. **Menu Overview (overview)**: Dashboard ringkasan harian, antrian cucian siap diserahkan, statistik omset, dan kartu status shift kasir.

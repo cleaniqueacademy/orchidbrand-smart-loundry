@@ -86,6 +86,8 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS referral_code_id TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS acquired_at TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_expense_categories TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_sop_ratios TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (
@@ -154,6 +156,9 @@ export async function initPostgresTables() {
       );
     `;
     await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'expense';`;
+    await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS rent_duration_months DOUBLE PRECISION;`;
+    await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS rent_start_date TEXT;`;
+    await client`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS is_auto_generated TEXT NOT NULL DEFAULT 'false';`;
 
     await client`
       CREATE TABLE IF NOT EXISTS shifts (

@@ -45,6 +45,7 @@ interface AppModalsProps {
   // WhatsApp integration
   waData?: WAStatusData;
   onSendBaileys?: (phone: string, text: string) => Promise<{ success: boolean; error?: string }>;
+  onNavigateToSettings?: () => void;
 
   // Submission handlers
   onCreateOrder: (data: any) => Promise<void>;
@@ -86,6 +87,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
   tenantId,
   waData,
   onSendBaileys,
+  onNavigateToSettings,
   onCreateOrder,
   onUpdateOrder,
   onCreateExpense,
@@ -152,6 +154,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
         tenant={currentTenant}
         waData={waData}
         onSendBaileys={onSendBaileys}
+        onNavigateToSettings={onNavigateToSettings}
       />
 
       <EditOrderModal

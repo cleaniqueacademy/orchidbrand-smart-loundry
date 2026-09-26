@@ -219,7 +219,7 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
         {/* Dark semi-transparent backdrop applied with mask */}
         <rect
           width="100%" height="100%"
-          fill="rgba(5, 17, 25, 0.78)"
+          fill="rgba(15, 23, 42, 0.65)"
           mask="url(#spotlight-tour-mask)"
         />
       </svg>
@@ -235,10 +235,10 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
             width: `${spotlightW}px`,
             height: `${spotlightH}px`,
           }}
-          className="fixed z-[9992] pointer-events-none rounded-2xl ring-3 ring-emerald-400/90 shadow-[0_0_25px_rgba(16,185,129,0.55)] transition-all duration-200"
+          className="fixed z-[9992] pointer-events-none rounded-2xl ring-4 ring-blue-600/90 shadow-[0_0_25px_rgba(37,99,235,0.45)] transition-all duration-200"
         >
           {/* Static Beacon Dot on top-right corner of target */}
-          <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs" />
+          <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 rounded-full bg-blue-600 border-2 border-white shadow-xs" />
         </div>
       )}
 
@@ -248,13 +248,13 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
       <div
         ref={popoverRef}
         style={popoverStyle}
-        className="relative bg-gradient-to-b from-[#0f2432] via-[#091b26] to-[#06121b] border border-emerald-500/30 text-white rounded-2xl shadow-2xl shadow-black/80 p-4 sm:p-5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3"
+        className="relative bg-white border border-zinc-200/90 text-zinc-900 rounded-2xl shadow-2xl shadow-zinc-950/25 p-5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3.5"
       >
         {/* Directional Arrow Notch pointing directly to target element */}
         {targetRect && (
           <div
             style={arrowStyle}
-            className={`absolute w-3.5 h-3.5 bg-[#0e2230] border-emerald-500/40 rotate-45 pointer-events-none z-10 ${
+            className={`absolute w-3.5 h-3.5 bg-white border-zinc-200 rotate-45 pointer-events-none z-10 ${
               arrowPlacement === "top"
                 ? "border-t border-l"
                 : arrowPlacement === "bottom"
@@ -267,46 +267,46 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
         )}
 
         {/* Popover Header */}
-        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+        <div className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2.5">
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Compass className="h-3.5 w-3.5" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-700 border border-blue-100 shadow-2xs">
+              <Compass className="h-4 w-4" />
             </span>
-            <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">
               {step.badge}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
               {currentStepIndex + 1}/{steps.length}
             </span>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
               title="Tutup Tur"
               aria-label="Tutup Tur"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Popover Content */}
         <div className="space-y-1.5">
-          <h3 id="tour-popover-title" className="text-sm sm:text-base font-extrabold text-white leading-snug">
+          <h3 id="tour-popover-title" className="text-sm sm:text-base font-bold text-zinc-900 leading-snug">
             {step.title}
           </h3>
-          <p className="text-xs text-slate-300 leading-relaxed">
+          <p className="text-xs text-zinc-600 leading-relaxed">
             {step.description}
           </p>
 
           {step.tips && step.tips.length > 0 && (
-            <div className="pt-1.5 space-y-1">
+            <div className="pt-1.5 space-y-1 bg-zinc-50 rounded-xl p-2.5 border border-zinc-100">
               {step.tips.map((tip, idx) => (
-                <div key={idx} className="flex items-start gap-1.5 text-[11px] text-slate-400 leading-normal">
-                  <span className="text-emerald-400 font-bold">•</span>
+                <div key={idx} className="flex items-start gap-1.5 text-[11px] text-zinc-600 leading-normal">
+                  <span className="text-blue-600 font-bold">•</span>
                   <span>{tip}</span>
                 </div>
               ))}
@@ -315,27 +315,27 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
         </div>
 
         {/* Step Progress Dots */}
-        <div className="flex items-center gap-1 pt-1">
+        <div className="flex items-center gap-1 pt-0.5">
           {steps.map((s, idx) => (
             <span
               key={s.id}
-              className={`h-1 rounded-full transition-all duration-200 ${
+              className={`h-1.5 rounded-full transition-all duration-200 ${
                 idx === currentStepIndex
-                  ? "w-6 bg-emerald-400 shadow-xs shadow-emerald-400/50"
+                  ? "w-6 bg-blue-600 shadow-2xs"
                   : idx < currentStepIndex
-                  ? "w-2 bg-emerald-600/80"
-                  : "w-2 bg-white/15"
+                  ? "w-2 bg-blue-200"
+                  : "w-2 bg-zinc-200"
               }`}
             />
           ))}
         </div>
 
         {/* Popover Action Buttons */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+        <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-zinc-100">
           <button
             type="button"
             onClick={onSkip}
-            className="text-[11px] font-semibold text-slate-400 hover:text-slate-200 hover:underline transition-colors px-1"
+            className="text-xs font-semibold text-zinc-400 hover:text-zinc-700 hover:underline transition-colors px-1 cursor-pointer"
           >
             Lewati
           </button>
@@ -345,7 +345,7 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
               <button
                 type="button"
                 onClick={onPrev}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors cursor-pointer"
               >
                 <ChevronLeft className="h-3 w-3" />
                 <span>Sebelumnya</span>
@@ -355,17 +355,17 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
             <button
               type="button"
               onClick={isLast ? onFinish : onNext}
-              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-xs font-bold text-white shadow-md shadow-emerald-950/40 hover:from-emerald-500 hover:to-teal-600 active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-sm shadow-blue-600/25 active:scale-95 transition-all cursor-pointer"
             >
               {isLast ? (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-white" />
                   <span>Selesai</span>
                 </>
               ) : (
                 <>
                   <span>Lanjut</span>
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </>
               )}
             </button>

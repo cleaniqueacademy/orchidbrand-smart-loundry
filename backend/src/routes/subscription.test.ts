@@ -14,6 +14,7 @@ import {
   services,
   signupRequests,
   referralEvents,
+  expenses,
 } from "../db/schema";
 import { eq } from "drizzle-orm";
 
@@ -39,6 +40,7 @@ describe("subscription routes integration tests", () => {
       await db.delete(referralEvents).where(eq(referralEvents.tenantId, testTenantId));
       await db.delete(waNumbers).where(eq(waNumbers.tenantId, testTenantId));
       await db.delete(services).where(eq(services.tenantId, testTenantId));
+      await db.delete(expenses).where(eq(expenses.tenantId, testTenantId));
       await db.delete(signupRequests).where(eq(signupRequests.createdTenantId, testTenantId));
       await db.delete(tenants).where(eq(tenants.id, testTenantId));
     }

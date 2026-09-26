@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, TrendingDown, TrendingUp, DollarSign } from "lucide-react";
+import { X, TrendingDown, TrendingUp, DollarSign, Home } from "lucide-react";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
 
@@ -13,14 +13,20 @@ interface CreateExpenseModalProps {
     amount: number;
     notes: string;
     expenseDate: string;
+    rentDurationMonths?: number | null;
+    rentStartDate?: string | null;
   }) => Promise<void>;
 }
 
 const EXPENSE_CATEGORIES = [
-  "Deterjen & Pewangi",
+  "Deterjen & Kimia",
+  "Parfum & Pelicin",
+  "Gas Pengering (LPG)",
   "Listrik & Air",
   "Plastik Packing",
+  "Sewa Ruko / Tempat",
   "Gaji Karyawan",
+  "Langganan Aplikasi",
   "Servis Mesin",
   "Biaya Operasional",
   "Lain-lain",
@@ -47,18 +53,34 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [amount, setAmount] = useState(50000);
   const [notes, setNotes] = useState("");
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
+  const [isRentOption, setIsRentOption] = useState(false);
+  const [rentDurationMonths, setRentDurationMonths] = useState(12);
+  const [rentStartDate, setRentStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setType(defaultType);
-      setCategory(defaultType === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+      const initialCat = defaultType === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0];
+      setCategory(initialCat);
+      setIsRentOption(initialCat === "Sewa Ruko / Tempat");
+      setExpenseDate(new Date().toISOString().slice(0, 10));
+      setRentStartDate(new Date().toISOString().slice(0, 10));
     }
   }, [isOpen, defaultType]);
 
+  const handleCategoryChange = (newCat: string) => {
+    setCategory(newCat);
+    if (newCat === "Sewa Ruko / Tempat") {
+      setIsRentOption(true);
+    }
+  };
+
   const handleTypeChange = (newType: "income" | "expense") => {
     setType(newType);
-    setCategory(newType === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+    const newCat = newType === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0];
+    setCategory(newCat);
+    setIsRentOption(newCat === "Sewa Ruko / Tempat");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +102,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         amount,
         notes: notes.trim(),
         expenseDate,
+        rentDurationMonths: isRentOption ? rentDurationMonths : null,
+        rentStartDate: isRentOption ? rentStartDate : null,
       });
       setNotes("");
       setAmount(50000);
@@ -161,7 +185,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             </label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full text-xs font-medium border border-zinc-200 rounded-lg px-3 py-2 bg-white text-zinc-800 outline-none focus:border-zinc-900 transition"
             >
               {(type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
@@ -171,6 +195,63 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Sewa Ruko Option */}
+          {type === "expense" && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={isRentOption}
+                  onChange={(e) => setIsRentOption(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Ini Biaya Sewa Berjangka (Amortisasi Bulanan)</span>
+              </label>
+
+              {isRentOption && (
+                <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                      <Home className="w-3.5 h-3.5 text-indigo-600" />
+                      Pelacakan Sewa Ruko / Tempat
+                    </span>
+                    <span className="text-[11px] font-semibold text-indigo-700">
+                      Rp {Math.round(amount / (rentDurationMonths || 1)).toLocaleString("id-ID")}/bln
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-medium text-indigo-950 mb-1">
+                        Durasi Sewa (Bulan)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={rentDurationMonths}
+                        onChange={(e) =>
+                          setRentDurationMonths(Math.max(1, parseInt(e.target.value) || 1))
+                        }
+                        className="w-full text-xs font-semibold border border-indigo-200 rounded-lg px-2.5 py-1.5 bg-white text-zinc-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-indigo-950 mb-1">
+                        Tanggal Mulai Sewa
+                      </label>
+                      <input
+                        type="date"
+                        value={rentStartDate}
+                        onChange={(e) => setRentStartDate(e.target.value)}
+                        className="w-full text-xs font-medium border border-indigo-200 rounded-lg px-2.5 py-1.5 bg-white text-zinc-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-1">

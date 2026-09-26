@@ -8,6 +8,9 @@ import { ReportAnalyticsPanels } from "./reports/ReportAnalyticsPanels";
 import { ReportLedgerTable } from "./reports/ReportLedgerTable";
 import { PrintPreviewModal } from "./reports/PrintPreviewModal";
 import { SuperAdminPlatformReport } from "./reports/SuperAdminPlatformReport";
+import { BusinessHealthSection } from "./reports/BusinessHealthSection";
+import { computeFrontendBusinessHealth } from "../../utils/businessHealthUtils";
+import { Activity, FileText } from "lucide-react";
 import { User } from "../../types";
 
 interface ReportsTabProps {
@@ -29,6 +32,7 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
 }) => {
   const isSuperAdmin = currentUserRole === "superadmin";
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<"recap" | "health">("recap");
 
   const {
     activeTenant,
@@ -65,6 +69,19 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
     currentTenantId,
     currentUserRole,
   });
+
+  const businessHealth = React.useMemo(() => {
+    let customRatios = null;
+    if (activeTenant?.customSopRatios) {
+      try {
+        customRatios =
+          typeof activeTenant.customSopRatios === "string"
+            ? JSON.parse(activeTenant.customSopRatios)
+            : activeTenant.customSopRatios;
+      } catch {}
+    }
+    return computeFrontendBusinessHealth(filteredOrders, filteredExpenses, customRatios);
+  }, [filteredOrders, filteredExpenses, activeTenant]);
 
   return (
     <div>
@@ -151,41 +168,79 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
           isSuperAdmin={isSuperAdmin}
         />
 
-        {/* Executive Financial Metrics (5 Cards) */}
-        <ReportMetricsCards
-          metrics={metrics}
-          expenseCount={filteredExpenses.length}
-        />
+        {/* Sub-tab Navigation: Rekap Keuangan vs Kesehatan Bisnis */}
+        <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
+          <button
+            onClick={() => setActiveSubTab("recap")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeSubTab === "recap"
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Rekap Finansial & Buku Besar
+          </button>
+          <button
+            onClick={() => setActiveSubTab("health")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeSubTab === "health"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            Kesehatan Bisnis & Efisiensi Bahan
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-700 text-white font-black">
+              {businessHealth.healthScore}
+            </span>
+          </button>
+        </div>
 
-        {/* Two Column Analytic Panels: Services & Expenses */}
-        <ReportAnalyticsPanels
-          serviceBreakdown={serviceBreakdown}
-          expenseBreakdown={expenseBreakdown}
-          paymentMethodBreakdown={paymentMethodBreakdown}
-          totalExpense={metrics.totalExpense}
-          paidCount={metrics.paidCount}
-        />
+        {activeSubTab === "health" ? (
+          <BusinessHealthSection
+            health={businessHealth}
+            tenantId={selectedTenantId}
+          />
+        ) : (
+          <>
+            {/* Executive Financial Metrics (5 Cards) */}
+            <ReportMetricsCards
+              metrics={metrics}
+              expenseCount={filteredExpenses.length}
+            />
 
-        {/* Buku Besar Transaksi Rinci (Ledger Table with Search & Pagination) */}
-        <ReportLedgerTable
-          searchQuery={searchQuery}
-          onSearchChange={(q) => {
-            setSearchQuery(q);
-            setPage(1);
-          }}
-          paginatedOrders={paginatedOrders}
-          totalOrdersCount={filteredOrders.length}
-          page={page}
-          pageSize={pageSize}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setPage(1);
-          }}
-          isMultiTenant={activeTenant.id === "all" || isSuperAdmin}
-          tenants={tenants}
-        />
+            {/* Two Column Analytic Panels: Services & Expenses */}
+            <ReportAnalyticsPanels
+              serviceBreakdown={serviceBreakdown}
+              expenseBreakdown={expenseBreakdown}
+              paymentMethodBreakdown={paymentMethodBreakdown}
+              totalExpense={metrics.totalExpense}
+              paidCount={metrics.paidCount}
+            />
+
+            {/* Buku Besar Transaksi Rinci (Ledger Table with Search & Pagination) */}
+            <ReportLedgerTable
+              searchQuery={searchQuery}
+              onSearchChange={(q) => {
+                setSearchQuery(q);
+                setPage(1);
+              }}
+              paginatedOrders={paginatedOrders}
+              totalOrdersCount={filteredOrders.length}
+              page={page}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              isMultiTenant={activeTenant.id === "all" || isSuperAdmin}
+              tenants={tenants}
+            />
+          </>
+        )}
       </div>
 
       {/* Modal Preview Lembar Cetak Dokumen Resmi PDF */}

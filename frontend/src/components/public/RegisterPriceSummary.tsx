@@ -26,17 +26,17 @@ export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
   return (
     <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-emerald-500/5 p-4 sm:p-5 shadow-xs">
       {/* Badge Trial Gratis */}
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold rounded-full shadow-sm mb-3">
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold rounded-full shadow-xs mb-3">
         <Gift className="w-3.5 h-3.5" />
         <span>GRATIS {trialDays} HARI PERTAMA</span>
       </div>
 
       <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
         <Sparkles className="w-4 h-4 text-emerald-600" />
-        Akses Uji Coba Penuh
+        Paket Lengkap Semua Fitur
       </h3>
       <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-        Nikmati seluruh fitur kasir POS, cetak struk thermal, dan WhatsApp notifikasi otomatis tanpa biaya pendaftaran.
+        Akses penuh kasir POS, cetak nota thermal, WhatsApp otomatis, dan rekap shift kasir.
       </p>
 
       {/* Rincian Harga */}
@@ -84,15 +84,15 @@ export const RegisterPriceSummary: React.FC<RegisterPriceSummaryProps> = ({
       <div className="mt-4 pt-3 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
         <div className="flex items-center gap-1.5">
           <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span>Akses instan setelah registrasi</span>
+          <span>Langsung aktif seketika</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span>Tanpa perlu kartu kredit</span>
+          <span>Tanpa kartu kredit</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span>WhatsApp support prioritas</span>
+          <span>Support WhatsApp prioritas</span>
         </div>
         <div className="flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />

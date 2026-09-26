@@ -63,14 +63,14 @@ export const RegisterSuccessPage: React.FC = () => {
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100/80 text-emerald-800 text-xs font-bold rounded-full mb-3">
-          <span>Pendaftaran Berhasil & Akun Aktif</span>
+          <span>Pendaftaran Berhasil • Akun Aktif</span>
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           Selamat Datang di Laundry Cleanique!
         </h1>
         <p className="text-slate-500 mt-2 text-xs sm:text-sm max-w-md leading-relaxed">
-          Outlet Anda telah aktif secara otomatis. Nikmati kemudahan pengelolaan kasir laundry cerdas dan WhatsApp notifikasi nota tanpa biaya awal.
+          Kelola Mudah, Tumbuh Lebih Terarah. Outlet Anda siap beroperasi dengan sistem kasir cerdas & nota WhatsApp otomatis.
         </p>
 
         {/* Kartu Rincian Akun */}
@@ -88,7 +88,7 @@ export const RegisterSuccessPage: React.FC = () => {
               </div>
             </div>
             <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
-              Trial Aktif
+              Trial 7 Hari Aktif
             </span>
           </div>
 
@@ -122,7 +122,7 @@ export const RegisterSuccessPage: React.FC = () => {
         {/* Panduan Langkah Awal */}
         <div className="w-full mt-4 p-4 sm:p-5 bg-emerald-50/60 rounded-2xl border border-emerald-100/90 text-left">
           <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-2.5">
-            Langkah Cepat Memulai Operasional:
+            Langkah Cepat Memulai:
           </h4>
           <div className="space-y-2 text-xs text-slate-700">
             <div className="flex items-start gap-2">
@@ -135,13 +135,13 @@ export const RegisterSuccessPage: React.FC = () => {
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                 2
               </span>
-              <span>Hubungkan WhatsApp outlet via scan QR untuk pengiriman nota digital otomatis.</span>
+              <span>Hubungkan WhatsApp toko via scan QR untuk pengiriman nota otomatis.</span>
             </div>
             <div className="flex items-start gap-2">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                 3
               </span>
-              <span>Atur tarif layanan & durasi pengerjaan di menu Master Layanan.</span>
+              <span>Sesuaikan tarif layanan dan buat nota kasir perdana Anda.</span>
             </div>
           </div>
         </div>
@@ -150,9 +150,9 @@ export const RegisterSuccessPage: React.FC = () => {
         <div className="w-full mt-6">
           <button
             onClick={() => navigateTo("/")}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white font-bold text-sm sm:text-base shadow-md shadow-emerald-900/15 hover:shadow-lg hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white font-bold text-sm sm:text-base shadow-md shadow-emerald-900/15 hover:shadow-lg hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Masuk ke Dashboard Aplikasi</span>
+            <span>Masuk ke Akun</span>
             <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>

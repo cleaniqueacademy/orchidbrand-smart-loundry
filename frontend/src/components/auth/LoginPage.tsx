@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import gsap from "gsap";
 import {
   Mail,
   Lock,
@@ -19,6 +20,9 @@ import {
   X,
   Check,
   RotateCcw,
+  Receipt,
+  Smartphone,
+  Bot,
 } from "lucide-react";
 import { User } from "../../types";
 import { InactiveAccountModal } from "../modals/InactiveAccountModal";
@@ -30,6 +34,7 @@ interface LoginPageProps {
 const SAVED_EMAIL_KEY = "cleanique_saved_email";
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+  const pageRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState(() => {
     try {
       return localStorage.getItem(SAVED_EMAIL_KEY) || "";
@@ -46,52 +51,83 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [capsLockActive, setCapsLockActive] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [inactiveAccountUser, setInactiveAccountUser] = useState<any | null>(null);
-  const [activeDemoRole, setActiveDemoRole] = useState<string | null>(null);
 
-  // Quick fill demo accounts
-  const demoAccounts = [
-    {
-      role: "owner",
-      title: "Owner",
-      fullName: "Owner Outlet",
-      subtitle: "Laundry Melati",
-      email: "budi@laundrymelati.com",
-      password: "budi123",
-      icon: Store,
-    },
-    {
-      role: "staff",
-      title: "Kasir",
-      fullName: "Kasir / Staf",
-      subtitle: "Shift Operasional",
-      email: "kasir@laundrymelati.com",
-      password: "kasir123",
-      icon: UserCheck,
-    },
-    {
-      role: "admin",
-      title: "Super Admin",
-      fullName: "Super Admin",
-      subtitle: "HQ Platform",
-      email: "admin@cleaniquelaundry.com",
-      password: "admin123",
-      icon: Building2,
-    },
-  ];
+  // GSAP Entrance Animations
+  useEffect(() => {
+    if (!pageRef.current) return;
+    const ctx = gsap.context(() => {
+      // 1. Ambient Background Glow Orbs Breathing Loop
+      gsap.to(".gsap-glow-orb", {
+        y: -14,
+        x: 8,
+        scale: 1.05,
+        duration: 4.5,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+        stagger: 0.7,
+      });
 
-  const handleSelectDemo = (account: (typeof demoAccounts)[0]) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setActiveDemoRole(account.role);
-    setErrorMessage("");
-  };
+      // 2. Left Hero section items stagger entrance
+      gsap.fromTo(
+        ".gsap-login-hero",
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.08,
+          duration: 0.75,
+          ease: "power3.out",
+          delay: 0.08,
+        }
+      );
 
-  const handleClearDemo = () => {
-    setEmail("");
-    setPassword("");
-    setActiveDemoRole(null);
-    setErrorMessage("");
-  };
+      // 3. Feature Cards Staggered Pop
+      gsap.fromTo(
+        ".gsap-feature-card",
+        { opacity: 0, y: 20, scale: 0.94 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          stagger: 0.09,
+          duration: 0.65,
+          ease: "back.out(1.4)",
+          delay: 0.28,
+        }
+      );
+
+      // 4. Right Form Container Entrance
+      gsap.fromTo(
+        ".gsap-login-form-container",
+        { opacity: 0, y: 20, scale: 0.98 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          ease: "power3.out",
+          delay: 0.15,
+        }
+      );
+
+      // 5. Right Form Elements Staggered Fade-Up
+      gsap.fromTo(
+        ".gsap-login-form-elem",
+        { opacity: 0, y: 14 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.06,
+          duration: 0.6,
+          ease: "power2.out",
+          delay: 0.25,
+        }
+      );
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     setCapsLockActive(e.getModifierState("CapsLock"));
@@ -160,102 +196,122 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[1.12fr_1fr] lg:h-screen lg:overflow-hidden">
+    <main
+      ref={pageRef}
+      className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[1.12fr_1fr] lg:h-screen lg:overflow-hidden"
+    >
       {/* ========================================================================= */}
       {/* LEFT COLUMN: HERO & BRANDING SHOWCASE (Desktop Only)                     */}
       {/* ========================================================================= */}
-      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] p-6 xl:p-10 2xl:p-12 text-slate-100 border-r border-white/5">
+      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] px-6 xl:px-10 2xl:px-12 pt-5 pb-7 xl:pb-9 text-slate-100 border-r border-white/5">
         {/* Ambient Glows */}
-        <div className="pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-emerald-500/15 blur-[140px]" />
-        <div className="pointer-events-none absolute -bottom-32 right-0 h-[450px] w-[450px] rounded-full bg-teal-400/15 blur-[150px]" />
-        <div className="pointer-events-none absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
+        <div className="gsap-glow-orb pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-emerald-500/15 blur-[140px]" />
+        <div className="gsap-glow-orb pointer-events-none absolute -bottom-32 right-0 h-[450px] w-[450px] rounded-full bg-teal-400/15 blur-[150px]" />
+        <div className="gsap-glow-orb pointer-events-none absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
 
         {/* Top Header: Logo & System Indicator */}
-        <div className="relative z-10 flex items-center justify-between shrink-0">
+        <div className="relative z-10 flex items-center justify-between shrink-0 gsap-login-hero">
           <div className="flex items-center gap-3">
             <img
               src="/laundry-cleanique-outline.png"
               alt="Laundry Cleanique"
-              className="h-9 xl:h-10 w-auto object-contain filter drop-shadow-md"
+              className="h-7 xl:h-8 w-auto object-contain filter drop-shadow-md"
             />
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md shadow-xs">
-            <span>Platform Cloud v2.0 • Online</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-md shadow-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Platform Manajemen Laundry</span>
           </div>
         </div>
 
         {/* Hero Middle Content */}
-        <div className="relative z-10 my-auto max-w-xl py-3 xl:py-6 space-y-4 xl:space-y-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-3.5 py-1 text-xs font-semibold text-emerald-200 backdrop-blur-md shadow-xs">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-            Smart Laundry Management Platform
+        <div className="relative z-10 my-auto max-w-xl py-1 space-y-2 xl:space-y-3">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-200 backdrop-blur-md shadow-xs gsap-login-hero">
+            <Sparkles className="h-3 w-3 text-emerald-400" />
+            Simple to Use. Built to Perform.
           </div>
 
-          <h1 className="text-2xl xl:text-3xl 2xl:text-4xl font-extrabold tracking-tight text-white leading-[1.2]">
-            Kendalikan Operasional & Kasir Laundry{" "}
+          <h1 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold tracking-tight text-white leading-snug gsap-login-hero">
+            Kelola Mudah,{" "}
             <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
-              dalam Satu Layar.
+              Tumbuh Lebih Terarah.
             </span>
           </h1>
 
-          <p className="text-xs xl:text-sm leading-relaxed text-slate-300/85 max-w-lg">
-            Sistem terintegrasi untuk kasir POS cepat, cetak struk thermal 58/80mm, pelacakan resi online, serta notifikasi otomatis WhatsApp ke pelanggan.
+          <p className="text-[11px] xl:text-xs leading-relaxed text-slate-300/85 max-w-lg gsap-login-hero">
+            Solusi kasir POS cepat, nota WhatsApp otomatis, rekapitulasi kas laci, dan asisten AI pintar dalam satu sistem yang ringkas.
           </p>
 
-          {/* Interactive Feature Cards */}
-          <div className="grid grid-cols-2 gap-3 pt-0.5">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-md transition-all duration-300 hover:border-emerald-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-emerald-950/20">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="rounded-xl bg-emerald-500/20 p-1.5 text-emerald-300">
-                  <Store className="h-4 w-4" />
+          {/* Interactive Feature Cards Grid (4 Key Highlights) */}
+          <div className="grid grid-cols-2 gap-2 xl:gap-2.5 pt-0.5">
+            {/* Card 1 */}
+            <div className="gsap-feature-card group rounded-xl border border-white/10 bg-white/[0.04] p-2 xl:p-2.5 backdrop-blur-md transition-all duration-300 hover:border-emerald-400/40 hover:bg-white/[0.08] hover:shadow-lg hover:shadow-emerald-950/25 hover:-translate-y-0.5">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="rounded-md bg-emerald-500/20 p-1 text-emerald-300 group-hover:scale-110 transition-transform">
+                  <Store className="h-3 w-3" />
                 </div>
-                <span className="text-xs font-bold text-white">Kasir POS & Shift</span>
+                <span className="text-[11px] font-bold text-white tracking-wide">Kasir POS & Shift</span>
               </div>
-              <p className="text-[11px] xl:text-xs text-slate-300/75 leading-relaxed">
-                Timbang kiloan/satuan instan, quick pay QRIS/Tunai, dan rekonsiliasi kas laci.
+              <p className="text-[10px] xl:text-[10.5px] text-slate-300/75 leading-snug">
+                Timbang kiloan, cetak struk thermal, & rekap kas laci tanpa ribet.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-md transition-all duration-300 hover:border-teal-400/30 hover:bg-white/[0.07] hover:shadow-lg hover:shadow-teal-950/20">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="rounded-xl bg-teal-500/20 p-1.5 text-teal-300">
-                  <MessageCircle className="h-4 w-4" />
+            {/* Card 2 */}
+            <div className="gsap-feature-card group rounded-xl border border-white/10 bg-white/[0.04] p-2 xl:p-2.5 backdrop-blur-md transition-all duration-300 hover:border-teal-400/40 hover:bg-white/[0.08] hover:shadow-lg hover:shadow-teal-950/25 hover:-translate-y-0.5">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="rounded-md bg-teal-500/20 p-1 text-teal-300 group-hover:scale-110 transition-transform">
+                  <MessageCircle className="h-3 w-3" />
                 </div>
-                <span className="text-xs font-bold text-white">WhatsApp Otomatis</span>
+                <span className="text-[11px] font-bold text-white tracking-wide">Nota WhatsApp Otomatis</span>
               </div>
-              <p className="text-[11px] xl:text-xs text-slate-300/75 leading-relaxed">
-                Struk digital langsung ke WA pelanggan saat order dibuat & selesai dicuci.
+              <p className="text-[10px] xl:text-[10.5px] text-slate-300/75 leading-snug">
+                Kirim nota digital & info cucian selesai langsung ke nomor pelanggan.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="gsap-feature-card group rounded-xl border border-white/10 bg-white/[0.04] p-2 xl:p-2.5 backdrop-blur-md transition-all duration-300 hover:border-cyan-400/40 hover:bg-white/[0.08] hover:shadow-lg hover:shadow-cyan-950/25 hover:-translate-y-0.5">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="rounded-md bg-cyan-500/20 p-1 text-cyan-300 group-hover:scale-110 transition-transform">
+                  <Bot className="h-3 w-3" />
+                </div>
+                <span className="text-[11px] font-bold text-white tracking-wide">Asisten AI Bisnis</span>
+              </div>
+              <p className="text-[10px] xl:text-[10.5px] text-slate-300/75 leading-snug">
+                Konsultasi finansial, ide promo, dan audit efisiensi bahan 24/7.
+              </p>
+            </div>
+
+            {/* Card 4 */}
+            <div className="gsap-feature-card group rounded-xl border border-white/10 bg-white/[0.04] p-2 xl:p-2.5 backdrop-blur-md transition-all duration-300 hover:border-emerald-400/40 hover:bg-white/[0.08] hover:shadow-lg hover:shadow-emerald-950/25 hover:-translate-y-0.5">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="rounded-md bg-emerald-500/20 p-1 text-emerald-300 group-hover:scale-110 transition-transform">
+                  <Receipt className="h-3 w-3" />
+                </div>
+                <span className="text-[11px] font-bold text-white tracking-wide">Laporan & Keuangan</span>
+              </div>
+              <p className="text-[10px] xl:text-[10.5px] text-slate-300/75 leading-snug">
+                Pantau omzet harian, performa staf, dan laba-rugi secara akurat.
               </p>
             </div>
           </div>
 
-          {/* Live WhatsApp Notification Preview */}
-          <div className="rounded-2xl border border-emerald-500/20 bg-slate-900/70 p-3.5 backdrop-blur-lg shadow-xl shadow-black/30">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pb-2 border-b border-white/5">
-              <span className="flex items-center gap-1.5 font-medium text-emerald-400">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Pratinjau Pesan Pelanggan
-              </span>
-              <span className="text-slate-400 text-[10px]">Baru saja</span>
-            </div>
-            <div className="mt-2 flex items-start gap-2.5">
-              <div className="h-7 w-7 rounded-full bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                <MessageCircle className="h-3.5 w-3.5" />
-              </div>
-              <div className="text-xs text-slate-200 leading-relaxed">
-                <span className="font-semibold text-white">Cleanique Outlet:</span> Halo Kak Budi, cucian Anda nota{" "}
-                <span className="font-mono text-emerald-300 font-semibold bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                  #INV-2026-081
-                </span>{" "}
-                sudah <span className="text-emerald-400 font-semibold">Selesai & Siap Diambil</span>. Jam operasional toko hari ini s/d 16:00. Terima kasih!
-              </div>
-            </div>
+          {/* Trust Highlights Badges */}
+          <div className="flex items-center flex-wrap gap-1.5 pt-0.5 gsap-login-hero">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-slate-300">
+              <ShieldCheck className="h-3 w-3 text-emerald-400" /> Data Outlet Aman & Terisolasi
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-slate-300">
+              <Smartphone className="h-3 w-3 text-teal-400" /> Akses dari HP, Tablet, & PC
+            </span>
           </div>
         </div>
 
         {/* Desktop Footer */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-slate-400 shrink-0">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 pb-1 text-[11px] xl:text-xs text-slate-400 shrink-0 gsap-login-hero">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
             <span>PT Indotech Berkah Abadi</span>
           </div>
           <span className="text-slate-500 font-medium">© 2026 Laundry Cleanique</span>
@@ -266,9 +322,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       {/* RIGHT COLUMN: LOGIN FORM (Mobile & Desktop)                               */}
       {/* ========================================================================= */}
       <section className="flex flex-col justify-center items-center bg-[#f8fafc] px-4 py-8 sm:px-8 md:px-10 overflow-y-auto min-h-screen lg:h-screen">
-        <div className="w-full max-w-[420px] my-auto">
+        <div className="gsap-login-form-container w-full max-w-[420px] my-auto">
           {/* Mobile Top Brand Header */}
-          <div className="mb-6 flex flex-col items-center text-center lg:hidden">
+          <div className="mb-6 flex flex-col items-center text-center lg:hidden gsap-login-form-elem">
             <img
               src="/laundry-cleanique.png"
               alt="Laundry Cleanique"
@@ -276,73 +332,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-semibold text-emerald-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
-              Sistem Operasional & Kasir Laundry
+              Simple to Use. Built to Perform.
             </div>
           </div>
 
           {/* Form Header */}
-          <div className="mb-4 text-left sm:text-left">
+          <div className="mb-4 text-left sm:text-left gsap-login-form-elem">
             <h2 className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-slate-900 leading-snug">
-              Masuk ke Ruang Kerja
+              Masuk ke Akun
             </h2>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed">
-              Masukkan email dan kata sandi akun outlet Anda untuk memulai shift.
+              Kelola Mudah, Tumbuh Lebih Terarah.
             </p>
-          </div>
-
-          {/* DEMO ACCOUNTS SEGMENTED SWITCHER */}
-          <div className="mb-4 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                Coba Akun Demo
-              </span>
-              {activeDemoRole ? (
-                <button
-                  type="button"
-                  onClick={handleClearDemo}
-                  className="text-[11px] font-medium text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
-                >
-                  <RotateCcw className="h-3 w-3" /> Reset
-                </button>
-              ) : (
-                <span className="text-[10px] text-slate-400 font-medium">1-klik isi otomatis</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5">
-              {demoAccounts.map((account) => {
-                const isSelected = activeDemoRole === account.role;
-                const IconComponent = account.icon;
-                return (
-                  <button
-                    key={account.role}
-                    type="button"
-                    onClick={() => handleSelectDemo(account)}
-                    className={`group relative flex flex-col items-center justify-center p-2 rounded-xl text-center border transition-all duration-150 ${
-                      isSelected
-                        ? "border-emerald-600 bg-emerald-50/80 text-emerald-950 shadow-xs ring-1 ring-emerald-500/20"
-                        : "border-slate-200 bg-slate-50/80 text-slate-700 hover:bg-slate-100 hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1 mb-1">
-                      <IconComponent
-                        className={`h-3.5 w-3.5 ${
-                          isSelected ? "text-emerald-700" : "text-slate-500 group-hover:text-slate-700"
-                        }`}
-                      />
-                      {isSelected && <Check className="h-3 w-3 text-emerald-600" />}
-                    </div>
-                    <span className="text-[11px] font-bold leading-tight truncate w-full">
-                      {account.title}
-                    </span>
-                    <span className="text-[9px] text-slate-500 leading-tight mt-0.5 truncate w-full">
-                      {account.subtitle}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* ERROR ALERT */}
@@ -380,12 +381,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {/* LOGIN FORM CARD */}
           <form
             onSubmit={executeLogin}
-            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.06)] space-y-4"
+            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.06)] space-y-4 gsap-login-form-elem"
           >
             {/* EMAIL INPUT */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Alamat Email
+                Email
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -397,10 +398,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   autoComplete="email"
                   disabled={loading}
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (activeDemoRole) setActiveDemoRole(null);
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@outlet.com"
                   className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3.5 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                 />
@@ -433,10 +431,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   value={password}
                   onKeyDown={handleKeyDown}
                   onKeyUp={handleKeyDown}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (activeDemoRole) setActiveDemoRole(null);
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan kata sandi"
                   className="w-full h-11 sm:h-12 rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-11 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
                 />
@@ -468,7 +463,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 focus:ring-offset-0 cursor-pointer"
                 />
-                <span className="font-medium">Ingat akun saya</span>
+                <span className="font-medium">Ingat saya</span>
               </label>
             </div>
 
@@ -476,16 +471,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="relative mt-2 flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 px-4 text-sm font-bold text-white shadow-md shadow-emerald-900/15 transition-all duration-200 hover:from-emerald-700 hover:to-teal-800 hover:shadow-lg hover:shadow-emerald-900/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65"
+              className="relative mt-2 flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 px-4 text-sm font-bold text-white shadow-md shadow-emerald-900/15 transition-all duration-200 hover:from-emerald-700 hover:to-teal-800 hover:shadow-lg hover:shadow-emerald-900/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
             >
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-emerald-100" />
-                  <span>Memvalidasi Akun…</span>
+                  <span>Memeriksa Akun…</span>
                 </>
               ) : (
                 <>
-                  <span>Masuk ke Dashboard</span>
+                  <span>Masuk</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -498,7 +493,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={goToRegister}
-                  className="font-bold text-emerald-700 hover:text-emerald-800 underline-offset-4 hover:underline"
+                  className="font-bold text-emerald-700 hover:text-emerald-800 underline-offset-4 hover:underline cursor-pointer"
                 >
                   Mulai Trial 7 Hari Gratis
                 </button>
@@ -507,9 +502,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </form>
 
           {/* BOTTOM SECURITY NOTE */}
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center gsap-login-form-elem">
             <p className="text-[11px] leading-relaxed text-slate-400">
-              Dilindungi enkripsi end-to-end, multi-role RBAC, & audit shift kasir.
+              Aman & terenkripsi • Multi-cabang • Akses dari HP, tablet, & PC
             </p>
           </div>
         </div>

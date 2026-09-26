@@ -4,12 +4,34 @@
 
 /**
  * Tambah N hari ke tanggal dasar (default: hari ini).
- * Mengembalikan string ISO date tanpa time component.
+ * Menerima string YYYY-MM-DD atau Date object.
+ * Mengembalikan string ISO date tanpa time component (YYYY-MM-DD).
  */
-export function addDays(days: number, base?: Date): string {
-  const d = base ? new Date(base) : new Date();
-  d.setDate(d.getDate() + days);
-  return toDateOnly(d);
+export function addDays(a: number | string | Date, b?: number | string | Date): string {
+  let days: number;
+  let base: Date;
+
+  if (typeof a === "number") {
+    days = a;
+    if (!b) {
+      base = new Date();
+    } else if (typeof b === "string") {
+      base = new Date(`${b}T00:00:00`);
+    } else {
+      base = new Date(b);
+    }
+  } else {
+    // a is base date, b is days
+    days = typeof b === "number" ? b : 0;
+    base = typeof a === "string" ? new Date(`${a}T00:00:00`) : new Date(a);
+  }
+
+  if (isNaN(base.getTime())) {
+    base = new Date();
+  }
+
+  base.setDate(base.getDate() + days);
+  return toDateOnly(base);
 }
 
 /**

@@ -41,12 +41,12 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
   const totalAmount = pricePerMonth * durationMonths;
 
   const currentExpiry = tenant.subscriptionUntil || new Date().toISOString().slice(0, 10);
-  const curDate = new Date(currentExpiry);
+  const curDate = new Date(currentExpiry.includes("T") ? currentExpiry : `${currentExpiry}T00:00:00`);
   const now = new Date();
-  const baseDate = curDate > now ? curDate : now;
-  const estimatedNewExpiry = new Date(baseDate.getTime() + durationMonths * 30 * 86400000)
-    .toISOString()
-    .slice(0, 10);
+  const baseDate = !isNaN(curDate.getTime()) && curDate > now ? curDate : now;
+  const targetDate = new Date(baseDate);
+  targetDate.setDate(targetDate.getDate() + durationMonths * 30);
+  const estimatedNewExpiry = targetDate.toISOString().slice(0, 10);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

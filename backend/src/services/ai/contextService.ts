@@ -1,12 +1,16 @@
 import { db } from "../../db/index";
-import { orders, tenants } from "../../db/schema";
+import { orders, tenants, expenses } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { OperationalContext } from "./types";
+import { calculateBusinessHealth, SopRatios } from "../../utils/businessHealth";
 
 /**
  * Mengumpulkan data operasional outlet secara realtime untuk konteks AI
  */
-export async function getOperationalContext(tenantId: string | null): Promise<OperationalContext> {
+export async function getOperationalContext(
+  tenantId: string | null,
+  userRole: string = "staff"
+): Promise<OperationalContext> {
   if (!tenantId) {
     return {
       outletName: "Pusat / Superadmin",
@@ -40,6 +44,59 @@ export async function getOperationalContext(tenantId: string | null): Promise<Op
   const completedCount = ordersToday.filter((o) => o.status === "completed").length;
   const unpaidCount = allOrders.filter((o) => o.paymentStatus === "unpaid").length;
 
+  let businessHealth: OperationalContext["businessHealth"] = undefined;
+
+  // Hanya jika pemanggil adalah Pemilik Outlet atau Superadmin: sediakan data finansial mendalam & kesehatan bisnis
+  const isOwnerOrSuper = userRole === "tenant_owner" || userRole === "superadmin" || userRole === "owner";
+  if (isOwnerOrSuper) {
+    try {
+      const allExpenses = await db.select().from(expenses).where(eq(expenses.tenantId, tenantId));
+
+      let customRatios: Partial<SopRatios> | null = null;
+      if (tenant?.customSopRatios) {
+        try {
+          customRatios = JSON.parse(tenant.customSopRatios);
+        } catch {
+          // ignore json parse error
+        }
+      }
+
+      const health = calculateBusinessHealth({
+        orders: allOrders,
+        expenses: allExpenses,
+        customRatios,
+      });
+
+      businessHealth = {
+        healthScore: health.healthScore,
+        ratingText: health.ratingText,
+        totalWashKg: health.totalWashKg,
+        monthlyRevenue: health.paidRevenue,
+        monthlyExpense: health.effectiveMonthlyExpense,
+        monthlyNetProfit: health.netProfit,
+        netMarginPct: health.netMarginPct,
+        chemicalRatioPct: health.chemicalRatioPct,
+        materials: health.materials.map((m) => ({
+          name: m.name,
+          estimatedQty: m.estimatedQty,
+          unitLabel: m.unitLabel,
+          estimatedCost: m.estimatedCost,
+          actualCost: m.actualCost,
+          statusText: m.statusText,
+        })),
+        rent: {
+          hasRent: health.rent.hasRent,
+          remainingMonths: health.rent.remainingMonths,
+          endDate: health.rent.endDate,
+          monthlyAmortization: health.rent.monthlyAmortization,
+        },
+        recommendations: health.recommendations,
+      };
+    } catch (err) {
+      console.warn("[getOperationalContext] Failed to compute businessHealth:", err);
+    }
+  }
+
   return {
     outletName,
     todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
@@ -49,5 +106,6 @@ export async function getOperationalContext(tenantId: string | null): Promise<Op
     readyCount,
     completedCount,
     unpaidCount,
+    businessHealth,
   };
 }

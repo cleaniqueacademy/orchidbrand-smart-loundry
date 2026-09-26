@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -41,6 +41,19 @@ export const PWAInstallPrompt: React.FC = () => {
     return "desktop";
   });
   const [isInstalled, setIsInstalled] = useState(false);
+  const sideTabRef = useRef<HTMLElement>(null);
+
+  // Otomatis menutup side tab saat mengklik area lain
+  useEffect(() => {
+    if (!isPwaTabOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (sideTabRef.current && !sideTabRef.current.contains(e.target as Node)) {
+        setIsPwaTabOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+  }, [isPwaTabOpen]);
 
   useEffect(() => {
     // 1. Cek apakah sudah berjalan di mode standalone (PWA terpasang)
@@ -213,18 +226,18 @@ export const PWAInstallPrompt: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Side Docked PWA Install Tab on Corner Screen Edge (Only Arrow icon visible when closed) */}
+      {/* Side Docked PWA Install Tab on Corner Screen Edge (Hanya muncul jika diklik, tidak muncul saat hover) */}
       {!showToast && (
         <aside
+          ref={sideTabRef}
           aria-label="PWA Install Shortcut"
-          className="fixed right-0 bottom-6 sm:bottom-8 z-30 flex items-center group animate-fade-in"
-          onMouseLeave={() => setIsPwaTabOpen(false)}
+          className="fixed right-0 bottom-6 sm:bottom-8 z-30 flex items-center animate-fade-in"
         >
           <div
             className={`flex items-stretch bg-gradient-to-l from-emerald-800 via-teal-900 to-slate-900 text-white rounded-l-2xl shadow-xl shadow-emerald-950/40 border-y border-l border-emerald-500/30 overflow-hidden transition-all duration-300 ease-out ${
               isPwaTabOpen
                 ? "translate-x-0"
-                : "translate-x-[calc(100%-34px)] group-hover:translate-x-0"
+                : "translate-x-[calc(100%-34px)]"
             }`}
           >
             {/* Arrow Peek Handle - Always visible on the corner edge when closed */}

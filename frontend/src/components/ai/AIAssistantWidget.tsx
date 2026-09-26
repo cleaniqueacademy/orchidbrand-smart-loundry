@@ -81,6 +81,24 @@ const QUICK_PROMPTS: QuickPrompt[] = [
     text: "Bagaimana cara mencetak laporan keuangan ke file PDF atau ekspor ke Excel?",
   },
   {
+    id: "biz-health",
+    category: "menus",
+    label: "Kesehatan Bisnis",
+    text: "Bagaimana analisa kesehatan bisnis dan efisiensi pengeluaran laundry saya bulan ini?",
+  },
+  {
+    id: "biz-detergent",
+    category: "menus",
+    label: "Audit Takaran Deterjen",
+    text: "Berapa estimasi pemakaian deterjen dan parfum saya dari total cucian yang masuk?",
+  },
+  {
+    id: "biz-rent",
+    category: "menus",
+    label: "Status Sewa Ruko",
+    text: "Berapa sisa masa sewa ruko saya dan berapa beban sewanya per bulan?",
+  },
+  {
     id: "menu-tracking",
     category: "menus",
     label: "Cek Resi Mandiri",
@@ -222,6 +240,20 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isSideTabOpen, setIsSideTabOpen] = useState(false);
+  const sideTabRef = useRef<HTMLElement>(null);
+
+  // Otomatis menutup side tab saat mengklik area lain
+  useEffect(() => {
+    if (!isSideTabOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (sideTabRef.current && !sideTabRef.current.contains(e.target as Node)) {
+        setIsSideTabOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+  }, [isSideTabOpen]);
+
   const [isDockedToSide, setIsDockedToSide] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem("cleanique_ai_docked");
@@ -568,6 +600,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         "menu-all",
         "menu-cashflow",
         "menu-reports",
+        "biz-health",
+        "biz-detergent",
+        "biz-rent",
         "tip-summary",
         "tip-promo",
       ];
@@ -640,19 +675,19 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   return (
     <>
-      {/* Side Docked Tab on Right Screen Edge (Corner - Only Arrow icon visible when closed) */}
+      {/* Side Docked Tab on Right Screen Edge (Hanya muncul jika diklik, tidak muncul saat hover) */}
       {!isOpen && isDockedToSide && (
         <aside
+          ref={sideTabRef}
           id="tour-ai-widget"
           aria-label="Cleanique AI Assistant Side Dock"
-          className="fixed right-0 bottom-20 sm:bottom-24 z-40 flex items-center group animate-fade-in"
-          onMouseLeave={() => setIsSideTabOpen(false)}
+          className="fixed right-0 bottom-20 sm:bottom-24 z-40 flex items-center animate-fade-in"
         >
           <div
             className={`flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/25 overflow-hidden transition-all duration-300 ease-out ${
               isSideTabOpen
                 ? "translate-x-0"
-                : "translate-x-[calc(100%-34px)] group-hover:translate-x-0"
+                : "translate-x-[calc(100%-34px)]"
             }`}
           >
             {/* Arrow Peek Handle - Always visible at the corner edge when closed */}

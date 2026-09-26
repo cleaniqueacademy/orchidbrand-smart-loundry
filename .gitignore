@@ -51,6 +51,8 @@ build/
 **/.env
 **/.env.*
 !**/.env.example
+user.txt
+users.txt
 
 # --- Database & Storage (SQLite) ---
 *.db

@@ -333,6 +333,63 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
+  // 9B. ANALISA KESEHATAN BISNIS & EFISIENSI DETERJEN (Owner only)
+  // =========================================================================
+  if (
+    !isStaff &&
+    (lower.includes("kesehatan") ||
+      lower.includes("deterjen") ||
+      lower.includes("parfum") ||
+      lower.includes("gas") ||
+      lower.includes("bahan") ||
+      lower.includes("boros") ||
+      lower.includes("sewa") ||
+      lower.includes("audit") ||
+      lower.includes("keuangan"))
+  ) {
+    if (context.businessHealth) {
+      const bh = context.businessHealth;
+      const matLines = bh.materials
+        .map(
+          (m) =>
+            `• **${m.name}**: Estimasi wajar **${m.estimatedQty} ${m.unitLabel}** (Rp ${m.estimatedCost.toLocaleString("id-ID")}) | Realisasi buku kas: **Rp ${m.actualCost.toLocaleString("id-ID")}** (${m.statusText})`
+        )
+        .join("\n");
+
+      const recLines = bh.recommendations.map((r) => `💡 ${r}`).join("\n");
+
+      return (
+        `🩺 **Analisa Kesehatan Bisnis & Efisiensi Bahan — ${context.outletName}**\n\n` +
+        `🏆 **Skor Kesehatan Bisnis:** **${bh.healthScore} / 100** (${bh.ratingText})\n\n` +
+        `📊 **Ringkasan Finansial Berjalan:**\n` +
+        `• Total Cucian Kiloan (Cuci): **${bh.totalWashKg} Kg**\n` +
+        `• Omset Masuk Lunas: **Rp ${bh.monthlyRevenue.toLocaleString("id-ID")}**\n` +
+        `• Beban Pengeluaran Efektif: **Rp ${bh.monthlyExpense.toLocaleString("id-ID")}**\n` +
+        `• Estimasi Laba Bersih: **Rp ${bh.monthlyNetProfit.toLocaleString("id-ID")}** (Margin: **${bh.netMarginPct}%**)\n` +
+        `• Rasio HPP Bahan Kimia vs Omset: **${bh.chemicalRatioPct}%** (Ideal: 12-18%)\n\n` +
+        `🧺 **Audit Pemakaian Bahan (Estimasi SOP vs Belanja Riil):**\n` +
+        `${matLines}\n\n` +
+        `🏢 **Pelacakan Sewa Ruko:**\n` +
+        `${
+          bh.rent.hasRent
+            ? `• Sisa Masa Sewa: **${bh.rent.remainingMonths} bulan** lagi (Jatuh tempo: ${bh.rent.endDate})\n• Beban Sewa Bulanan: Rp ${bh.rent.monthlyAmortization.toLocaleString("id-ID")}/bulan (terhitung di laba bulanan)`
+            : `• Belum ada pencatatan sewa ruko berjangka.`
+        }\n\n` +
+        `📝 **Saran & Rekomendasi AI:**\n` +
+        `${recLines}\n\n` +
+        `[ACTION:NAVIGATE:reports]`
+      );
+    }
+
+    return (
+      `🩺 **Analisa Kesehatan Bisnis Outlet:**\n\n` +
+      `Sistem menghitung otomatis kesehatan bisnis Anda dari perbandingan total kg cucian, realisasi belanja bahan kimia (deterjen/parfum/gas), dan beban operasional bulanan.\n\n` +
+      `Buka menu **Laporan** lalu pilih tab **Kesehatan Bisnis** untuk melihat grafik skor dan audit efisiensi bahan secara visual!\n\n` +
+      `[ACTION:NAVIGATE:reports]`
+    );
+  }
+
+  // =========================================================================
   // 10. RINGKASAN OMSET & OPERASIONAL TOKO HARI INI
   // =========================================================================
   if (

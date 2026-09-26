@@ -15,6 +15,7 @@ import platformCashflowRoutes from "./routes/platformCashflow";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
 import { DEFAULT_PRESET_SERVICES } from "./constants/services";
 import { askLaundryAssistant } from "./services/aiService";
+import { calculateBusinessHealth } from "./utils/businessHealth";
 import { signToken, authMiddleware, getUser, invalidateTenantAuthCache } from "./middleware/auth";
 import { requireRole, requireTenantAccess } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
@@ -1068,6 +1069,96 @@ app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_
   }
 });
 
+app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const id = c.req.param("id");
+    const target = (await db.select().from(users).where(eq(users.id, id)))[0];
+    if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
+    if (target.role !== "staff") {
+      return c.json({ success: false, message: "Hanya akun staf kasir yang dapat diedit dari menu ini" }, 400);
+    }
+    if (user.role !== "superadmin" && target.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Staf bukan milik outlet Anda" }, 403);
+    }
+
+    const body = await c.req.json();
+    const { name, email, status, password } = body;
+    const updatePayload: any = {};
+
+    if (name !== undefined) updatePayload.name = String(name).trim();
+    if (email !== undefined) {
+      const cleanEmail = String(email).trim().toLowerCase();
+      if (cleanEmail !== target.email) {
+        const duplicate = (await db.select().from(users).where(eq(users.email, cleanEmail)))[0];
+        if (duplicate) {
+          return c.json({ success: false, message: "Email sudah terdaftar oleh pengguna lain" }, 400);
+        }
+      }
+      updatePayload.email = cleanEmail;
+    }
+    if (status !== undefined) {
+      updatePayload.status = status === "active" ? "active" : "inactive";
+    }
+    if (password !== undefined && String(password).trim().length >= 4) {
+      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
+    }
+
+    await db.update(users).set(updatePayload).where(eq(users.id, id));
+    return c.json({ success: true, message: "Data staf kasir berhasil diperbarui" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const id = c.req.param("id");
+    const target = (await db.select().from(users).where(eq(users.id, id)))[0];
+    if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
+    if (target.role !== "staff") {
+      return c.json({ success: false, message: "Hanya akun staf kasir yang dapat direset dari menu ini" }, 400);
+    }
+    if (user.role !== "superadmin" && target.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Staf bukan milik outlet Anda" }, 403);
+    }
+
+    const body = await c.req.json();
+    const { newPassword } = body;
+    if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 4) {
+      return c.json({ success: false, message: "Kata sandi baru minimal 4 karakter" }, 400);
+    }
+
+    const passwordHash = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 10 });
+    await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+    return c.json({ success: true, message: "Kata sandi staf kasir berhasil direset" });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+app.patch("/api/staff/:id/status", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const id = c.req.param("id");
+    const target = (await db.select().from(users).where(eq(users.id, id)))[0];
+    if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
+    if (target.role !== "staff") {
+      return c.json({ success: false, message: "Hanya akun staf kasir yang dapat diubah dari menu ini" }, 400);
+    }
+    if (user.role !== "superadmin" && target.tenantId !== user.tenantId) {
+      return c.json({ success: false, message: "Akses ditolak: Staf bukan milik outlet Anda" }, 403);
+    }
+
+    const nextStatus = target.status === "active" ? "inactive" : "active";
+    await db.update(users).set({ status: nextStatus }).where(eq(users.id, id));
+    return c.json({ success: true, message: `Status staf berhasil diubah menjadi ${nextStatus}`, data: { status: nextStatus } });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
 // ==========================================
 // 2C. Cashier Shift & Cash Reconciliation Endpoints
 // ==========================================
@@ -2074,6 +2165,9 @@ app.post("/api/expenses", authMiddleware, requireRole(["superadmin", "tenant_own
       amount: Number(body.amount) || 0,
       notes: body.notes || "",
       expenseDate: body.expenseDate || new Date().toISOString().slice(0, 10),
+      rentDurationMonths: body.rentDurationMonths ? Number(body.rentDurationMonths) : null,
+      rentStartDate: body.rentStartDate || null,
+      isAutoGenerated: body.isAutoGenerated === "true" ? "true" : "false",
       createdAt: new Date().toISOString(),
     };
 
@@ -2083,6 +2177,82 @@ app.post("/api/expenses", authMiddleware, requireRole(["superadmin", "tenant_own
       message: type === "income" ? "Pemasukan berhasil dicatat" : "Pengeluaran berhasil dicatat",
       data: newExpense,
     });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Endpoint Analisa Kesehatan Bisnis & Audit Bahan
+app.get("/api/reports/business-health", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const targetTenantId = user.role === "superadmin" && c.req.query("tenantId") ? c.req.query("tenantId") : user.tenantId;
+    if (!targetTenantId) {
+      return c.json({ success: false, message: "Tenant ID diperlukan" }, 400);
+    }
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, targetTenantId));
+    const allOrders = await db.select().from(orders).where(eq(orders.tenantId, targetTenantId));
+    const allExpenses = await db.select().from(expenses).where(eq(expenses.tenantId, targetTenantId));
+
+    let customRatios = null;
+    if (tenant?.customSopRatios) {
+      try {
+        customRatios = JSON.parse(tenant.customSopRatios);
+      } catch {}
+    }
+
+    const health = calculateBusinessHealth({
+      orders: allOrders,
+      expenses: allExpenses,
+      customRatios,
+    });
+
+    let customCategories: string[] = [];
+    if (tenant?.customExpenseCategories) {
+      try {
+        customCategories = JSON.parse(tenant.customExpenseCategories);
+      } catch {}
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        ...health,
+        customExpenseCategories: customCategories,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// Endpoint Pengaturan Skema Biaya & Takaran SOP Bahan Outlet
+app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const id = c.req.param("id");
+    if (user.role !== "superadmin" && user.tenantId !== id) {
+      return c.json({ success: false, message: "Akses ditolak" }, 403);
+    }
+
+    const body = await c.req.json();
+    const updateData: any = {};
+    if (body.customExpenseCategories !== undefined) {
+      updateData.customExpenseCategories =
+        typeof body.customExpenseCategories === "string"
+          ? body.customExpenseCategories
+          : JSON.stringify(body.customExpenseCategories);
+    }
+    if (body.customSopRatios !== undefined) {
+      updateData.customSopRatios =
+        typeof body.customSopRatios === "string"
+          ? body.customSopRatios
+          : JSON.stringify(body.customSopRatios);
+    }
+
+    await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    return c.json({ success: true, message: "Pengaturan biaya berhasil diperbarui" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }

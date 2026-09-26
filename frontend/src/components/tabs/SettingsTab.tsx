@@ -17,6 +17,7 @@ import {
   CheckCheck,
   Copy,
   Smartphone,
+  Printer,
 } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -25,6 +26,7 @@ import { EditProfileModal } from "../modals/EditProfileModal";
 import { StaffManagementSection } from "./StaffManagementSection";
 import { ServicesTab } from "./ServicesTab";
 import { SubscriptionStatusCard } from "./SubscriptionStatusCard";
+import { ThermalPrinterSettingsSection } from "./ThermalPrinterSettingsSection";
 
 interface SettingsTabProps {
   tenant?: Tenant | null;
@@ -89,7 +91,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   setActiveTab,
 }) => {
   const toast = useToast();
-  type SettingsSubTab = "profil" | "layanan" | "staf" | "langganan";
+  type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "langganan";
   const [settingsTab, setSettingsTab] = useState<SettingsSubTab>("profil");
 
   // Resolve active tenant safely for both Tenant Owner & Super Admin preview
@@ -226,7 +228,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           Pengaturan
         </h1>
         <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-          Kelola profil cabang, master layanan, manajemen staf, dan status langganan outlet.
+          Kelola profil cabang, master layanan, manajemen staf, printer thermal kasir, dan status langganan outlet.
         </p>
       </div>
 
@@ -236,8 +238,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           { id: "profil", label: "Profil Outlet", icon: Store },
           { id: "layanan", label: "Master Layanan", icon: Tag },
           { id: "staf", label: "Manajemen Staf", icon: UserIcon },
+          { id: "printer", label: "Printer & Struk", icon: Printer },
           { id: "langganan", label: "Langganan", icon: CreditCard },
-        ] as { id: "profil" | "layanan" | "staf" | "langganan"; label: string; icon: React.ElementType }[]).map((tab) => {
+        ] as { id: "profil" | "layanan" | "staf" | "printer" | "langganan"; label: string; icon: React.ElementType }[]).map((tab) => {
           const Icon = tab.icon;
           const isActive = settingsTab === tab.id;
           return (
@@ -732,6 +735,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         ) : (
           <SubTabSkeleton />
         )
+      )}
+
+      {/* === TAB: PRINTER & STRUK === */}
+      {settingsTab === "printer" && (
+        <ThermalPrinterSettingsSection
+          outletName={displayOutletName}
+          phone={displayPhone}
+          address={displayAddress}
+        />
       )}
 
       {/* === TAB: LANGGANAN === */}
