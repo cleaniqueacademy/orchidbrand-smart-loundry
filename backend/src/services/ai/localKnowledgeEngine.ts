@@ -27,6 +27,14 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
+  // 0B. SAPAAN RAMAH & SINGKAT (GREETING)
+  // =========================================================================
+  const cleanMsg = lower.trim().replace(/[!.,?]/g, "");
+  if (["halo", "halo copilot", "hai", "hi", "p", "pagi", "selamat pagi", "siang", "selamat siang", "sore", "selamat sore", "malam", "selamat malam", "assalamualaikum", "tes", "test"].includes(cleanMsg)) {
+    return `Halo! Ada yang bisa saya bantu seputar operasional Laundry Cleanique hari ini? 😊`;
+  }
+
+  // =========================================================================
   // 1. PANDUAN PENGATURAN & SETTINGS (Owner & Superadmin only)
   // =========================================================================
   if (
@@ -282,17 +290,14 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
-  // 7. PANDUAN PELANGGAN & CEK RESI (Semua Role)
+  // 7. PANDUAN DATA PELANGGAN (Semua Role)
   // =========================================================================
-  if (lower.includes("pelanggan") || lower.includes("customer") || lower.includes("resi") || lower.includes("tracking")) {
+  if (lower.includes("pelanggan") || lower.includes("customer")) {
     return (
-      `👥 **Panduan Data Pelanggan & Cek Resi Mandiri:**\n\n` +
+      `👥 **Panduan Data Pelanggan:**\n\n` +
       `1. **Menu Pelanggan:**\n` +
-      `   • Menyimpan nomor WhatsApp, alamat, dan total riwayat transaksi setiap pelanggan.\n` +
-      `   • Terdapat tombol chat WhatsApp 1-klik ke nomor pelanggan.\n` +
-      `2. **Portal Cek Resi Mandiri:**\n` +
-      `   • Setiap struk kasir memiliki QR Code unik.\n` +
-      `   • Pelanggan cukup scan QR Code di HP untuk melihat status cucian secara live tanpa perlu login di alamat: \`/track/[nomor-nota]\`.\n\n` +
+      `   • Menyimpan nama, nomor WhatsApp, alamat, dan total riwayat transaksi setiap pelanggan.\n` +
+      `   • Terdapat tombol chat WhatsApp 1-klik untuk menghubungi pelanggan langsung dari dashboard.\n\n` +
       `[ACTION:NAVIGATE:customers]`
     );
   }

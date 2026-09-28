@@ -1744,10 +1744,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
           }).format(new Date(estimatedCompletionAt))
         : "-";
 
-      const origin = c.req.header("origin") || "http://localhost:5173";
-      const trackingUrl = `${origin}/track/${encodeURIComponent(invoiceNo)}`;
-
-      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}\n\n🔍 *Cek Progres Cucian Mandiri:* \n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
+      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
 
       waData = {
         phone: cleanPhone,
@@ -1863,9 +1860,6 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
       const cleanPhone = cust.phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
       const outletName = tenant ? tenant.outletName : "Laundry Cleanique";
       const paymentNote = existing.paymentStatus === "paid" ? "✅ LUNAS" : `⚠️ BELUM LUNAS (Rp ${existing.totalAmount.toLocaleString("id-ID")})`;
-      const origin = c.req.header("origin") || "http://localhost:5173";
-      const trackingUrl = `${origin}/track/${encodeURIComponent(existing.invoiceNo)}`;
-
       let parsedOrderItems = null;
       if (existing.items) {
         try {
@@ -1885,7 +1879,7 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
             .join("\n");
       }
 
-      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}\n\n🔍 *Detail Resi:* \n${trackingUrl}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
       waData = {
         phone: cleanPhone,
