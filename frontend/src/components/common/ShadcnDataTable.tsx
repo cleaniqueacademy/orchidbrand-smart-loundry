@@ -8,6 +8,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Check,
+  ChevronDown,
 } from "lucide-react";
 import { DateFilterPreset } from "../../types";
 
@@ -136,9 +137,7 @@ export function ShadcnDataTable<T>({
                   <option value="this_year">Tahun Ini</option>
                 </select>
                 <Calendar className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <span className="text-[10px] text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                  ▼
-                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
           )}

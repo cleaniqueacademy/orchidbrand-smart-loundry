@@ -11,6 +11,7 @@ import {
   Tag,
   AlertCircle,
   Eye,
+  X,
 } from "lucide-react";
 import { api } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
@@ -285,9 +286,10 @@ export const SubscriptionInvoicesTab: React.FC = () => {
               </h4>
               <button
                 onClick={() => setPreviewImage(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                title="Tutup"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="max-h-[70vh] overflow-auto rounded-2xl bg-slate-100 dark:bg-slate-800 p-2">

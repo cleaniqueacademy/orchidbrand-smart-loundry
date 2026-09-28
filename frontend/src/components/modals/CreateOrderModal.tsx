@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ShoppingBag, UserPlus, Users } from "lucide-react";
+import { X, ShoppingBag, UserPlus, Users, Lightbulb } from "lucide-react";
 import { Customer } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
@@ -288,7 +288,10 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-0.5 text-[10.5px] text-blue-800">
-                  <span>💡 Tersimpan otomatis, tidak perlu bolak-balik buka menu Pelanggan.</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Tersimpan otomatis, tidak perlu bolak-balik buka menu Pelanggan.</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setCustomerMode("existing")}

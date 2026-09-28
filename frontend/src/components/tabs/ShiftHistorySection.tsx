@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Clock, Calculator, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, User, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, Calculator, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, User, Calendar, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { CashierShift } from "../../types";
 import { authHeaders } from "../../utils/api";
 
@@ -135,8 +135,10 @@ export const ShiftHistorySection: React.FC<ShiftHistorySectionProps> = ({ tenant
                           <Calendar className="w-3 h-3 text-zinc-400" />
                           <span>{openedDate}</span>
                         </div>
-                        <div className="text-[11px] text-zinc-400">
-                          {openedTime} {closedTime ? `➔ ${closedTime}` : "➔ Berjalan"}
+                        <div className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                          <span>{openedTime}</span>
+                          <ArrowRight className="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+                          <span>{closedTime || "Berjalan"}</span>
                         </div>
                       </td>
                       <td className="py-3 px-3 text-right font-medium text-zinc-700">

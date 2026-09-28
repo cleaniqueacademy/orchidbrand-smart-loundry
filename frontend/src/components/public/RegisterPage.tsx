@@ -27,6 +27,7 @@ import {
   Receipt,
   MessageCircle,
   Bot,
+  AlertCircle,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { getReferralQueryParam, navigateTo } from "../../utils/routeUtils";
@@ -431,7 +432,7 @@ export const RegisterPage: React.FC = () => {
               role="alert"
               className="mb-3 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50/95 p-3 text-xs text-rose-800 shadow-xs"
             >
-              <div className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 font-bold">⚠️</div>
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
               <span className="leading-snug">{error}</span>
             </div>
           )}
@@ -717,9 +718,10 @@ export const RegisterPage: React.FC = () => {
                 setWelcomeStep(0);
                 setShowWelcomeModal(true);
               }}
-              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer"
             >
-              Pelajari panduan paket & fitur lengkap →
+              <span>Pelajari panduan paket & fitur lengkap</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

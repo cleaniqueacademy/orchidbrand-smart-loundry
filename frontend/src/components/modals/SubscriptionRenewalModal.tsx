@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Tag, CheckCircle, AlertTriangle, CreditCard, ChevronRight, Loader2 } from "lucide-react";
 
@@ -279,7 +279,10 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
                 {!proofSubmitted ? (
                   <>
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                      <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-1">Invoice Dibuat ✓</p>
+                      <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        <span>Invoice Dibuat</span>
+                      </p>
                       <p className="text-sm text-zinc-700">
                         Invoice <strong>{invoice?.invoiceNo}</strong> senilai <strong>{formatRp(invoice?.finalAmount || 0)}</strong> berhasil dibuat.
                       </p>

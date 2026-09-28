@@ -29,6 +29,7 @@ import {
   UserPlus,
   UserCheck,
   UserX,
+  Gem,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Customer, Order, Role, Tenant, DateFilterPreset } from "../../types";
@@ -749,8 +750,9 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         {/* Card 4: Top Spender (Tertinggi Belanja) */}
         <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Top Spender 💎
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <Gem className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Top Spender</span>
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <TrendingUp className="w-4 h-4" />

@@ -347,9 +347,10 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                 </p>
                 <button
                   onClick={() => setActiveTab("orders")}
-                  className="mt-2 text-xs font-bold text-rose-900 underline cursor-pointer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-rose-900 underline cursor-pointer"
                 >
-                  Lihat Pesanan Telat SLA →
+                  <span>Lihat Pesanan Telat SLA</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -367,9 +368,10 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                 </p>
                 <button
                   onClick={() => setActiveTab("orders")}
-                  className="mt-2 text-xs font-bold text-amber-900 underline cursor-pointer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-900 underline cursor-pointer"
                 >
-                  Lihat Cucian Menginap →
+                  <span>Lihat Cucian Menginap</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

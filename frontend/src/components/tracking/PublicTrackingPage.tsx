@@ -349,13 +349,23 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
                   <Shirt className="w-4 h-4 text-emerald-400" /> Rincian Cucian
                 </h3>
                 <span
-                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
                     order.paymentStatus === "paid"
                       ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
                       : "bg-amber-950 text-amber-300 border border-amber-800"
                   }`}
                 >
-                  {order.paymentStatus === "paid" ? "✅ LUNAS" : "⚠️ BELUM LUNAS"}
+                  {order.paymentStatus === "paid" ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>LUNAS</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>BELUM LUNAS</span>
+                    </>
+                  )}
                 </span>
               </div>
 

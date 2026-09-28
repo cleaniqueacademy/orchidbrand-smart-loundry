@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   History,
   RefreshCw,
+  X,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
@@ -626,7 +627,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         emptyMessage="Tidak ada pesanan yang sesuai."
         emptyContent={
           <EmptyStateWalkthrough
-            title="Belum Ada Pesanan Laundry Aktif 🧺"
+            title="Belum Ada Pesanan Laundry Aktif"
             description="Pelanggan baru datang? Catat cucian kiloan atau satuan dengan cepat, pilih layanan, dan langsung cetak nota struk thermal."
             actionLabel={!isSuperAdmin ? "+ Buat Order Baru Pertama" : undefined}
             onAction={!isSuperAdmin ? onOpenOrderModal : undefined}
@@ -652,9 +653,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setQuickPayOrder(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+                title="Tutup"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

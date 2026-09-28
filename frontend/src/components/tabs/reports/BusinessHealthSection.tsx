@@ -15,6 +15,7 @@ import {
   Info,
   DollarSign,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 import { BusinessHealthAnalysis, SopRatios } from "../../../types";
 import { formatCurrency } from "../../../utils/formatUtils";
@@ -406,9 +407,10 @@ export const BusinessHealthSection: React.FC<BusinessHealthSectionProps> = ({
             <button
               type="button"
               onClick={() => setIsSopModalOpen(false)}
-              className="text-zinc-400 hover:text-zinc-700 text-sm font-bold"
+              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+              title="Tutup"
             >
-              ✕
+              <X className="w-5 h-5" />
             </button>
           </div>
 
