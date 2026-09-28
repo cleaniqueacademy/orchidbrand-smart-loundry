@@ -119,9 +119,49 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
+  // 1B. PANDUAN PENGGUNAAN AWAL / ONBOARDING PEMULA (Owner)
+  // =========================================================================
+  if (
+    lower.includes("pemula") ||
+    lower.includes("baru mulai") ||
+    lower.includes("free trial") ||
+    lower.includes("penggunaan awal") ||
+    lower.includes("langkah awal") ||
+    lower.includes("cara mulai") ||
+    lower.includes("onboarding") ||
+    lower.includes("baru daftar")
+  ) {
+    return (
+      `🚀 **Panduan Memulai Laundry Cleanique (Langkah Awal untuk Pemula):**\n\n` +
+      `Selamat bergabung di masa *Free Trial* Cleanique! Berikut 5 langkah praktis untuk memulai operasional outlet Anda:\n\n` +
+      `1. **Lengkapi Pengaturan Outlet (Settings):**\n` +
+      `   • Masuk ke menu **Pengaturan**.\n` +
+      `   • Atur nama cabang, alamat, dan jam buka toko (jadwal ini otomatis tercetak di struk nota).\n` +
+      `   • Masukkan rekening bank & info QRIS untuk memudahkan pelanggan bayar non-tunai.\n\n` +
+      `2. **Atur Tarif & Daftar Layanan (Services):**\n` +
+      `   • Masuk ke menu **Layanan**.\n` +
+      `   • Sesuaikan harga paket kiloan (Cuci Kering Setrika, Cuci Kering Lipat, dll.) dan satuan (Bedcover, Jas, Sepatu).\n\n` +
+      `3. **Hubungkan WhatsApp Gateway (Baileys):**\n` +
+      `   • Buka **Pengaturan** ➔ klik tombol **Hubungkan WhatsApp**.\n` +
+      `   • Pindai QR Code dari nomor WhatsApp outlet agar struk digital dan notifikasi cucian selesai terkirim otomatis.\n\n` +
+      `4. **Buka Shift Kasir & Buat Pesanan Pertama (POS):**\n` +
+      `   • Masuk ke menu **Kasir** ➔ klik **Buka Shift** (masukkan uang modal kasir di laci).\n` +
+      `   • Klik **+ Order Baru** untuk mencatat pelanggan pertama Anda!\n\n` +
+      `5. **Pantau Arus Kas Toko (Cashflow):**\n` +
+      `   • Rekap uang masuk otomatis tercatat saat nota lunas, dan Anda bisa mencatat belanja deterjen/parfum di menu **Buku Kas**.\n\n` +
+      `[ACTION:NAVIGATE:settings]`
+    );
+  }
+
+  // =========================================================================
   // 2. PANDUAN WHATSAPP GATEWAY & SCAN QR (Owner & Superadmin only)
   // =========================================================================
-  if (lower.includes("whatsapp") || lower.includes("wa") || lower.includes("baileys") || lower.includes("scan qr")) {
+  if (
+    lower.includes("whatsapp") ||
+    /\bwa\b/i.test(message) ||
+    lower.includes("baileys") ||
+    lower.includes("scan qr")
+  ) {
     return (
       `📲 **Panduan Menghubungkan WhatsApp Outlet (Baileys Gateway):**\n\n` +
       `Laundry Cleanique menyediakan gateway WhatsApp otomatis via Baileys multi-session:\n\n` +

@@ -16,88 +16,9 @@ export async function callGoogleGemini(
     apiKey: apiKey,
   });
 
-  const tools: Interactions.Tool[] = [
-    {
-      type: "google_search",
-    },
-  ];
-
-  const generationConfig = {
-    temperature: 1,
-    max_output_tokens: 65536,
-    top_p: 0.95,
-  };
-
-  // Format percakapan lengkap
-  const conversationContext = history.length > 0
-    ? "\n\nRiwayat Percakapan Sebelumnya:\n" +
-      history.slice(-6).map((m) => `${m.role === "assistant" || m.role === "model" ? "AI" : "User"}: ${m.content}`).join("\n")
-    : "";
-
-  const fullInput = `${systemInstruction}${conversationContext}\n\nUser: ${userMessage}`;
-
-  const primaryModel = "models/gemini-3-flash-preview";
   let lastErr: Error | null = null;
 
-  // 1. Coba Interactions API dengan tools google_search
-  try {
-    const interaction = await ai.interactions.create({
-      model: primaryModel,
-      input: fullInput,
-      tools: tools,
-      generation_config: generationConfig,
-    });
-
-    let outputText = interaction.output_text;
-    if (!outputText && interaction.steps && interaction.steps.length > 0) {
-      const lastStep = interaction.steps.at(-1) as any;
-      outputText =
-        lastStep?.output_text ||
-        lastStep?.content ||
-        lastStep?.parts?.[0]?.text ||
-        null;
-    }
-
-    if (outputText && outputText.trim()) {
-      return {
-        text: outputText.trim(),
-        modelName: `google/${primaryModel}`,
-      };
-    }
-  } catch (err: any) {
-    lastErr = err;
-    console.warn(`[Google Provider] interactions.create dengan tools gagal:`, err.message);
-
-    // Coba tanpa tool jika tools google_search menyebabkan kendala kuota/argumen
-    try {
-      const interactionNoTool = await ai.interactions.create({
-        model: primaryModel,
-        input: fullInput,
-        generation_config: generationConfig,
-      });
-
-      let outputText = interactionNoTool.output_text;
-      if (!outputText && interactionNoTool.steps && interactionNoTool.steps.length > 0) {
-        const lastStep = interactionNoTool.steps.at(-1) as any;
-        outputText =
-          lastStep?.output_text ||
-          lastStep?.content ||
-          lastStep?.parts?.[0]?.text ||
-          null;
-      }
-
-      if (outputText && outputText.trim()) {
-        return {
-          text: outputText.trim(),
-          modelName: `google/${primaryModel}`,
-        };
-      }
-    } catch (noToolErr: any) {
-      lastErr = noToolErr;
-    }
-  }
-
-  // 2. Coba model alternatif gemini-3.8-flash dengan generateContent cepat
+  // 1. Prioritaskan gemini-3.8-flash via generateContent (Cepat, stabil, tanpa 429 search quota)
   try {
     const contents = [
       ...history.slice(-6).map((m) => ({
@@ -130,6 +51,46 @@ export async function callGoogleGemini(
   } catch (genErr: any) {
     lastErr = genErr;
     console.warn("[Google Provider] generateContent gemini-3.8-flash gagal:", genErr.message);
+  }
+
+  // 2. Fallback ke Interactions API dengan gemini-3-flash-preview (tanpa tool google_search agar tidak 429)
+  try {
+    const conversationContext = history.length > 0
+      ? "\n\nRiwayat Percakapan Sebelumnya:\n" +
+        history.slice(-6).map((m) => `${m.role === "assistant" || m.role === "model" ? "AI" : "User"}: ${m.content}`).join("\n")
+      : "";
+
+    const fullInput = `${systemInstruction}${conversationContext}\n\nUser: ${userMessage}`;
+
+    const interaction = await ai.interactions.create({
+      model: "gemini-3-flash-preview",
+      input: fullInput,
+      generation_config: {
+        temperature: 0.8,
+        max_output_tokens: 4096,
+        top_p: 0.95,
+      },
+    });
+
+    let outputText = interaction.output_text;
+    if (!outputText && interaction.steps && interaction.steps.length > 0) {
+      const lastStep = interaction.steps.at(-1) as any;
+      outputText =
+        lastStep?.output_text ||
+        lastStep?.content ||
+        lastStep?.parts?.[0]?.text ||
+        null;
+    }
+
+    if (outputText && outputText.trim()) {
+      return {
+        text: outputText.trim(),
+        modelName: "google/gemini-3-flash-preview",
+      };
+    }
+  } catch (err: any) {
+    lastErr = err;
+    console.warn("[Google Provider] interactions.create gagal:", err.message);
   }
 
   throw lastErr || new Error("Gagal mendapatkan respon dari Google Gemini");

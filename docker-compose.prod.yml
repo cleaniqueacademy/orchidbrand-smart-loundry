@@ -28,6 +28,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/${POSTGRES_DB:-cleanique_laundry}
       - JWT_SECRET=${JWT_SECRET:-cleanique_super_secret_jwt_key_2026}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - AIVENE_API_KEY=${AIVENE_API_KEY:-}
     volumes:
       # Sesi WhatsApp Baileys wajib persisten agar tidak minta scan QR ulang saat restart
       - cleanique_wa_sessions:/app/auth_info_baileys

@@ -24,16 +24,17 @@ export async function getOperationalContext(
     };
   }
 
-  const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId));
-  const tenant = tenantRows[0];
-  const outletName = tenant ? tenant.outletName : "Cleanique Laundry";
+  try {
+    const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    const tenant = tenantRows[0];
+    const outletName = tenant ? tenant.outletName : "Cleanique Laundry";
 
-  const todayIsoPrefix = new Date().toISOString().slice(0, 10);
-  const allOrders = await db.select().from(orders).where(eq(orders.tenantId, tenantId));
+    const todayIsoPrefix = new Date().toISOString().slice(0, 10);
+    const allOrders = await db.select().from(orders).where(eq(orders.tenantId, tenantId));
 
-  const ordersToday = allOrders.filter(
-    (o) => o.createdAt && o.createdAt.startsWith(todayIsoPrefix)
-  );
+    const ordersToday = allOrders.filter(
+      (o) => o.createdAt && o.createdAt.startsWith(todayIsoPrefix)
+    );
 
   const revenueToday = ordersToday
     .filter((o) => o.paymentStatus === "paid")
@@ -97,15 +98,28 @@ export async function getOperationalContext(
     }
   }
 
-  return {
-    outletName,
-    todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
-    ordersTodayCount: ordersToday.length,
-    revenueToday,
-    processCount,
-    readyCount,
-    completedCount,
-    unpaidCount,
-    businessHealth,
-  };
+    return {
+      outletName,
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      ordersTodayCount: ordersToday.length,
+      revenueToday,
+      processCount,
+      readyCount,
+      completedCount,
+      unpaidCount,
+      businessHealth,
+    };
+  } catch (err: any) {
+    console.warn("[getOperationalContext] Failed to fetch DB context, using fallback:", err?.message);
+    return {
+      outletName: "Cleanique Laundry",
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      ordersTodayCount: 0,
+      revenueToday: 0,
+      processCount: 0,
+      readyCount: 0,
+      completedCount: 0,
+      unpaidCount: 0,
+    };
+  }
 }

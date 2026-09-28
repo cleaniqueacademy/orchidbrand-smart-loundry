@@ -273,6 +273,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activeModel, setActiveModel] = useState<string>("Gemini 3.8 Flash");
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory>("all");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
@@ -442,6 +443,19 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       });
 
       if (res.success && res.data) {
+        if (res.data.model) {
+          if (res.data.model.includes("gemini-3.8-flash")) {
+            setActiveModel("Gemini 3.8 Flash");
+          } else if (res.data.model.includes("gemini-3-flash")) {
+            setActiveModel("Gemini 3 Flash");
+          } else if (res.data.model.includes("aivene")) {
+            setActiveModel("Aivene Gateway");
+          } else if (res.data.model.includes("Local")) {
+            setActiveModel("Offline Engine");
+          } else {
+            setActiveModel(res.data.model.replace("google/", ""));
+          }
+        }
         const parsed = parseActionTags(res.data.reply);
         const aiMsg: Message = {
           id: `msg-${Date.now() + 1}`,
@@ -796,8 +810,14 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-xs font-bold tracking-wide">Cleanique AI Copilot</h3>
-                  <span className="px-2 py-0.5 text-[9px] font-semibold bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-full">
-                    Gemini 3.8 Flash
+                  <span className={`px-2 py-0.5 text-[9px] font-semibold rounded-full border ${
+                    activeModel.includes("Gemini")
+                      ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/30"
+                      : activeModel.includes("Aivene")
+                      ? "bg-blue-500/30 text-blue-200 border-blue-400/30"
+                      : "bg-amber-500/30 text-amber-200 border-amber-400/30"
+                  }`}>
+                    {activeModel}
                   </span>
                 </div>
                 <p className="text-[10px] text-white/80">
