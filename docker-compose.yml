@@ -57,22 +57,6 @@ services:
     profiles:
       - full-stack
 
-  landing:
-    build:
-      context: ./landing
-      dockerfile: Dockerfile
-    container_name: cleanique_laundry_landing
-    restart: unless-stopped
-    ports:
-      - "${LANDING_PORT:-4174}:4174"
-    volumes:
-      - ./landing/src:/app/src
-      - ./landing/index.html:/app/index.html
-    networks:
-      - cleanique-network
-    profiles:
-      - full-stack
-
 volumes:
   cleanique_postgres_data:
     driver: local

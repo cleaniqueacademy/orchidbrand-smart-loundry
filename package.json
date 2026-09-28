@@ -3,14 +3,12 @@
   "private": true,
   "workspaces": [
     "backend",
-    "frontend",
-    "landing"
+    "frontend"
   ],
   "scripts": {
     "dev": "bun --filter '*' dev",
     "dev:backend": "bun --filter cleanique-backend dev",
     "dev:frontend": "bun --filter cleanique-frontend dev",
-    "dev:landing": "bun --filter cleanique-landing dev",
     "build": "bun --filter '*' build",
     "db:push": "bun --filter cleanique-backend db:push",
     "db:push:force": "bun --filter cleanique-backend db:push:force",
