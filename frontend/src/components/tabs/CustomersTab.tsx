@@ -430,24 +430,22 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
 
                 {/* Badges Segmen */}
                 {cust.isTopOrder && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9.5px] font-bold">
-                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9.5px] font-bold whitespace-nowrap shrink-0">
                     Teraktif
                   </span>
                 )}
                 {cust.isTopSpender && !cust.isTopOrder && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9.5px] font-bold">
-                    <Award className="w-2.5 h-2.5 text-emerald-600" />
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9.5px] font-bold whitespace-nowrap shrink-0">
                     Top Spender
                   </span>
                 )}
                 {cust.isNew && (
-                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200 text-[9.5px] font-semibold">
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200 text-[9.5px] font-semibold whitespace-nowrap shrink-0">
                     Baru
                   </span>
                 )}
                 {cust.isPassive && (
-                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 text-[9.5px] font-medium">
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 text-[9.5px] font-medium whitespace-nowrap shrink-0">
                     Pasif
                   </span>
                 )}
@@ -686,61 +684,57 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       {/* ========================================================================= */}
       {/* 2. 4 EXECUTIVE KPI & TRACKING CARDS                                      */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* 2. 4 EXECUTIVE KPI & TRACKING CARDS                                      */}
+      {/* ========================================================================= */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* Card 1: Total Pelanggan - Hero Spotlight */}
-        <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 shadow-sm">
-          <div className="absolute -right-4 -bottom-4 w-16 h-16 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-              Total Basis Data
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+        {/* Card 1: Total Pelanggan - Highlighted Blue Card */}
+        <div className="bg-blue-50/70 border border-blue-200 p-4 sm:p-5 rounded-2xl shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Total Basis Data</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
-            {metrics.totalCount}
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {metrics.totalCount} <span className="text-xs font-semibold text-blue-700">Pelanggan</span>
           </div>
-          <p className="text-[11px] text-sky-700 font-medium mt-0.5">
+          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
             Pelanggan terdaftar di outlet
           </p>
         </div>
 
         {/* Card 2: Pelanggan Aktif di Periode Ini */}
-        <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
-              Aktif di Periode Ini
-            </span>
+        <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
+          <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
+            <span>Aktif di Periode Ini</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-xs">
               <Flame className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-zinc-900 mt-2 tracking-tight">
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
             {metrics.activeCount}{" "}
-            <span className="text-xs font-normal text-zinc-400">
+            <span className="text-xs font-semibold text-indigo-700">
               ({metrics.totalCount > 0 ? Math.round((metrics.activeCount / metrics.totalCount) * 100) : 0}%)
             </span>
           </div>
-          <p className="text-[11px] text-indigo-700/90 font-medium mt-0.5">
+          <p className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
             Mencuci pada {activePeriodLabel}
           </p>
         </div>
 
         {/* Card 3: Pelanggan Teraktif (Top Frequency) */}
-        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              Juara Teraktif ⭐
-            </span>
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Juara Teraktif</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
               <Crown className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-sm font-bold text-zinc-900 mt-2 truncate">
+          <div className="text-base sm:text-lg font-bold text-amber-950 mt-2.5 truncate">
             {metrics.topActiveCust ? metrics.topActiveCust.name : "Belum Ada Order"}
           </div>
-          <p className="text-[11px] text-amber-800 font-semibold mt-0.5">
+          <p className="text-[11px] text-amber-800/90 font-medium mt-1 truncate">
             {metrics.topActiveCust
               ? `${metrics.topActiveCust.ordersInPeriod}x pesanan (${metrics.topActiveCust.totalOrdersAllTime}x total)`
               : "0 transaksi di periode ini"}
@@ -748,23 +742,20 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
         </div>
 
         {/* Card 4: Top Spender (Tertinggi Belanja) */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-              <Gem className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Top Spender</span>
-            </span>
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Top Spender</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-sm font-bold text-zinc-900 mt-2 truncate">
-            {metrics.topSpenderCust ? metrics.topSpenderCust.name : "Belum Ada"}
-          </div>
-          <p className="text-[11px] text-emerald-700 font-semibold mt-0.5 font-mono">
+          <div className="text-base sm:text-lg font-bold text-emerald-950 mt-2.5 truncate font-mono">
             {metrics.topSpenderCust
               ? `Rp ${metrics.topSpenderCust.spentInPeriod.toLocaleString("id-ID")}`
               : "Rp 0"}
+          </div>
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+            {metrics.topSpenderCust ? metrics.topSpenderCust.name : "Belum Ada"}
           </p>
         </div>
       </div>
@@ -1094,18 +1085,18 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
                                   {ord.weightOrQty} {ord.unit}
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3">
+                              <td className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">
                                 <span
-                                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                  className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                                     statusBadgeStyles[ord.status] || "bg-zinc-100 text-zinc-700"
                                   }`}
                                 >
                                   {ord.status}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3">
+                              <td className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">
                                 <span
-                                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                  className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                                     ord.paymentStatus === "paid"
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                       : "bg-amber-50 text-amber-700 border-amber-200"

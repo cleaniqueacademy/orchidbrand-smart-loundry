@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   UserCheck,
   Plus,
@@ -89,31 +89,24 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-xs border border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-              <UserCheck className="w-5 h-5" />
-            </span>
-            <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-              {isSuperadmin ? "Manajemen Mitra Affiliate & Marketing" : "Dashboard Kemitraan Affiliate"}
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
+            {isSuperadmin ? "Mitra Affiliate & Marketing" : "Dashboard Kemitraan Affiliate"}
+          </h2>
+          <p className="text-xs text-zinc-500">
             {isSuperadmin
-              ? "Kelola akun marketing, atur persentase komisi, dan proses pencairan dana reward."
-              : "Pantau performa kode referral Anda, rincian komisi, dan rekening pencairan dana."}
+              ? "Kelola akun marketing, atur komisi, dan proses pencairan reward."
+              : "Pantau performa kode referral, rincian komisi, dan rekening pencairan."}
           </p>
         </div>
-
         {isSuperadmin && (
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer shrink-0"
+            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            Tambah Mitra Marketing
+            <Plus className="w-3.5 h-3.5" />
+            Tambah Mitra
           </button>
         )}
       </div>
@@ -122,38 +115,49 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
       {isSuperadmin && (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <Briefcase className="w-6 h-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+              <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+                <span>Total Mitra Marketing</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Briefcase className="w-4 h-4" />
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Total Mitra Marketing</span>
-                <h3 className="text-2xl font-bold text-slate-800">{profiles.length} Orang</h3>
+              <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+                {profiles.length} <span className="text-xs font-semibold text-blue-700">Mitra</span>
               </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <DollarSign className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Total Komisi Ditransfer</span>
-                <h3 className="text-2xl font-bold text-emerald-600 font-mono">
-                  Rp {totalWithdrawnAll.toLocaleString("id-ID")}
-                </h3>
+              <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+                Akun promosi aktif
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <Clock className="w-6 h-6" />
+            <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+                <span>Total Komisi Ditransfer</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <DollarSign className="w-4 h-4" />
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Menunggu Verifikasi</span>
-                <h3 className="text-2xl font-bold text-amber-600 font-mono">
-                  {pendingCommissionsCount} Komisi
-                </h3>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-900 mt-2.5 tracking-tight">
+                Rp {totalWithdrawnAll.toLocaleString("id-ID")}
+              </div>
+              <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+                Pencairan reward terbayar
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+              <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+                <span>Menunggu Verifikasi</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
+                {pendingCommissionsCount} <span className="text-xs font-semibold text-amber-700">Komisi</span>
+              </div>
+              <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
+                Permohonan pencairan dana
               </div>
             </div>
           </div>
@@ -284,52 +288,64 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
       {isMarketing && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Store className="w-6 h-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+              <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+                <span>Total Outlet Terdaftar</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Store className="w-4 h-4" />
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Total Outlet Memakai Kode</span>
-                <h3 className="text-2xl font-bold text-blue-700">
-                  {meData?.totalTenantsCount ?? 0} Outlet
-                </h3>
+              <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+                {meData?.totalTenantsCount ?? 0} <span className="text-xs font-semibold text-blue-700">Outlet</span>
               </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <DollarSign className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Total Komisi Terakumulasi</span>
-                <h3 className="text-2xl font-bold text-slate-800 font-mono">
-                  Rp {(meData?.commissionsSummary?.totalEarned || 0).toLocaleString("id-ID")}
-                </h3>
+              <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+                Memakai kode referral Anda
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-6 h-6" />
+            <div className="bg-gradient-to-br from-indigo-50/90 via-violet-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
+              <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
+                <span>Total Komisi Terakumulasi</span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <DollarSign className="w-4 h-4" />
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Sudah Ditransfer</span>
-                <h3 className="text-2xl font-bold text-emerald-600 font-mono">
-                  Rp {(meData?.commissionsSummary?.totalWithdrawn || 0).toLocaleString("id-ID")}
-                </h3>
+              <div className="text-xl sm:text-2xl font-bold text-indigo-950 mt-2.5 tracking-tight">
+                Rp {(meData?.commissionsSummary?.totalEarned || 0).toLocaleString("id-ID")}
+              </div>
+              <div className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
+                Akumulasi reward afiliasi
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <Clock className="w-6 h-6" />
+            <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+                <span>Sudah Ditransfer</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400">Saldo Menunggu</span>
-                <h3 className="text-2xl font-bold text-amber-600 font-mono">
-                  Rp {(meData?.commissionsSummary?.pendingCommission || 0).toLocaleString("id-ID")}
-                </h3>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-900 mt-2.5 tracking-tight">
+                Rp {(meData?.commissionsSummary?.totalWithdrawn || 0).toLocaleString("id-ID")}
+              </div>
+              <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+                Pencairan komisi selesai
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+              <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+                <span>Saldo Menunggu</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
+                Rp {(meData?.commissionsSummary?.pendingCommission || 0).toLocaleString("id-ID")}
+              </div>
+              <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
+                Menunggu verifikasi pencairan
               </div>
             </div>
           </div>
@@ -344,7 +360,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 <div>
                   <span className="text-xs text-indigo-200">Rekening Tujuan Pencairan Komisi</span>
                   <div className="text-sm font-bold mt-0.5">
-                    {meData.profile.bankName} — {meData.profile.bankAccountNumber}
+                    {meData.profile.bankName} â€” {meData.profile.bankAccountNumber}
                   </div>
                   <div className="text-xs text-indigo-200">a.n {meData.profile.bankAccountName}</div>
                 </div>
@@ -389,9 +405,9 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                       <p className="text-xs text-slate-700 font-medium mt-2">{c.name}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-500">
                         <span>Diskon: {c.discountType === "percent" ? `${c.discountValue}%` : `Rp ${(c.discountValue || 0).toLocaleString("id-ID")}`}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>Komisi: {c.commissionType === "percent" ? `${c.commissionValue}%` : `Rp ${(c.commissionValue || 0).toLocaleString("id-ID")}`}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>Pemakaian: {c.currentUsage || 0}x</span>
                       </div>
                     </div>
@@ -494,13 +510,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col">
-                            <span className={`inline-flex items-center gap-1 font-semibold text-[10.5px] px-2 py-0.5 rounded-full w-fit ${
+                            <span className={`whitespace-nowrap inline-flex items-center font-semibold text-[10.5px] px-2 py-0.5 rounded-full shrink-0 w-fit ${
                               t.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
                             }`}>
                               {t.isTrial ? "Trial 7 Hari" : "Aktif"}
                             </span>
                             {t.subscriptionUntil && (
-                              <span className="text-[10px] text-slate-400 mt-0.5">
+                              <span className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">
                                 s/d {new Date(t.subscriptionUntil).toLocaleDateString("id-ID")}
                               </span>
                             )}
@@ -603,9 +619,9 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                         )}
                       </div>
 
-                      <div className="text-right sm:self-center">
+                      <div className="text-right sm:self-center shrink-0">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold ${
+                          className={`whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold ${
                             t.status === "active"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-slate-100 text-slate-600"
@@ -614,7 +630,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                           {t.isTrial ? "Trial 7 Hari" : "Aktif"}
                         </span>
                         {t.subscriptionUntil && (
-                          <div className="text-[10px] text-slate-400 mt-1">
+                          <div className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">
                             Hingga: {new Date(t.subscriptionUntil).toLocaleDateString("id-ID")}
                           </div>
                         )}

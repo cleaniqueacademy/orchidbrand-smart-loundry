@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 interface ReferralBadgeProps {
   loading: boolean;
@@ -41,8 +41,8 @@ export const ReferralBadge: React.FC<ReferralBadgeProps> = ({
             Kode <strong>{codeName}</strong> aktif! Hemat {discountText}
           </span>
         </div>
-        <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-md font-bold">
-          <Sparkles className="w-3 h-3" /> Berhasil
+        <span className="inline-flex items-center text-[11px] bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-md font-bold">
+          Berhasil
         </span>
       </div>
     );

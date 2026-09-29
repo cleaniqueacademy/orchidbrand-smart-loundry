@@ -8,8 +8,6 @@ import {
   Mail,
   Calendar,
   ShieldAlert,
-  Sparkles,
-  CheckCircle2,
 } from "lucide-react";
 import { User } from "../../types";
 import {
@@ -82,13 +80,13 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
     >
       <div className="bg-white rounded-3xl w-full shadow-2xl border border-zinc-200 overflow-hidden relative">
         {/* Top Header Accent Banner */}
-        <div className="h-3 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-600 w-full" />
+        <div className="h-2 bg-rose-600 w-full" />
 
         <div className="p-6 sm:p-8">
           {/* Main Warning Beacon */}
           <div className="flex flex-col items-center text-center mb-6">
             <div className="relative mb-4">
-              <div className="w-18 h-18 rounded-3xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/10 ring-8 ring-rose-50/60">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-xs">
                 {isInactiveStatus ? (
                   <ShieldAlert className="w-9 h-9" />
                 ) : (
@@ -98,8 +96,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               <span className="absolute -bottom-1 -right-1 flex h-4 w-4 rounded-full bg-rose-600 border-2 border-white" />
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 mb-2">
               {isInactiveStatus ? "Akun Nonaktif" : "Masa Aktif Berakhir"}
             </span>
 
@@ -176,7 +173,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold flex flex-col items-center justify-center shadow-lg shadow-emerald-600/30 transition group cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex flex-col items-center justify-center shadow-xs transition group cursor-pointer"
             >
               <div className="flex items-center gap-2 text-sm">
                 <MessageCircle className="w-5 h-5 fill-white/20 text-white group-hover:scale-110 transition-transform" />

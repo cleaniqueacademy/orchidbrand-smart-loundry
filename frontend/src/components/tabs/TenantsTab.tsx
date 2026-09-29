@@ -148,7 +148,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
       id: "status",
       header: "Status / Tarif",
       align: "center",
-      className: "w-[110px]",
+      className: "min-w-[160px] whitespace-nowrap",
       cell: (t) => {
         const isActive = (t.status || "active") === "active";
         const dateStr = t.subscriptionUntil || "2026-12-31";
@@ -156,21 +156,21 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         const isExpired = diffDays < 0;
         const hasReferral = Boolean(t.referralCodeId || t.source === "referral");
         return (
-          <div className="flex flex-col items-center gap-1">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+          <div className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
               isActive ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"
             }`}>
               {isActive ? "Aktif" : "Nonaktif"}
             </span>
-            <span className={`text-[9px] font-semibold ${isExpired ? "text-rose-500" : diffDays <= 7 ? "text-amber-500" : "text-zinc-400"}`}>
+            <span className={`text-[9.5px] font-semibold shrink-0 whitespace-nowrap ${isExpired ? "text-rose-500" : diffDays <= 7 ? "text-amber-500" : "text-zinc-400"}`}>
               {isExpired ? "Expired" : `${diffDays}h lagi`}
             </span>
             {hasReferral ? (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Terdaftar dengan kode referral: Tarif Rp 55.000/bln">
-                <Tag className="w-2.5 h-2.5" /> Ref (55k)
+              <span className="whitespace-nowrap px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0" title="Terdaftar dengan kode referral: Tarif Rp 55.000/bln">
+                Ref (55k)
               </span>
             ) : (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-zinc-50 text-zinc-500 border border-zinc-200" title="Tarif standar: Rp 60.000/bln">
+              <span className="whitespace-nowrap px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-zinc-50 text-zinc-500 border border-zinc-200 shrink-0" title="Tarif standar: Rp 60.000/bln">
                 Reg (60k)
               </span>
             )}
@@ -189,7 +189,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
           <div className="font-bold text-emerald-700 text-xs whitespace-nowrap">
             Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
           </div>
-          <div className="text-[10px] text-zinc-400 mt-0.5">{t.totalOrders || 0} pesanan</div>
+          <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">{t.totalOrders || 0} pesanan</div>
         </div>
       ),
     },
@@ -224,7 +224,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Cabang</h2>
@@ -238,37 +238,51 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         </button>
       </div>
 
-      {/* KPI Cards — ringkas 3 kartu */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-sky-50 border border-sky-200 p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-sky-700">Total Cabang</span>
-            <Building2 className="w-4 h-4 text-sky-500" />
+      {/* KPI Cards — modern gradient style */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Total Cabang</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Building2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-zinc-900">{tenants.length}</div>
-          <div className="text-[10px] text-sky-600 mt-0.5">
-            {tenants.filter(t => t.status === "active").length} aktif
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {tenants.length} <span className="text-xs font-semibold text-blue-700">Cabang</span>
+          </div>
+          <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+            {tenants.filter(t => t.status === "active").length} cabang aktif beroperasi
           </div>
         </div>
 
-        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-emerald-700">Total Omset</span>
-            <DollarSign className="w-4 h-4 text-emerald-500" />
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Total Omset</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <DollarSign className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-lg font-bold text-zinc-900 leading-tight">
+          <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
             Rp {(totalOmsetAll / 1000000).toFixed(1)}jt
           </div>
-          <div className="text-[10px] text-emerald-600 mt-0.5">semua cabang, lunas</div>
+          <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+            Semua cabang terdaftar (lunas)
+          </div>
         </div>
 
-        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-indigo-700">Total Pesanan</span>
-            <ShoppingBag className="w-4 h-4 text-indigo-500" />
+        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
+          <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
+            <span>Total Pesanan</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+              <ShoppingBag className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-2xl font-bold text-zinc-900">{totalOrdersAll}</div>
-          <div className="text-[10px] text-indigo-600 mt-0.5">semua cabang</div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {totalOrdersAll} <span className="text-xs font-semibold text-indigo-700">Order</span>
+          </div>
+          <div className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
+            Akumulasi transaksi jaringan
+          </div>
         </div>
       </div>
 

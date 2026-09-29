@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   FileText,
   CheckCircle2,
@@ -95,27 +95,21 @@ export const SubscriptionInvoicesTab: React.FC = () => {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <FileText className="w-6 h-6 text-indigo-600" />
-            <span>Verifikasi Tagihan Langganan</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Tinjau bukti pembayaran transfer dari mitra outlet dan aktivasi masa perpanjangan langganan.
-          </p>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Verifikasi Tagihan Langganan</h2>
+          <p className="text-xs text-zinc-500">Tinjau bukti pembayaran dan aktivasi perpanjangan langganan outlet.</p>
         </div>
-
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari invoice, outlet..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 w-64"
+              className="pl-9 pr-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 w-52"
             />
           </div>
 
@@ -143,7 +137,7 @@ export const SubscriptionInvoicesTab: React.FC = () => {
             onClick={() => setStatusFilter(tab.id)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
               statusFilter === tab.id
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                ? "bg-blue-700 text-white shadow-xs"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50"
             }`}
           >
@@ -229,21 +223,23 @@ export const SubscriptionInvoicesTab: React.FC = () => {
                         <span className="text-slate-400 italic">Belum diunggah</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 min-w-[130px] whitespace-nowrap">
                       {inv.status === "paid" ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" /> Lunas
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                          Lunas
                         </span>
                       ) : inv.status === "pending_verification" ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          <Clock className="w-3 h-3" /> Menunggu
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                          Menunggu
                         </span>
                       ) : inv.status === "rejected" ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-                          <XCircle className="w-3 h-3" /> Ditolak
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+                          Ditolak
                         </span>
                       ) : (
-                        <span className="text-slate-500 font-medium">Belum Bayar</span>
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          Belum Bayar
+                        </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right">

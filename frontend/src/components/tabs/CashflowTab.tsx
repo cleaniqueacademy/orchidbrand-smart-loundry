@@ -141,14 +141,12 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
       header: "Jenis",
       cell: (item) =>
         item.type === "income" ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap">
-            <TrendingUp className="w-3 h-3 text-emerald-600" />
-            <span>Pemasukan</span>
+          <span className="inline-flex items-center text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+            Pemasukan
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md whitespace-nowrap">
-            <TrendingDown className="w-3 h-3 text-rose-600" />
-            <span>Pengeluaran</span>
+          <span className="inline-flex items-center text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+            Pengeluaran
           </span>
         ),
     },
@@ -322,59 +320,52 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
         <ShiftHistorySection tenantId={tenantFilter !== "all" ? tenantFilter : tenantId || "all"} />
       ) : (
         <>
-          {/* 3 Metric Cards dengan Palet Warna Berani & Spotlight Light Blue */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Pemasukan - Mint Emerald */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Pemasukan
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <TrendingUp className="w-4 h-4" />
+          {/* 3 Metric Cards dengan Modern Gradient Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* Pemasukan - Mint Emerald */}
+            <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+                <span>Pemasukan</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
+                Rp {(isSuperAdmin ? dynamicIncome : stats.totalIncome).toLocaleString("id-ID")}
+              </div>
+              <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+                Belum tertagih: Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
+              </p>
             </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            Rp {(isSuperAdmin ? dynamicIncome : stats.totalIncome).toLocaleString("id-ID")}
-          </div>
-          <p className="text-[11px] text-emerald-700/90 font-medium mt-1">
-            Belum tertagih: Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
-          </p>
-        </div>
 
-        {/* Pengeluaran - Rose Vibrant */}
-        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
-              Pengeluaran
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
-              <TrendingDown className="w-4 h-4" />
+            {/* Pengeluaran - Rose Vibrant */}
+            <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
+              <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
+                <span>Pengeluaran</span>
+                <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-rose-950 mt-2.5 tracking-tight">
+                Rp {(isSuperAdmin ? dynamicExpense : stats.totalExpense).toLocaleString("id-ID")}
+              </div>
+              <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">Total beban operasional</p>
             </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            Rp {(isSuperAdmin ? dynamicExpense : stats.totalExpense).toLocaleString("id-ID")}
-          </div>
-          <p className="text-[11px] text-rose-700/90 font-medium mt-1">Total beban operasional</p>
-        </div>
 
-        {/* Laba Bersih - Hero Light Blue Spotlight */}
-        <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
-          <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-              Laba Bersih
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
-              <DollarSign className="w-4 h-4" />
+            {/* Laba Bersih - Highlighted Card */}
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+              <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+                <span>Laba Bersih</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+                {formatCurrency(isSuperAdmin ? dynamicNetProfit : stats.netProfit)}
+              </div>
+              <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">Pemasukan dikurangi pengeluaran</p>
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            {formatCurrency(isSuperAdmin ? dynamicNetProfit : stats.netProfit)}
-          </div>
-          <p className="text-[11px] text-sky-700 font-medium mt-1">Pemasukan dikurangi pengeluaran</p>
-        </div>
-      </div>
 
       {/* Unified Transactions Table using ShadcnDataTable */}
       <div className="space-y-3">

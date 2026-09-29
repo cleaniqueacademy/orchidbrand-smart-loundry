@@ -70,7 +70,7 @@ export const RegisterSuccessPage: React.FC = () => {
           Selamat Datang di Laundry Cleanique!
         </h1>
         <p className="text-slate-500 mt-2 text-xs sm:text-sm max-w-md leading-relaxed">
-          Kelola Mudah, Tumbuh Lebih Terarah. Outlet Anda siap beroperasi dengan sistem kasir cerdas & nota WhatsApp otomatis.
+          Kelola Mudah, Tumbuh Lebih Terarah. Outlet Anda siap beroperasi dengan sistem kasir cerdas & notifikasi WhatsApp.
         </p>
 
         {/* Kartu Rincian Akun */}

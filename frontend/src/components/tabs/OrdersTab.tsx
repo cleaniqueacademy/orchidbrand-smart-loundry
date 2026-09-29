@@ -129,7 +129,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="font-mono font-bold text-zinc-900 text-xs">{order.invoiceNo}</span>
               {late && (
-                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap shrink-0">
                   Telat SLA
                 </span>
               )}
@@ -503,69 +503,60 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       {/* 4 Metric Cards Ringkasan Jaringan untuk Super Admin */}
       {isSuperAdmin && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          {/* Total Pesanan - Hero Spotlight Light Blue */}
-          <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
-            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-                Total Pesanan
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+          {/* Total Pesanan - Highlighted Blue Card */}
+          <div className="bg-blue-50/70 border border-blue-200 p-4 sm:p-5 rounded-2xl shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+            <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+              <span>Total Pesanan</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                 <ShoppingBag className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-              {totalOrdersCount}
+            <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+              {totalOrdersCount} <span className="text-xs font-semibold text-blue-700">Order</span>
             </div>
-            <p className="text-[11px] text-sky-700 font-medium mt-1">Seluruh pesanan jaringan</p>
+            <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">Seluruh pesanan jaringan</p>
           </div>
 
           {/* Dalam Proses - Sunset Amber */}
-          <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                Dalam Proses
-              </span>
+          <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+            <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+              <span>Dalam Proses</span>
               <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-              {inProgressCount}
+            <div className="text-xl sm:text-2xl font-bold text-amber-950 mt-2.5 tracking-tight">
+              {inProgressCount} <span className="text-xs font-semibold text-amber-700">Order</span>
             </div>
-            <p className="text-[11px] text-amber-700/90 font-medium mt-1">Sedang diproses laundry</p>
+            <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">Sedang diproses laundry</p>
           </div>
 
           {/* Siap Diambil - Teal */}
-          <div className="rounded-2xl border border-teal-200/90 bg-gradient-to-br from-teal-50/90 via-cyan-50/40 to-white p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800">
-                Siap Diambil
-              </span>
+          <div className="rounded-2xl border border-teal-200/90 bg-gradient-to-br from-teal-50/90 via-cyan-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-teal-300 transition">
+            <div className="flex items-center justify-between text-xs text-teal-800 font-semibold">
+              <span>Siap Diambil</span>
               <div className="w-8 h-8 rounded-xl bg-teal-500 text-white flex items-center justify-center shadow-xs">
                 <CheckCircle className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-              {readyCount}
+            <div className="text-xl sm:text-2xl font-bold text-teal-950 mt-2.5 tracking-tight">
+              {readyCount} <span className="text-xs font-semibold text-teal-700">Order</span>
             </div>
-            <p className="text-[11px] text-teal-700/90 font-medium mt-1">Menunggu penyerahan</p>
+            <p className="text-[11px] text-teal-700/90 font-medium mt-1 truncate">Menunggu penyerahan</p>
           </div>
 
           {/* Pesanan Selesai - Mint Emerald */}
-          <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                Pesanan Selesai
-              </span>
+          <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+            <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+              <span>Pesanan Selesai</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-              {completedCount}
+            <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
+              {completedCount} <span className="text-xs font-semibold text-emerald-700">Order</span>
             </div>
-            <p className="text-[11px] text-emerald-700/90 font-medium mt-1">Tuntas & terverifikasi</p>
+            <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">Tuntas & terverifikasi</p>
           </div>
         </div>
       )}

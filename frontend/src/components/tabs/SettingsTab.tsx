@@ -18,6 +18,8 @@ import {
   Copy,
   Smartphone,
   Printer,
+  Building2,
+  Crown,
 } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -27,6 +29,8 @@ import { StaffManagementSection } from "./StaffManagementSection";
 import { ServicesTab } from "./ServicesTab";
 import { SubscriptionStatusCard } from "./SubscriptionStatusCard";
 import { ThermalPrinterSettingsSection } from "./ThermalPrinterSettingsSection";
+import { BranchManagementSection } from "./BranchManagementSection";
+import { PremiumFeatureLock } from "../common/PremiumFeatureLock";
 
 interface SettingsTabProps {
   tenant?: Tenant | null;
@@ -91,7 +95,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   setActiveTab,
 }) => {
   const toast = useToast();
-  type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "langganan";
+  type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "cabang" | "langganan";
   const [settingsTab, setSettingsTab] = useState<SettingsSubTab>("profil");
 
   // Resolve active tenant safely for both Tenant Owner & Super Admin preview
@@ -237,24 +241,31 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {([
           { id: "profil", label: "Profil Outlet", icon: Store },
           { id: "layanan", label: "Master Layanan", icon: Tag },
-          { id: "staf", label: "Manajemen Staf", icon: UserIcon },
-          { id: "printer", label: "Printer & Struk", icon: Printer },
+          { id: "staf", label: "Manajemen Staf", icon: UserIcon, badge: "Premium" },
+          { id: "printer", label: "Printer & Struk", icon: Printer, badge: "Premium" },
+          { id: "cabang", label: "Manajemen Cabang", icon: Building2, badge: "Premium" },
           { id: "langganan", label: "Langganan", icon: CreditCard },
-        ] as { id: "profil" | "layanan" | "staf" | "printer" | "langganan"; label: string; icon: React.ElementType }[]).map((tab) => {
+        ] as { id: SettingsSubTab; label: string; icon: React.ElementType; badge?: string }[]).map((tab) => {
           const Icon = tab.icon;
           const isActive = settingsTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setSettingsTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 isActive
                   ? "bg-white text-zinc-900 shadow-sm"
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
               <Icon className="w-4 h-4" />
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-300/60 dark:border-amber-800/60 flex items-center gap-0.5">
+                  <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                  <span>{tab.badge}</span>
+                </span>
+              )}
             </button>
           );
         })}
@@ -716,10 +727,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       {/* === TAB: MANAJEMEN STAF === */}
       {settingsTab === "staf" && (
         effectiveTenantId ? (
-          <StaffManagementSection
-            tenantId={effectiveTenantId}
-            tenantName={resolvedTenant?.outletName || "Outlet"}
-          />
+          <PremiumFeatureLock feature="employee_management" isLocked={true}>
+            <StaffManagementSection
+              tenantId={effectiveTenantId}
+              tenantName={resolvedTenant?.outletName || "Outlet"}
+            />
+          </PremiumFeatureLock>
         ) : (
           <SubTabSkeleton />
         )
@@ -727,10 +740,20 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       {/* === TAB: PRINTER & STRUK === */}
       {settingsTab === "printer" && (
-        <ThermalPrinterSettingsSection
-          outletName={displayOutletName}
-          phone={displayPhone}
-          address={displayAddress}
+        <PremiumFeatureLock feature="thermal_printer" isLocked={true}>
+          <ThermalPrinterSettingsSection
+            outletName={displayOutletName}
+            phone={displayPhone}
+            address={displayAddress}
+          />
+        </PremiumFeatureLock>
+      )}
+
+      {/* === TAB: MANAJEMEN CABANG === */}
+      {settingsTab === "cabang" && (
+        <BranchManagementSection
+          currentTenant={resolvedTenant || tenant}
+          isLocked={true}
         />
       )}
 

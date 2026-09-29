@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   FileText,
   Search,
@@ -282,20 +282,18 @@ export const SystemLogsTab: React.FC<SystemLogsTabProps> = ({
                             {log.mode}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-4 text-right whitespace-nowrap min-w-[120px]">
                           {log.status === "sent" ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
                               Terkirim
                             </span>
                           ) : (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/80">
-                                <AlertCircle className="w-3 h-3 text-rose-600" />
+                            <div className="inline-flex flex-col items-end">
+                              <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200/80">
                                 Gagal
                               </span>
                               {log.errorMessage && (
-                                <div className="text-[10px] text-rose-600 mt-0.5 font-mono">
+                                <div className="text-[10px] text-rose-600 mt-0.5 font-mono max-w-[200px] truncate">
                                   {log.errorMessage}
                                 </div>
                               )}
@@ -379,37 +377,43 @@ export const SystemLogsTab: React.FC<SystemLogsTabProps> = ({
 
       {/* SUB-TAB 3: SYSTEM & DATABASE HEALTH */}
       {activeSubTab === "system" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl bg-white border border-zinc-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Runtime Backend</span>
-              <Server className="w-4 h-4 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
+            <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+              <span>Runtime Backend</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <Server className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-xl font-bold text-zinc-900">Bun + Hono API</div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-              <span>Operational (Port 3001)</span>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-zinc-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Basis Data</span>
-              <Database className="w-4 h-4 text-blue-600" />
-            </div>
-            <div className="text-xl font-bold text-zinc-900">PostgreSQL (Drizzle)</div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-              <span>Connected & Persisten</span>
+            <div className="text-xl font-bold text-zinc-900 mt-2.5 tracking-tight">Bun + Hono API</div>
+            <div className="text-[11px] text-emerald-700 font-medium mt-1">
+              Operational (Port 3001)
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white border border-zinc-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Gateway WhatsApp</span>
-              <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+          <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
+            <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
+              <span>Basis Data</span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+                <Database className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-xl font-bold text-zinc-900">Baileys Multi-Device</div>
-            <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
-              <span>Standby per Cabang</span>
+            <div className="text-xl font-bold text-zinc-900 mt-2.5 tracking-tight">PostgreSQL (Drizzle)</div>
+            <div className="text-[11px] text-emerald-700 font-medium mt-1">
+              Connected & Persisten
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+            <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+              <span>Gateway WhatsApp</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                <WhatsAppIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-zinc-900 mt-2.5 tracking-tight">Baileys Multi-Device</div>
+            <div className="text-[11px] text-emerald-700 font-medium mt-1">
+              Standby Siaga per Cabang
             </div>
           </div>
         </div>

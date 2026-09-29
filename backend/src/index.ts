@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
-import { users, tenants, customers, orders, expenses, services, shifts, waLogs } from "./db/schema";
+import { users, tenants, customers, orders, expenses, services, shifts, waLogs, marketingProfiles } from "./db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import referralRoutes from "./routes/referralCodes";
@@ -329,7 +329,42 @@ app.get("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) =
   }
 });
 
-// 2b. Single Tenant Detail (Superadmin or Tenant Owner/Staff of that tenant)
+// 2b. My Branches (Owner multi-branch view)
+app.get("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const branches = await db.select().from(tenants).where(eq(tenants.userId, user.userId));
+    return c.json({ success: true, data: branches });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// 2c. Add New Branch (Gated to Premium tier)
+app.post("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  try {
+    const user = getUser(c);
+    const [foundUser] = await db.select().from(users).where(eq(users.id, user.userId));
+    const isPremium = foundUser?.tier === "premium" || foundUser?.metadata?.includes('"tier":"premium"');
+
+    if (!isPremium && user.role !== "superadmin") {
+      return c.json({
+        success: false,
+        code: "FEATURE_LOCKED_PREMIUM",
+        message: "Fitur penambahan cabang baru hanya tersedia pada Paket Premium (Coming Soon).",
+      }, 403);
+    }
+
+    return c.json({
+      success: false,
+      message: "Fitur pembuatan multi-cabang akan segera hadir pada rilis Paket Premium.",
+    }, 403);
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+});
+
+// 2d. Single Tenant Detail (Superadmin or Tenant Owner/Staff of that tenant)
 app.get("/api/tenants/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
@@ -593,6 +628,7 @@ app.post("/api/auth/login", async (c) => {
     }
 
     // Periksa masa aktif langganan: jika user tidak punya tanggal sendiri (misal kasir), cek tanggal outlet
+    let isExpired = false;
     if (foundUser.role !== "superadmin") {
       let subDate = foundUser.subscriptionUntil;
       if (!subDate && userTenant?.subscriptionUntil) {
@@ -601,15 +637,22 @@ app.post("/api/auth/login", async (c) => {
       if (subDate) {
         const expDate = new Date(`${subDate}T23:59:59`);
         if (!isNaN(expDate.getTime()) && expDate < new Date()) {
-          return c.json({
-            success: false,
-            code: "SUBSCRIPTION_EXPIRED",
-            message: `Masa aktif akun / outlet Anda telah berakhir pada ${subDate}. Silakan hubungi Super Admin untuk perpanjangan.`,
-            user: userSummary,
-          }, 403);
+          isExpired = true;
         }
+      } else {
+        isExpired = true;
       }
     }
+
+    const determinedTier = isExpired
+      ? "free"
+      : ((foundUser as any).tier || (userTenant as any)?.tier || "pro");
+
+    const enrichedUserSummary = {
+      ...userSummary,
+      isExpired,
+      tier: determinedTier,
+    };
 
     // Generate session token (HMAC-SHA256)
     const token = await signToken({
@@ -621,8 +664,8 @@ app.post("/api/auth/login", async (c) => {
 
     return c.json({
       success: true,
-      message: "Login berhasil",
-      user: userSummary,
+      message: isExpired ? "Login berhasil (Akun Memerlukan Langganan Aktif)" : "Login berhasil",
+      user: enrichedUserSummary,
       token,
     });
   } catch (error: any) {
@@ -651,17 +694,24 @@ app.get("/api/auth/status", async (c) => {
 
     let isExpired = false;
     let daysRemaining = 0;
-    if (foundUser.subscriptionUntil) {
-      const expDate = new Date(`${foundUser.subscriptionUntil}T23:59:59`);
+    const subDate = foundUser.subscriptionUntil || userTenant?.subscriptionUntil;
+    if (subDate) {
+      const expDate = new Date(`${subDate}T23:59:59`);
       if (!isNaN(expDate.getTime())) {
         const diffMs = expDate.getTime() - Date.now();
         daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         isExpired = diffMs < 0;
       }
+    } else if (foundUser.role !== "superadmin") {
+      isExpired = true;
     }
 
     const isInactive =
       foundUser.role !== "superadmin" && (foundUser.status === "inactive" || isExpired);
+
+    const determinedTier = isExpired
+      ? "free"
+      : ((foundUser as any).tier || (userTenant as any)?.tier || "pro");
 
     return c.json({
       success: true,
@@ -671,11 +721,13 @@ app.get("/api/auth/status", async (c) => {
         email: foundUser.email,
         role: foundUser.role,
         status: foundUser.status || "active",
-        subscriptionUntil: foundUser.subscriptionUntil,
+        subscriptionUntil: subDate,
         tenantId: userTenant ? userTenant.id : null,
         tenantName: userTenant ? userTenant.outletName : null,
         tutorialCompleted: foundUser.tutorialCompleted === "true",
         metadata: foundUser.metadata || null,
+        tier: determinedTier,
+        isExpired,
       },
       statusInfo: {
         isInactive,
@@ -724,10 +776,38 @@ app.get("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) => 
 app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const body = await c.req.json();
-    const { name, email, password, role, tenantId, status, subscriptionUntil } = body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      tenantId,
+      newOutletName,
+      status,
+      subscriptionUntil,
+      phone,
+      commissionRateDefault,
+      notes,
+    } = body;
 
     const newUserId = `user-${Date.now()}`;
     const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
+
+    let finalTenantId = tenantId || null;
+
+    // Jika membuat owner dengan outlet baru
+    if (role === "tenant_owner" && !finalTenantId && newOutletName?.trim()) {
+      finalTenantId = `tenant-${Date.now()}`;
+      await db.insert(tenants).values({
+        id: finalTenantId,
+        outletName: newOutletName.trim(),
+        userId: newUserId,
+        status: status || "active",
+        subscriptionUntil: subscriptionUntil || null,
+        phone: phone || null,
+      });
+    }
+
     await db.insert(users).values({
       id: newUserId,
       name,
@@ -736,12 +816,26 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
       role: role || "staff",
       status: status || "active",
       subscriptionUntil: subscriptionUntil || null,
-      tenantId: tenantId || null,
+      tenantId: finalTenantId,
     });
 
-    // If a tenant is specified and user is tenant_owner, link them
-    if (tenantId && role === "tenant_owner") {
-      await db.update(tenants).set({ userId: newUserId }).where(eq(tenants.id, tenantId));
+    // If an existing tenant is specified and user is tenant_owner, link them
+    if (finalTenantId && role === "tenant_owner" && !newOutletName?.trim()) {
+      await db.update(tenants).set({ userId: newUserId }).where(eq(tenants.id, finalTenantId));
+    }
+
+    // Jika role marketing, buatkan profil marketing afiliasi
+    if (role === "marketing") {
+      const mpId = `mp-${Date.now()}`;
+      await db.insert(marketingProfiles).values({
+        id: mpId,
+        userId: newUserId,
+        phone: phone || null,
+        commissionRateDefault: commissionRateDefault ? Number(commissionRateDefault) : 10,
+        totalEarned: 0,
+        totalWithdrawn: 0,
+        notes: notes || null,
+      });
     }
 
     return c.json({
@@ -754,7 +848,7 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
         role: role || "staff",
         status: status || "active",
         subscriptionUntil: subscriptionUntil || null,
-        tenantId: tenantId || null,
+        tenantId: finalTenantId,
       },
     });
   } catch (error: any) {
@@ -837,7 +931,9 @@ app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), 
       await db.update(tenants).set(tenantPayload).where(eq(tenants.userId, id));
     }
 
-    return c.json({ success: true, message: "Status akun berhasil diperbarui" });
+    invalidateTenantAuthCache(undefined, id);
+
+    return c.json({ success: true, message: `Status akun berhasil diperbarui (${status === "active" ? "Aktif" : "Nonaktif"})` });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }

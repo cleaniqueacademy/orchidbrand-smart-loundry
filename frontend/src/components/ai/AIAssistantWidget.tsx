@@ -1,26 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Bot,
-  Sparkles,
   X,
   Send,
   Trash2,
-  Minimize2,
-  Maximize2,
   ArrowRight,
-  Settings,
-  ShoppingCart,
-  DollarSign,
-  Compass,
-  Layers,
-  HelpCircle,
-  Smartphone,
-  Printer,
-  Calendar,
-  CheckCircle2,
   User,
-  ChevronRight,
-  ChevronLeft,
+  CheckCircle2,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { TabType } from "../../types";
@@ -98,51 +84,39 @@ const QUICK_PROMPTS: QuickPrompt[] = [
     label: "Status Sewa Ruko",
     text: "Berapa sisa masa sewa ruko saya dan berapa beban sewanya per bulan?",
   },
-  {
-    id: "menu-tracking",
-    category: "menus",
-    label: "Cek Resi Mandiri",
-    text: "Bagaimana cara pelanggan bisa melacak cucian mereka secara mandiri tanpa login?",
-  },
 
   // Settings & WhatsApp
   {
     id: "set-hours",
     category: "settings",
-    label: "Atur Jam Buka",
-    text: "Bagaimana cara mengatur jam operasional toko agar otomatis tercantum di struk dan WhatsApp?",
+    label: "Atur Jam Buka Toko",
+    text: "Bagaimana cara mengubah jam operasional outlet saya agar muncul di nota digital?",
   },
   {
     id: "set-bank",
     category: "settings",
-    label: "Rekening & QRIS",
-    text: "Bagaimana cara memasukkan nomor rekening bank dan info QRIS outlet?",
+    label: "Atur Rekening & QRIS",
+    text: "Bagaimana cara mengatur rekening bank dan info QRIS pembayaran laundry?",
   },
   {
     id: "set-wa",
     category: "settings",
-    label: "Scan QR WhatsApp",
-    text: "Bagaimana cara menghubungkan WhatsApp toko (scan QR Baileys) untuk kirim struk otomatis?",
+    label: "WhatsApp Otomatis",
+    text: "Bagaimana cara menghubungkan WhatsApp agar nota terkirim otomatis ke pelanggan?",
   },
   {
     id: "set-staff",
     category: "settings",
-    label: "Tambah Kasir Baru",
-    text: "Bagaimana cara membuat akun staf kasir baru dan mengatur password mereka?",
-  },
-  {
-    id: "set-printer",
-    category: "settings",
-    label: "Format Printer Thermal",
-    text: "Apa saja ukuran printer thermal yang didukung dan bagaimana cara cetaknya?",
+    label: "Tambah Akun Kasir",
+    text: "Bagaimana cara menambah akun kasir baru dan mengatur hak aksesnya?",
   },
 
-  // Kasir & POS
+  // Kasir POS
   {
-    id: "pos-create",
+    id: "pos-order",
     category: "pos",
-    label: "Buat Pesanan Baru",
-    text: "Bagaimana alur membuat nota pesanan baru kiloan atau satuan di kasir?",
+    label: "Cara Buat Order Kasir",
+    text: "Bagaimana alur input pesanan kiloan dan satuan di meja kasir POS?",
   },
   {
     id: "pos-status",
@@ -238,38 +212,18 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   onOpenTutorialModal,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isSideTabOpen, setIsSideTabOpen] = useState(false);
+  const [triggerCollapsed, setTriggerCollapsed] = useState(true);
   const sideTabRef = useRef<HTMLElement>(null);
 
-  // Otomatis menutup side tab saat mengklik area lain
+  // Close slideover on Escape key
   useEffect(() => {
-    if (!isSideTabOpen) return;
-    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
-      if (sideTabRef.current && !sideTabRef.current.contains(e.target as Node)) {
-        setIsSideTabOpen(false);
-      }
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
     };
-    document.addEventListener("pointerdown", handleOutsideClick);
-    return () => document.removeEventListener("pointerdown", handleOutsideClick);
-  }, [isSideTabOpen]);
-
-  const [isDockedToSide, setIsDockedToSide] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem("cleanique_ai_docked");
-      return saved === null ? true : saved === "true";
-    } catch {
-      return true;
-    }
-  });
-
-  const toggleDock = (dock: boolean) => {
-    setIsDockedToSide(dock);
-    setIsSideTabOpen(false);
-    try {
-      localStorage.setItem("cleanique_ai_docked", dock ? "true" : "false");
-    } catch {}
-  };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOpen]);
 
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -282,16 +236,16 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const isSuperAdmin = currentUserRole === "superadmin";
 
   const initialWelcomeText = isStaff
-    ? "Halo! Saya **Cleanique AI Copilot** untuk Staf Kasir 🧺✨\n\n" +
-      "Saya siap memandu Anda menguasai **meja kasir POS, alur pesanan cucian, cetak struk thermal, shift kasir, dan tips penanganan noda pakaian**.\n\n" +
-      "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan!"
+    ? "Halo! Saya **Cleanique Asisten AI** untuk Staf Kasir.\n\n" +
+      "Saya siap memandu Anda menguasai meja kasir POS, alur pesanan cucian, shift kasir, dan tips penanganan noda pakaian.\n\n" +
+      "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan."
     : isMarketing
-    ? "Halo! Saya **Cleanique AI Copilot** untuk Mitra Marketing 💼✨\n\n" +
-      "Saya siap membantu Anda memahami **kode referral, tracking performa promosi, dan penghitungan komisi affiliate**.\n\n" +
-      "Silakan tanyakan seputar program referral!"
-    : "Halo! Saya **Cleanique AI Copilot** 🌸\n\n" +
-      "Saya siap memandu Anda menguasai **seluruh menu, pengaturan outlet, alur kasir POS, dan shift kerja** di dashboard ini.\n\n" +
-      "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan!";
+    ? "Halo! Saya **Cleanique Asisten AI** untuk Mitra Marketing.\n\n" +
+      "Saya siap membantu Anda memahami kode referral, pelacakan performa promosi, dan penghitungan komisi affiliate.\n\n" +
+      "Silakan tanyakan seputar program referral."
+    : "Halo! Saya **Cleanique Asisten AI**.\n\n" +
+      "Saya siap memandu Anda menguasai seluruh menu, pengaturan outlet, alur kasir POS, dan shift kerja di dashboard ini.\n\n" +
+      "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan.";
 
   const initialParsed = parseActionTags(initialWelcomeText);
 
@@ -325,11 +279,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen && !isMinimized) {
+    if (isOpen) {
       scrollToBottom();
       inputRef.current?.focus();
     }
-  }, [isOpen, isMinimized, messages]);
+  }, [isOpen, messages]);
 
   const handleExecuteAction = (action: ActionItem) => {
     // Guard aksi berdasarkan peran
@@ -365,45 +319,45 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     }
   };
 
-  const getActionLabel = (action: ActionItem): { label: string; icon: React.ReactNode } => {
+  const getActionLabel = (action: ActionItem): string => {
     if (action.type === "NAVIGATE") {
       switch (action.target) {
         case "settings":
-          return { label: "Buka Menu Pengaturan", icon: <Settings className="w-3.5 h-3.5" /> };
+          return "Buka Menu Pengaturan";
         case "orders":
-          return { label: "Buka Meja Kasir (POS)", icon: <ShoppingCart className="w-3.5 h-3.5" /> };
+          return "Buka Meja Kasir (POS)";
         case "cashflow":
-          return { label: "Buka Buku Kas", icon: <DollarSign className="w-3.5 h-3.5" /> };
+          return "Buka Buku Kas";
         case "services":
-          return { label: "Kelola Tarif Layanan", icon: <Layers className="w-3.5 h-3.5" /> };
+          return "Kelola Tarif Layanan";
         case "customers":
-          return { label: "Buka Data Pelanggan", icon: <Compass className="w-3.5 h-3.5" /> };
+          return "Buka Data Pelanggan";
         case "subscription":
-          return { label: "Buka Menu Langganan", icon: <Calendar className="w-3.5 h-3.5" /> };
+          return "Buka Menu Langganan";
         case "reports":
-          return { label: "Buka Laporan Finansial", icon: <Layers className="w-3.5 h-3.5" /> };
+          return "Buka Laporan Finansial";
         case "tenants":
-          return { label: "Buka Manajemen Cabang", icon: <Settings className="w-3.5 h-3.5" /> };
+          return "Buka Manajemen Cabang";
         case "users":
-          return { label: "Buka Manajemen Pengguna", icon: <Settings className="w-3.5 h-3.5" /> };
+          return "Buka Manajemen Pengguna";
         case "overview":
         default:
-          return { label: `Ke Halaman ${action.target}`, icon: <Compass className="w-3.5 h-3.5" /> };
+          return `Ke Halaman ${action.target}`;
       }
     } else {
       switch (action.target) {
         case "whatsapp":
-          return { label: "Hubungkan WhatsApp Gateway", icon: <Smartphone className="w-3.5 h-3.5 text-emerald-400" /> };
+          return "Hubungkan WhatsApp Gateway";
         case "open_shift":
-          return { label: "Buka Shift Kasir Sekarang", icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> };
+          return "Buka Shift Kasir Sekarang";
         case "close_shift":
-          return { label: "Tutup & Rekonsiliasi Shift", icon: <DollarSign className="w-3.5 h-3.5 text-rose-400" /> };
+          return "Tutup & Rekonsiliasi Shift";
         case "expense":
-          return { label: "Catat Pengeluaran Toko", icon: <DollarSign className="w-3.5 h-3.5" /> };
+          return "Catat Pengeluaran Toko";
         case "tutorial":
-          return { label: "Buka Panduan Tutorial", icon: <HelpCircle className="w-3.5 h-3.5 text-amber-400" /> };
+          return "Buka Panduan Tutorial";
         default:
-          return { label: `Buka ${action.target}`, icon: <ArrowRight className="w-3.5 h-3.5" /> };
+          return `Buka ${action.target}`;
       }
     }
   };
@@ -600,7 +554,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         { id: "settings", label: "Setting & WA" },
         { id: "pos", label: "Kasir POS" },
         { id: "shift", label: "Shift Kasir" },
-        { id: "tips", label: "Tips Noda & Promo" },
+        { id: "tips", label: "Tips Noda" },
       ];
 
   const roleFilteredPrompts = QUICK_PROMPTS.filter((p) => {
@@ -628,11 +582,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     return true;
   });
 
-  const displayedPrompts =
-    selectedCategory === "all"
-      ? roleFilteredPrompts
-      : roleFilteredPrompts.filter((p) => p.category === selectedCategory);
-
   // Active Tab contextual prompt label
   const getActiveTabContextTip = () => {
     // Jangan berikan prompt kontekstual jika kasir sedang tidak berwenang pada tab tsb
@@ -649,7 +598,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       case "create-order":
         return {
           label: "Sedang di Meja Kasir",
-          query: "Panduan cepat input pesanan baru, cetak struk thermal, dan update status cucian?",
+          query: "Panduan cepat input pesanan baru, cetak nota pesanan, dan update status cucian?",
         };
       case "cashflow":
         return {
@@ -689,350 +638,284 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   return (
     <>
-      {/* Side Docked Tab on Right Screen Edge (Hanya muncul jika diklik, tidak muncul saat hover) */}
-      {!isOpen && isDockedToSide && (
+      {/* Slideover Trigger Button (Docked cleanly on the right screen edge) */}
+      {!isOpen && (
         <aside
           ref={sideTabRef}
           id="tour-ai-widget"
-          aria-label="Cleanique AI Assistant Side Dock"
-          className="fixed right-0 bottom-20 sm:bottom-24 z-40 flex items-center animate-fade-in"
+          aria-label="Cleanique AI Assistant"
+          className="fixed right-0 bottom-20 sm:bottom-24 z-40 flex items-center"
         >
-          <div
-            className={`flex items-stretch bg-gradient-to-l from-indigo-700 via-purple-700 to-pink-600 text-white rounded-l-2xl shadow-xl shadow-purple-950/40 border-y border-l border-white/25 overflow-hidden transition-all duration-300 ease-out ${
-              isSideTabOpen
-                ? "translate-x-0"
-                : "translate-x-[calc(100%-34px)]"
-            }`}
-          >
-            {/* Arrow Peek Handle - Always visible at the corner edge when closed */}
+          {/* Collapse toggle: show icon-only button when collapsed */}
+          {triggerCollapsed ? (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsSideTabOpen((prev) => !prev);
-              }}
-              className="w-[34px] px-2 py-3 hover:bg-white/20 text-white flex items-center justify-center border-r border-white/15 cursor-pointer relative shrink-0 transition-colors"
-              title={isSideTabOpen ? "Sembunyikan tab ke samping (Hanya arrow)" : "Buka Tanya AI Cleanique"}
-              aria-label={isSideTabOpen ? "Sembunyikan tab ke samping" : "Buka Tanya AI Cleanique"}
+              onClick={() => setTriggerCollapsed(false)}
+              className="flex items-center justify-center w-9 h-9 bg-blue-50 hover:bg-blue-100 text-blue-700 border-y border-l border-blue-200 rounded-l-xl shadow-xs transition-all cursor-pointer active:scale-95"
+              title="Buka Tanya AI Cleanique"
+              aria-label="Buka Tanya AI Cleanique"
             >
-              {isSideTabOpen ? (
-                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              ) : (
-                <ChevronLeft className="w-4 h-4" />
-              )}
+              <Bot className="w-4 h-4 text-blue-700" />
             </button>
-
-            {/* Main Trigger Tab (Expands when hovered or when arrow is clicked) */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(true);
-                setIsSideTabOpen(false);
-              }}
-              className="flex items-center gap-2.5 pl-2.5 pr-3 py-3 hover:bg-white/10 active:scale-95 transition-all text-left cursor-pointer shrink-0"
-              title="Klik untuk buka dialog Tanya AI Cleanique"
-            >
-              <div className="relative">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex flex-col pr-1">
-                <span className="text-[11px] font-bold tracking-wide leading-none flex items-center gap-1">
-                  Tanya AI <Sparkles className="w-3 h-3 text-amber-300" />
-                </span>
-                <span className="text-[9px] text-indigo-200 leading-tight mt-0.5">Bantuan Pintar</span>
-              </div>
-            </button>
-
-            {/* Undock / Restore to floating pill */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleDock(false);
-              }}
-              className="px-2 py-3 hover:bg-white/20 text-white/60 hover:text-white transition flex items-center justify-center border-l border-white/15 cursor-pointer text-[10px]"
-              title="Lepas dock ke tombol melayang"
-              aria-label="Lepas dock ke tombol melayang"
-            >
-              <Minimize2 className="w-3 h-3" />
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center">
+              {/* Collapse (hide text) */}
+              <button
+                type="button"
+                onClick={() => setTriggerCollapsed(true)}
+                className="flex items-center justify-center w-6 h-9 bg-blue-50 hover:bg-blue-100 text-blue-300 hover:text-blue-500 border-y border-l border-blue-200 rounded-l-xl shadow-xs transition-all cursor-pointer text-[10px]"
+                title="Sembunyikan"
+                aria-label="Sembunyikan label"
+              >
+                <span className="rotate-180">‹</span>
+              </button>
+              {/* Open drawer */}
+              <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                className="flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-y border-r-0 border-l-0 border border-blue-200 shadow-xs transition-all cursor-pointer font-medium text-xs active:scale-95"
+                title="Buka Tanya AI Cleanique"
+                aria-label="Buka Tanya AI Cleanique"
+              >
+                <Bot className="w-4 h-4 text-blue-700 shrink-0" />
+                <span className="font-semibold tracking-wide whitespace-nowrap">Tanya AI</span>
+              </button>
+            </div>
+          )}
         </aside>
       )}
 
-      {/* Floating Action Button with Quick Dock option */}
-      {!isOpen && !isDockedToSide && (
-        <div id="tour-ai-widget" className="fixed bottom-6 right-6 z-40 flex items-center group shadow-xl shadow-indigo-500/25 rounded-full border border-white/25 overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white transition-all duration-200 hover:shadow-indigo-500/40">
-          <button
-            type="button"
-            onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2.5 pl-4 pr-3 py-3 hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
-            title="Tanya Asisten AI Cleanique"
-          >
-            <div className="relative">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xs font-bold tracking-wide">Tanya AI</span>
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          </button>
-
-          {/* Dock to side toggle */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleDock(true);
-            }}
-            className="px-2.5 py-3 hover:bg-white/20 text-white/80 hover:text-white border-l border-white/15 transition flex items-center justify-center cursor-pointer"
-            title="Sembunyikan tombol ke samping layar agar tidak menutupi tabel"
-            aria-label="Sembunyikan ke samping"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Main Chat Panel - Mobile Fullscreen Layering */}
+      {/* Slideover Backdrop */}
       {isOpen && (
         <div
-          className={`fixed z-50 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden transition-all duration-200 ${
-            isMinimized
-              ? "bottom-0 right-0 left-0 w-full h-14 sm:left-auto sm:bottom-6 sm:right-6 sm:w-[460px] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:dark:border-slate-800/90"
-              : "inset-0 w-full h-[100dvh] rounded-none sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[620px] sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:dark:border-slate-800/90"
-          }`}
-        >
-          {/* Header */}
-          <div className="px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-between shadow-sm shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs font-bold tracking-wide">Cleanique AI Copilot</h3>
-                  <span className={`px-2 py-0.5 text-[9px] font-semibold rounded-full border ${
-                    activeModel.includes("Gemini")
-                      ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/30"
-                      : activeModel.includes("Aivene")
-                      ? "bg-blue-500/30 text-blue-200 border-blue-400/30"
-                      : "bg-amber-500/30 text-amber-200 border-amber-400/30"
-                  }`}>
-                    {activeModel}
-                  </span>
-                </div>
-                <p className="text-[10px] text-white/80">
-                  Panduan {isStaff ? "Kasir & Shift" : "Menu & Settings"} • <span className="font-semibold text-amber-200">{roleDisplayName}</span>
-                </p>
-              </div>
-            </div>
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-            <div className="flex items-center gap-1 text-white/80">
-              <button
-                type="button"
-                onClick={() => {
-                  toggleDock(true);
-                  setIsOpen(false);
-                }}
-                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
-                title="Sembunyikan ke samping layar"
-                aria-label="Sembunyikan ke samping layar"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={clearChat}
-                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
-                title="Bersihkan Percakapan"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
-                title={isMinimized ? "Perbesar" : "Perkecil"}
-              >
-                {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
-                title="Tutup"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* Slideover Panel (Right Drawer) */}
+      <aside
+        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] md:w-[460px] bg-white dark:bg-slate-900 shadow-xl border-l border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-label="Panel Tanya AI"
+      >
+        {/* Header */}
+        <div className="px-4 py-3.5 bg-blue-700 text-white flex items-center justify-between border-b border-blue-800 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center border border-white/20">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-xs font-bold tracking-wide">Cleanique AI</h3>
+                <span className={`px-2 py-0.2 text-[9px] font-semibold rounded-full border ${
+                  activeModel.includes("Gemini")
+                    ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/30"
+                    : activeModel.includes("Aivene")
+                    ? "bg-blue-500/30 text-blue-200 border-blue-400/30"
+                    : "bg-amber-500/30 text-amber-200 border-amber-400/30"
+                }`}>
+                  {activeModel}
+                </span>
+              </div>
+              <p className="text-[10px] text-white/80 mt-0.5">
+                Panduan {isStaff ? "Kasir & Shift" : "Menu & Settings"} • <span className="font-semibold text-blue-100">{roleDisplayName}</span>
+              </p>
             </div>
           </div>
 
-          {!isMinimized && (
-            <>
-              {/* Category Filter Bar */}
-              <div className="px-3 pt-2.5 pb-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-800 shrink-0">
-                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 text-[11px]">
-                  {availableCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 ${
-                        selectedCategory === cat.id
-                          ? "bg-indigo-600 text-white shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
+          <div className="flex items-center gap-1.5 text-white/80">
+            <button
+              type="button"
+              onClick={clearChat}
+              className="px-2.5 py-1 text-[11px] font-medium text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+              title="Bersihkan Percakapan"
+            >
+              Hapus
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+              title="Tutup Panel"
+              aria-label="Tutup Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-                {/* Contextual Active Tab Chip */}
-                {currentTabTip && (
-                  <div className="mt-1.5 mb-1">
-                    <button
-                      onClick={() => handleSendMessage(currentTabTip.query)}
-                      disabled={loading}
-                      className="w-full text-left px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/80 text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center justify-between hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
-                    >
-                      <span className="font-medium truncate">{currentTabTip.label}: Tanya panduan tab ini</span>
-                      <ArrowRight className="w-3 h-3 shrink-0 ml-1" />
-                    </button>
-                  </div>
-                )}
-              </div>
+        {/* Category Filter Bar */}
+        <div className="px-3 pt-2.5 pb-1 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-800 shrink-0">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 text-[11px]">
+            {availableCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 cursor-pointer ${
+                  selectedCategory === cat.id
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
 
-              {/* Horizontal Scroll Quick Prompt Chips */}
-              <div className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200/60 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0 flex items-center gap-1.5">
-                {roleFilteredPrompts.slice(0, 8).map((chip) => (
-                  <button
-                    key={chip.id}
-                    onClick={() => handleSendMessage(chip.text)}
-                    disabled={loading}
-                    className="shrink-0 px-2.5 py-1 text-[11px] font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 rounded-full transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Action Trigger Notice Banner */}
-              {actionNotice && (
-                <div className="bg-emerald-500 text-white text-[11px] font-medium py-1 px-3 flex items-center gap-1.5 animate-fadeIn">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>{actionNotice}</span>
-                </div>
-              )}
-
-              {/* Messages Body */}
-              <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 text-xs">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex items-start gap-2 ${
-                      msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                    }`}
-                  >
-                    {/* Icon Avatar hanya berlaku di chatting */}
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5 ${
-                        msg.role === "user"
-                          ? "bg-gradient-to-tr from-slate-600 to-slate-800"
-                          : "bg-gradient-to-tr from-indigo-600 to-purple-600"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        <User className="w-3.5 h-3.5" />
-                      ) : (
-                        <Bot className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-
-                    <div
-                      className={`flex flex-col ${
-                        msg.role === "user" ? "items-end" : "items-start"
-                      } max-w-[85%]`}
-                    >
-                      <div
-                        className={`rounded-2xl px-3.5 py-2.5 text-xs shadow-sm ${
-                          msg.role === "user"
-                            ? "bg-indigo-600 text-white rounded-tr-xs"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-xs border border-slate-200/60 dark:border-slate-700/60"
-                        }`}
-                      >
-                        {renderFormattedText(msg.cleanContent)}
-
-                        {/* Interactive Action Buttons */}
-                        {msg.actions && msg.actions.length > 0 && (
-                          <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-1.5">
-                            {msg.actions.map((act, actIdx) => {
-                              const { label, icon } = getActionLabel(act);
-                              return (
-                                <button
-                                  key={actIdx}
-                                  onClick={() => handleExecuteAction(act)}
-                                  className="group/btn inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-[11px] font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-xs hover:shadow-indigo-500/20 active:scale-95 cursor-pointer"
-                                >
-                                  {icon}
-                                  <span>{label}</span>
-                                  <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-slate-400 mt-1 px-1">
-                        {msg.time} {msg.model && `• ${msg.model.replace("gemini-", "")}`}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {loading && (
-                  <div className="flex items-start gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5">
-                      <Bot className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-xs px-3.5 py-2.5 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-1.5 text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.2s]"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.4s]"></span>
-                      <span className="text-[11px] ml-1 text-slate-400 font-medium">Cleanique AI sedang mengetik...</span>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input Footer */}
-              <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800/80 shrink-0">
-                <div className="relative flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
-                  <textarea
-                    ref={inputRef}
-                    rows={1}
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Tanyakan fungsi menu, setting, alur kasir, atau noda..."
-                    className="w-full pl-3 pr-10 py-2.5 bg-transparent resize-none outline-none text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 max-h-24 overflow-y-auto"
-                  />
-                  <button
-                    onClick={() => handleSendMessage()}
-                    disabled={!inputMessage.trim() || loading}
-                    className="absolute right-1.5 p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 transition-all active:scale-95"
-                    title="Kirim Pesan"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 px-1">
-                  <span>Enter untuk kirim, Shift+Enter untuk baris baru</span>
-                  <span className="text-emerald-500 font-medium flex items-center gap-0.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
-                  </span>
-                </div>
-              </div>
-            </>
+          {/* Contextual Active Tab Chip */}
+          {currentTabTip && (
+            <div className="mt-1.5 mb-1">
+              <button
+                type="button"
+                onClick={() => handleSendMessage(currentTabTip.query)}
+                disabled={loading}
+                className="w-full text-left px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/80 text-[11px] text-blue-700 dark:text-blue-300 flex items-center justify-between hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer"
+              >
+                <span className="font-medium truncate">{currentTabTip.label}: Tanya panduan tab ini</span>
+                <ArrowRight className="w-3 h-3 shrink-0 ml-1" />
+              </button>
+            </div>
           )}
         </div>
-      )}
+
+        {/* Horizontal Scroll Quick Prompt Chips */}
+        <div className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200/60 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0 flex items-center gap-1.5">
+          {roleFilteredPrompts.slice(0, 8).map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => handleSendMessage(chip.text)}
+              disabled={loading}
+              className="shrink-0 px-2.5 py-1 text-[11px] font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-300 border border-slate-200 dark:border-slate-700 rounded-full transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Action Trigger Notice Banner */}
+        {actionNotice && (
+          <div className="bg-emerald-500 text-white text-[11px] font-medium py-1 px-3 flex items-center gap-1.5 animate-fade-in shrink-0">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+        )}
+
+        {/* Messages Body */}
+        <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 text-xs">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex items-start gap-2 ${
+                msg.role === "user" ? "flex-row-reverse" : "flex-row"
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5 ${
+                  msg.role === "user"
+                    ? "bg-slate-700"
+                    : "bg-blue-600"
+                }`}
+              >
+                {msg.role === "user" ? (
+                  <User className="w-3.5 h-3.5" />
+                ) : (
+                  <Bot className="w-3.5 h-3.5" />
+                )}
+              </div>
+
+              <div
+                className={`flex flex-col ${
+                  msg.role === "user" ? "items-end" : "items-start"
+                } max-w-[85%]`}
+              >
+                <div
+                  className={`rounded-2xl px-3.5 py-2.5 text-xs shadow-xs ${
+                    msg.role === "user"
+                      ? "bg-blue-600 text-white rounded-tr-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-xs border border-slate-200/60 dark:border-slate-700/60"
+                  }`}
+                >
+                  {renderFormattedText(msg.cleanContent)}
+
+                  {/* Interactive Action Buttons */}
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-1.5">
+                      {msg.actions.map((act, actIdx) => {
+                        const label = getActionLabel(act);
+                        return (
+                          <button
+                            key={actIdx}
+                            type="button"
+                            onClick={() => handleExecuteAction(act)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg text-[11px] font-semibold transition-all active:scale-95 cursor-pointer"
+                          >
+                            <span>{label}</span>
+                            <ArrowRight className="w-3 h-3 text-blue-500" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 px-1">
+                  {msg.time} {msg.model && `• ${msg.model.replace("gemini-", "")}`}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex items-start gap-2">
+              <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5">
+                <Bot className="w-3.5 h-3.5" />
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-xs px-3.5 py-2.5 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-1.5 text-slate-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]"></span>
+                <span className="text-[11px] ml-1 text-slate-400 font-medium">Cleanique AI sedang mengetik...</span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Footer */}
+        <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800/80 shrink-0">
+          <div className="relative flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-transparent transition-all">
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Tanyakan fungsi menu, setting, alur kasir, atau noda..."
+              className="w-full pl-3 pr-10 py-2.5 bg-transparent resize-none outline-none text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 max-h-24 overflow-y-auto"
+            />
+            <button
+              type="button"
+              onClick={() => handleSendMessage()}
+              disabled={!inputMessage.trim() || loading}
+              className="absolute right-1.5 p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 transition-all active:scale-95 cursor-pointer"
+              title="Kirim Pesan"
+              aria-label="Kirim Pesan"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 px-1">
+            <span>Enter untuk kirim, Shift+Enter untuk baris baru</span>
+            <span className="text-emerald-500 font-medium flex items-center gap-0.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+            </span>
+          </div>
+        </div>
+      </aside>
     </>
   );
 };

@@ -170,48 +170,42 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
       {/* 4 Financial & Operational KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Pemasukan */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Pemasukan
-            </span>
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Pemasukan</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-emerald-950 tracking-tight">
             Rp {stats.totalIncome.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-emerald-700/90 font-medium mt-1">
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
             Belum lunas: Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
           </p>
         </div>
 
         {/* Pengeluaran */}
-        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
-              Pengeluaran
-            </span>
+        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
+          <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
+            <span>Pengeluaran</span>
             <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-rose-950 tracking-tight">
             Rp {stats.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-rose-700/90 font-medium mt-1">
+          <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
             Biaya operasional toko
           </p>
         </div>
 
         {/* Laba Bersih */}
-        <div className="rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-              Laba Bersih
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-xs">
+        <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Laba Bersih</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
@@ -220,25 +214,23 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
           }`}>
             {formatCurrency(stats.netProfit)}
           </div>
-          <p className="text-[11px] text-sky-700 font-medium mt-1">
+          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
             Pemasukan − Pengeluaran
           </p>
         </div>
 
         {/* Cucian Aktif */}
-        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              Dalam Proses
-            </span>
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Dalam Proses</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
               <Waves className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-amber-950 tracking-tight">
             {stats.activeOrdersCount} <span className="text-xs font-semibold text-amber-700">Order</span>
           </div>
-          <p className="text-[11px] text-amber-700/90 font-medium mt-1">
+          <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
             {stats.readyOrdersCount} pesanan siap diambil
           </p>
         </div>
@@ -508,7 +500,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                 <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                 <span className="text-xs font-medium text-zinc-700">WhatsApp Gateway</span>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 inline-flex items-center ${
                 waData?.status === "connected"
                   ? "bg-emerald-100 text-emerald-800"
                   : "bg-zinc-200 text-zinc-600"

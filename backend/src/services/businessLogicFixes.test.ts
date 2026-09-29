@@ -227,6 +227,15 @@ describe("Business Logic Fixes & AI Assistant Verification", () => {
       expect(body.code).toBe("SUBSCRIPTION_EXPIRED");
       expect(body.message).toContain("Masa aktif langganan outlet ini telah berakhir");
     });
+
+    it("authMiddleware mengizinkan rute paket & langganan bagi token outlet yang kedaluwarsa agar dapat melakukan pembayaran", async () => {
+      const res = await app.request("/api/plans/public", {
+        headers: { Authorization: `Bearer ${expiredOwnerToken}` },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+    });
   });
 
   // --------------------------------------------------------------------------

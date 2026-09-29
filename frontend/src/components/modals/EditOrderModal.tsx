@@ -376,7 +376,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-blue-900/20 transition disabled:opacity-50 flex items-center gap-1.5"
+              className="bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
               {submitting ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

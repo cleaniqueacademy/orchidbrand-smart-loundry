@@ -4,30 +4,14 @@ import gsap from "gsap";
 import {
   ArrowRight,
   ArrowLeft,
-  CheckCircle2,
   Eye,
   EyeOff,
   Loader2,
-  Lock,
-  Mail,
-  MapPin,
-  Phone,
-  Store,
-  Tag,
-  UserRound,
-  Sparkles,
-  ShieldCheck,
   Check,
-  Gift,
-  HelpCircle,
   X,
   ChevronRight,
-  Laptop,
-  Smartphone,
-  Receipt,
-  MessageCircle,
-  Bot,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { getReferralQueryParam, navigateTo } from "../../utils/routeUtils";
@@ -90,19 +74,7 @@ export const RegisterPage: React.FC = () => {
   useEffect(() => {
     if (!registerPageRef.current) return;
     const ctx = gsap.context(() => {
-      // 1. Ambient Background Glow Orbs Breathing Loop
-      gsap.to(".gsap-glow-orb", {
-        y: -14,
-        x: 8,
-        scale: 1.05,
-        duration: 4.5,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-        stagger: 0.7,
-      });
-
-      // 2. Left side elements stagger entrance
+      // 1. Left side elements stagger entrance
       gsap.fromTo(
         ".gsap-reg-hero",
         { opacity: 0, y: 22 },
@@ -277,89 +249,83 @@ export const RegisterPage: React.FC = () => {
   return (
     <main
       ref={registerPageRef}
-      className="min-h-screen w-full bg-[#f8fafc] lg:bg-[#07131b] font-sans text-slate-900 selection:bg-emerald-500 selection:text-white lg:grid lg:grid-cols-[0.95fr_1.3fr] lg:h-screen lg:overflow-hidden"
+      className="min-h-screen w-full bg-blue-50 font-sans text-slate-900 selection:bg-blue-600 selection:text-white lg:grid lg:grid-cols-[0.95fr_1.3fr] lg:h-screen lg:overflow-hidden"
     >
       {/* ========================================================================= */}
       {/* LEFT COLUMN: HERO & BRANDING (Desktop Only)                               */}
       {/* ========================================================================= */}
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-[#051119] via-[#091e2b] to-[#0a2926] px-6 xl:px-10 2xl:px-12 pt-5 pb-7 xl:pb-9 text-slate-100 border-r border-white/5">
-        {/* Ambient Glows */}
-        <div className="gsap-glow-orb pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-emerald-500/15 blur-[140px]" />
-        <div className="gsap-glow-orb pointer-events-none absolute -bottom-32 right-0 h-[450px] w-[450px] rounded-full bg-teal-400/15 blur-[150px]" />
-        <div className="gsap-glow-orb pointer-events-none absolute top-1/2 left-1/3 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
+      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden h-full bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50/50 px-6 xl:px-10 2xl:px-12 pt-5 pb-7 xl:pb-9 text-slate-800 border-r border-blue-200/60">
+        {/* Soft Ambient Glows */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-200/40 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-sky-200/40 blur-3xl pointer-events-none" />
 
         {/* Top Header Logo */}
         <div className="relative z-10 flex items-center justify-between shrink-0 gsap-reg-hero">
           <img
-            src="/laundry-cleanique-outline.png"
+            src="/laundry-cleanique.png"
             alt="Laundry Cleanique"
-            className="h-7 xl:h-8 w-auto object-contain filter drop-shadow-md"
+            className="h-8 xl:h-9 w-auto object-contain drop-shadow-xs"
           />
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-md shadow-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Platform Manajemen Laundry</span>
-          </div>
         </div>
 
         {/* Middle Hero Content */}
-        <div className="relative z-10 my-auto max-w-lg py-1 space-y-2 xl:space-y-3">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-200 backdrop-blur-md shadow-xs gsap-reg-hero">
-            <Sparkles className="h-3 w-3 text-emerald-400" />
+        <div className="relative z-10 my-auto max-w-lg py-1 space-y-2.5 xl:space-y-3.5">
+          <div className="inline-flex items-center rounded-full border border-blue-200/80 bg-blue-100/70 px-3 py-1 text-[11px] font-semibold text-blue-800 shadow-2xs gsap-reg-hero">
             Simple to Use. Built to Perform.
           </div>
 
-          <h1 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold tracking-tight text-white leading-snug gsap-reg-hero">
+          <h1 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold tracking-tight text-slate-900 leading-snug gsap-reg-hero">
             Kelola Mudah,{" "}
-            <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent">
               Tumbuh Lebih Terarah.
             </span>
           </h1>
 
-          <p className="text-[11px] xl:text-xs leading-relaxed text-slate-300/85 max-w-md gsap-reg-hero">
-            Daftarkan outlet Anda dalam 2 menit. Nikmati kasir modern, nota WhatsApp otomatis, dan pencatatan shift kas yang anti-selisih.
+          <p className="text-[11px] xl:text-xs leading-relaxed text-slate-600 max-w-md gsap-reg-hero">
+            Daftarkan outlet Anda dalam 2 menit. Nikmati kasir modern, notifikasi WhatsApp, dan laporan keuangan terpadu.
           </p>
 
           {/* Benefits List */}
-          <div className="space-y-1.5 pt-0.5 gsap-reg-hero">
-            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-200">
-              <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-2.5 w-2.5" />
+          <div className="space-y-2.5 pt-0.5 gsap-reg-hero">
+            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-700">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 shadow-2xs">
+                <Check className="h-3 w-3 stroke-[2.5]" />
               </div>
-              <span>Setup instan & database outlet terisolasi aman</span>
+              <span className="font-medium">Setup instan & database outlet terisolasi aman</span>
             </div>
-            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-200">
-              <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-2.5 w-2.5" />
+            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-700">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 shadow-2xs">
+                <Check className="h-3 w-3 stroke-[2.5]" />
               </div>
-              <span>Gratis {trialDays} hari pertama, tanpa perlu kartu kredit</span>
+              <span className="font-medium">Gratis {trialDays} hari pertama, tanpa perlu kartu kredit</span>
             </div>
-            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-200">
-              <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-2.5 w-2.5" />
+            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-700">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 shadow-2xs">
+                <Check className="h-3 w-3 stroke-[2.5]" />
               </div>
-              <span>Nota otomatis terkirim ke WhatsApp pelanggan</span>
+              <span className="font-medium">Notifikasi WhatsApp langsung ke pelanggan</span>
             </div>
-            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-200">
-              <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Check className="h-2.5 w-2.5" />
+            <div className="gsap-reg-benefit flex items-center gap-2.5 text-xs text-slate-700">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 shadow-2xs">
+                <Check className="h-3 w-3 stroke-[2.5]" />
               </div>
-              <span>Asisten AI bisnis untuk analisa omzet & keuangan</span>
+              <span className="font-medium">Asisten AI bisnis untuk analisa omzet & keuangan</span>
             </div>
           </div>
 
           {/* Trial Guarantee Highlight Card */}
-          <div className="rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-2.5 xl:p-3 backdrop-blur-md gsap-reg-hero">
+          <div className="rounded-2xl border border-blue-200/90 bg-white/90 p-3 xl:p-3.5 shadow-xs backdrop-blur-sm gsap-reg-hero">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3 text-emerald-400" />
+              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                 Garansi Trial {trialDays} Hari Penuh
               </span>
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9.5px] font-bold text-emerald-300 border border-emerald-500/30">
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[9.5px] font-bold text-blue-800 border border-blue-200">
                 100% Fitur Terbuka
               </span>
             </div>
-            <p className="text-[10px] xl:text-[10.5px] text-slate-300/80 leading-snug">
-              Coba seluruh fitur kasir, cetak struk thermal, manajemen shift, dan laporan omzet harian tanpa biaya pendaftaran.
+            <p className="text-[10.5px] xl:text-[11px] text-slate-600 leading-snug">
+              Coba seluruh fitur kasir POS, notifikasi WhatsApp, dan laporan omzet harian tanpa biaya pendaftaran.
             </p>
           </div>
 
@@ -371,9 +337,8 @@ export const RegisterPage: React.FC = () => {
                 setWelcomeStep(0);
                 setShowWelcomeModal(true);
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-emerald-300 hover:bg-white/10 hover:border-emerald-400/40 transition-all backdrop-blur-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-2xs cursor-pointer"
             >
-              <HelpCircle className="h-3.5 w-3.5" />
               <span>Panduan Paket & Fitur Lengkap</span>
               <ChevronRight className="h-3 w-3" />
             </button>
@@ -381,30 +346,24 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Desktop Footer */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-3 pb-1 text-[11px] xl:text-xs text-slate-400 shrink-0 gsap-reg-hero">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span>PT Indotech Berkah Abadi</span>
-          </div>
-          <span className="text-slate-500 font-medium">© 2026 Laundry Cleanique</span>
+        <div className="relative z-10 flex items-center justify-between border-t border-blue-200/60 pt-3 pb-1 text-[11px] xl:text-xs text-slate-500 shrink-0 gsap-reg-hero">
+          <span>PT Indotech Berkah Abadi</span>
+          <span className="text-slate-600 font-medium">© 2026 Laundry Cleanique</span>
         </div>
       </aside>
 
       {/* ========================================================================= */}
       {/* RIGHT COLUMN: REGISTRATION FORM (Ringkas & Bebas Scroll Panjang)           */}
       {/* ========================================================================= */}
-      <section className="flex flex-col justify-center items-center bg-[#f8fafc] px-4 py-6 sm:px-8 md:px-10 lg:py-6 overflow-y-auto lg:h-screen">
+      <section className="flex flex-col justify-center items-center bg-white px-4 py-6 sm:px-8 md:px-10 lg:py-6 overflow-y-auto lg:h-screen">
         <div className="gsap-reg-form-container w-full max-w-2xl my-auto">
           {/* Mobile Top Brand Header */}
           <div className="mb-4 flex flex-col items-center text-center lg:hidden gsap-reg-form">
             <img
               src="/laundry-cleanique.png"
               alt="Laundry Cleanique"
-              className="h-10 w-auto object-contain mb-2 drop-shadow-sm"
+              className="h-10 w-auto object-contain mb-1 drop-shadow-sm"
             />
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-semibold text-emerald-800">
-              Simple to Use. Built to Perform.
-            </div>
           </div>
 
           {/* Form Header with Login Link & Welcome Trigger */}
@@ -414,13 +373,13 @@ export const RegisterPage: React.FC = () => {
                 Daftar Akun Baru
               </h2>
               <p className="mt-0.5 text-xs text-slate-500 leading-normal">
-                Kelola Mudah, Tumbuh Lebih Terarah.
+                Kelola Mudah, Tumbuh Lebih Terarah. <span className="text-[11px] text-slate-400 font-normal ml-1">(* Wajib diisi)</span>
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigateTo("/")}
-              className="shrink-0 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline px-3 py-1.5 rounded-xl hover:bg-emerald-50 transition-colors cursor-pointer"
+              className="shrink-0 text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline px-3 py-1.5 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer"
             >
               Sudah punya akun? Masuk
             </button>
@@ -449,86 +408,66 @@ export const RegisterPage: React.FC = () => {
                 {/* Nama Outlet */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Nama Outlet
+                    Nama Outlet <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Store className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      disabled={loading}
-                      value={form.outletName}
-                      onChange={(e) => update("outletName", e.target.value)}
-                      placeholder="Contoh: Cleanique Melati"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    disabled={loading}
+                    value={form.outletName}
+                    onChange={(e) => update("outletName", e.target.value)}
+                    placeholder="Contoh: Cleanique Melati"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
 
                 {/* Nama Pemilik */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Nama Pemilik
+                    Nama Pemilik <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <UserRound className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      disabled={loading}
-                      value={form.ownerName}
-                      onChange={(e) => update("ownerName", e.target.value)}
-                      placeholder="Nama lengkap pengelola"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    disabled={loading}
+                    value={form.ownerName}
+                    onChange={(e) => update("ownerName", e.target.value)}
+                    placeholder="Nama lengkap pengelola"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
 
                 {/* Nomor WhatsApp */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Nomor WhatsApp
+                    Nomor WhatsApp <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Phone className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="tel"
-                      required
-                      disabled={loading}
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                      placeholder="08xxxxxxxxxx"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="tel"
+                    required
+                    disabled={loading}
+                    value={form.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    placeholder="08xxxxxxxxxx"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
 
                 {/* Email Login */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Email
+                    Email <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Mail className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      autoComplete="email"
-                      disabled={loading}
-                      value={form.email}
-                      onChange={(e) => update("email", e.target.value)}
-                      placeholder="nama@outlet.com"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    disabled={loading}
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    placeholder="nama@outlet.com"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
               </div>
 
@@ -537,52 +476,39 @@ export const RegisterPage: React.FC = () => {
                 {/* Kota */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Kota
+                    Kota <span className="text-slate-400 font-normal text-[10px] lowercase">(opsional)</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <MapPin className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="text"
-                      disabled={loading}
-                      value={form.city}
-                      onChange={(e) => update("city", e.target.value)}
-                      placeholder="Contoh: Surabaya"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    disabled={loading}
+                    value={form.city}
+                    onChange={(e) => update("city", e.target.value)}
+                    placeholder="Contoh: Surabaya"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
 
                 {/* Alamat */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Alamat
+                    Alamat <span className="text-slate-400 font-normal text-[10px] lowercase">(opsional)</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <MapPin className="h-4 w-4" />
-                    </div>
-                    <input
-                      type="text"
-                      disabled={loading}
-                      value={form.address}
-                      onChange={(e) => update("address", e.target.value)}
-                      placeholder="Jl. Mawar No. 10"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    disabled={loading}
+                    value={form.address}
+                    onChange={(e) => update("address", e.target.value)}
+                    placeholder="Jl. Mawar No. 10"
+                    className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                  />
                 </div>
 
                 {/* Kata Sandi */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Kata Sandi
+                    Kata Sandi <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Lock className="h-4 w-4" />
-                    </div>
                     <input
                       type={showPassword ? "text" : "password"}
                       required
@@ -592,7 +518,7 @@ export const RegisterPage: React.FC = () => {
                       value={form.password}
                       onChange={(e) => update("password", e.target.value)}
                       placeholder="Minimal 8 karakter"
-                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-10 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 pr-10 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
                     />
                     <button
                       type="button"
@@ -609,27 +535,22 @@ export const RegisterPage: React.FC = () => {
                 {/* Kode Referral */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Kode Referral (Opsional)
+                    Kode Referral <span className="text-slate-400 font-normal text-[10px] lowercase">(opsional)</span>
                   </label>
                   <div className="flex gap-1.5">
-                    <div className="relative flex-1">
-                      <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        <Tag className="h-4 w-4" />
-                      </div>
-                      <input
-                        type="text"
-                        disabled={loading}
-                        value={form.referralCode}
-                        onChange={(e) => update("referralCode", e.target.value.toUpperCase())}
-                        placeholder="Kode kupon promo"
-                        className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-2.5 text-xs font-mono text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-600/10 disabled:opacity-60"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      disabled={loading}
+                      value={form.referralCode}
+                      onChange={(e) => update("referralCode", e.target.value.toUpperCase())}
+                      placeholder="Kode kupon promo"
+                      className="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-mono text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                    />
                     <button
                       type="button"
                       disabled={loading || !form.referralCode.trim() || refValidation.loading}
                       onClick={() => validateReferralCode()}
-                      className="h-10 sm:h-11 px-3.5 rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-800 font-bold text-xs hover:bg-emerald-100/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center gap-1 cursor-pointer"
+                      className="h-10 sm:h-11 px-3.5 rounded-xl border border-blue-600 bg-blue-50 text-blue-800 font-bold text-xs hover:bg-blue-100/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center gap-1 cursor-pointer"
                     >
                       {refValidation.loading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -656,20 +577,15 @@ export const RegisterPage: React.FC = () => {
               </div>
             )}
 
-            {/* RINGKASAN HARGA SATU BARIS (Menggantikan Kartu Harga Besar) */}
-            <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-50/90 border border-emerald-200/90 px-3.5 py-2.5 text-xs shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-xs shrink-0">
-                  <Gift className="h-4 w-4" />
-                </span>
-                <div className="leading-tight">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>Trial {trialDays} Hari:</span>
-                    <span className="text-emerald-700 font-extrabold text-sm">Rp 0 (Gratis)</span>
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    Setelah trial: Rp {basePrice.toLocaleString("id-ID")}/bulan • Tanpa kartu kredit
-                  </div>
+            {/* RINGKASAN HARGA SATU BARIS */}
+            <div className="flex items-center justify-between rounded-2xl bg-blue-50/80 border border-blue-200/80 px-4 py-2.5 text-xs shadow-2xs">
+              <div className="leading-tight">
+                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>Trial {trialDays} Hari:</span>
+                  <span className="text-blue-700 font-extrabold text-sm">Rp 0 (Gratis)</span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  Setelah trial: Rp {basePrice.toLocaleString("id-ID")}/bulan • Tanpa kartu kredit
                 </div>
               </div>
               <button
@@ -678,7 +594,7 @@ export const RegisterPage: React.FC = () => {
                   setWelcomeStep(1); // Langsung ke step rincian harga
                   setShowWelcomeModal(true);
                 }}
-                className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-200 hover:bg-emerald-100/60 hover:border-emerald-300 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-blue-700 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-colors shrink-0 shadow-2xs cursor-pointer"
               >
                 <span>Rincian Paket</span>
                 <ChevronRight className="h-3 w-3" />
@@ -689,12 +605,12 @@ export const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 px-4 text-sm font-bold text-white shadow-md shadow-emerald-900/15 transition-all duration-200 hover:from-emerald-700 hover:to-teal-800 hover:shadow-lg hover:shadow-emerald-900/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
+              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 text-sm font-bold text-white transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-emerald-100" />
-                  <span>Menyiapkan Akun Outlet…</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-100" />
+                  <span>Menyiapkan Akun Outlet...</span>
                 </>
               ) : (
                 <>
@@ -718,7 +634,7 @@ export const RegisterPage: React.FC = () => {
                 setWelcomeStep(0);
                 setShowWelcomeModal(true);
               }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer"
             >
               <span>Pelajari panduan paket & fitur lengkap</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -742,18 +658,13 @@ export const RegisterPage: React.FC = () => {
             >
               {/* Modal Top Bar */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="rounded-2xl bg-emerald-100 p-2 text-emerald-700">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                      Panduan Paket & Fitur
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Langkah 0{welcomeStep + 1} dari 03 • Informasi Resmi Cleanique
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                    Panduan Paket & Fitur
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Langkah 0{welcomeStep + 1} dari 03 • Informasi Resmi Cleanique
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -773,9 +684,8 @@ export const RegisterPage: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     className="space-y-3.5"
                   >
-                    <div className="rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-4 border border-emerald-200/80">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5 mb-1">
-                        <Store className="h-3.5 w-3.5 text-emerald-600" />
+                    <div className="rounded-2xl bg-blue-50 p-4 border border-blue-200/80">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 block mb-1">
                         Laundry Cleanique
                       </span>
                       <h4 className="text-lg font-extrabold text-slate-900 leading-snug">
@@ -788,40 +698,28 @@ export const RegisterPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                       <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Receipt className="h-4 w-4 text-emerald-700" />
-                          <span className="font-bold text-slate-800">Kasir POS & Struk</span>
-                        </div>
+                        <div className="font-bold text-slate-800 mb-1">Kasir POS Praktis</div>
                         <p className="text-slate-500 text-[11px] leading-relaxed">
-                          Timbang cepat kiloan & satuan, cetak nota thermal Bluetooth/USB dengan QR Code.
+                          Timbang cepat kiloan & satuan, catat pesanan cucian pelanggan secara rapi dan cepat.
                         </p>
                       </div>
 
                       <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MessageCircle className="h-4 w-4 text-teal-700" />
-                          <span className="font-bold text-slate-800">WhatsApp Otomatis</span>
-                        </div>
+                        <div className="font-bold text-slate-800 mb-1">Notifikasi WhatsApp</div>
                         <p className="text-slate-500 text-[11px] leading-relaxed">
-                          Kirim nota digital & info cucian siap diambil langsung ke WhatsApp tanpa simpan nomor.
+                          Kirim notifikasi status cucian dan rincian transaksi langsung ke WhatsApp pelanggan.
                         </p>
                       </div>
 
                       <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Store className="h-4 w-4 text-emerald-700" />
-                          <span className="font-bold text-slate-800">Shift & Rekap Kas</span>
-                        </div>
+                        <div className="font-bold text-slate-800 mb-1">Laporan & Omzet</div>
                         <p className="text-slate-500 text-[11px] leading-relaxed">
-                          Kontrol uang fisik di laci kasir vs pencatatan sistem, hindari kebocoran kas 100%.
+                          Pantau transaksi harian, rekapitulasi penjualan, dan performa outlet kapan pun.
                         </p>
                       </div>
 
                       <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Bot className="h-4 w-4 text-teal-700" />
-                          <span className="font-bold text-slate-800">Asisten AI Bisnis</span>
-                        </div>
+                        <div className="font-bold text-slate-800 mb-1">Asisten AI Bisnis</div>
                         <p className="text-slate-500 text-[11px] leading-relaxed">
                           Konsultasi keuangan, analisa efisiensi bahan, dan strategi omzet toko siap bantu 24/7.
                         </p>
@@ -837,12 +735,11 @@ export const RegisterPage: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     className="space-y-3"
                   >
-                    <div className="rounded-2xl bg-emerald-50 p-3 border border-emerald-200 text-xs text-emerald-900 leading-relaxed">
-                      <p className="font-bold flex items-center gap-1.5 mb-0.5">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <div className="rounded-2xl bg-blue-50 p-3 border border-blue-200 text-xs text-blue-900 leading-relaxed">
+                      <p className="font-bold mb-0.5">
                         Transparansi Biaya Tanpa Jebakan:
                       </p>
-                      <p className="text-emerald-800 text-[11px]">
+                      <p className="text-blue-800 text-[11px]">
                         Semua outlet baru menikmati masa trial 7 hari penuh dengan biaya <strong>Rp 0 (Gratis)</strong>. Tidak memerlukan kartu kredit untuk memulai.
                       </p>
                     </div>
@@ -874,7 +771,7 @@ export const RegisterPage: React.FC = () => {
 
                       <div className="mt-4 space-y-3 text-xs text-slate-700">
                         <div className="flex items-start gap-3">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-extrabold text-xs">
                             1
                           </span>
                           <div>
@@ -886,7 +783,7 @@ export const RegisterPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-start gap-3">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-extrabold text-xs">
                             2
                           </span>
                           <div>
@@ -898,7 +795,7 @@ export const RegisterPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-start gap-3">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-extrabold text-xs">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-extrabold text-xs">
                             3
                           </span>
                           <div>
@@ -911,8 +808,7 @@ export const RegisterPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-emerald-50/80 p-3 border border-emerald-200/90 text-xs text-emerald-900 flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-emerald-700 shrink-0" />
+                    <div className="rounded-2xl bg-blue-50/80 p-3 border border-blue-200/90 text-xs text-blue-900">
                       <span>Data bisnis Anda dienkripsi dan terisolasi aman antar cabang.</span>
                     </div>
                   </motion.div>
@@ -931,7 +827,7 @@ export const RegisterPage: React.FC = () => {
                       onClick={() => setWelcomeStep(idx)}
                       className={`h-2 rounded-full transition-all duration-200 cursor-pointer ${
                         welcomeStep === idx
-                          ? "w-6 bg-emerald-600"
+                          ? "w-6 bg-blue-600"
                           : "w-2 bg-slate-200 hover:bg-slate-300"
                       }`}
                     />
@@ -955,7 +851,7 @@ export const RegisterPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setWelcomeStep((prev) => prev + 1)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-800 transition-colors cursor-pointer"
                     >
                       <span>Selanjutnya</span>
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -964,7 +860,7 @@ export const RegisterPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowWelcomeModal(false)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
                     >
                       <span>Mulai Isi Formulir</span>
                       <Check className="h-3.5 w-3.5" />

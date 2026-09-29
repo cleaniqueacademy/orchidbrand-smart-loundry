@@ -33,9 +33,8 @@ export const ReportMetricsCards: React.FC<ReportMetricsCardsProps> = ({
         <div className="text-xl font-bold text-zinc-900 mt-2.5 tracking-tight">
           Rp {metrics.totalRevenue.toLocaleString("id-ID")}
         </div>
-        <div className="text-[11px] text-emerald-700/90 font-medium mt-1 flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-          <span>{metrics.paidCount} transaksi lunas</span>
+        <div className="text-[11px] text-emerald-700/90 font-medium mt-1">
+          {metrics.paidCount} transaksi lunas
         </div>
       </div>
 
@@ -75,9 +74,8 @@ export const ReportMetricsCards: React.FC<ReportMetricsCardsProps> = ({
         </div>
       </div>
 
-      {/* 4. Laba Bersih - Hero Light Blue Spotlight */}
-      <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-sm">
-        <div className="absolute -top-4 -right-4 w-20 h-20 bg-sky-400/20 rounded-full blur-xl pointer-events-none" />
+      {/* 4. Laba Bersih */}
+      <div className="relative overflow-hidden rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50 via-blue-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-xs">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold uppercase tracking-wider text-[10px] text-sky-800">
             Laba Bersih

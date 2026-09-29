@@ -94,9 +94,8 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
 
       {/* 4 SaaS Platform KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* Total Cabang - Highlighted Blue Card */}
-        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-sm relative overflow-hidden group hover:border-blue-400 transition">
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-400/20 rounded-full blur-xl pointer-events-none" />
+        {/* Total Cabang */}
+        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
           <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
             <span>Total Cabang Toko</span>
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
@@ -225,7 +224,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                     <td className="py-3 px-5 text-right font-bold text-emerald-700 text-xs whitespace-nowrap">
                       Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
                     </td>
-                    <td className="py-3 px-5 text-center">
+                    <td className="py-3 px-5 text-center min-w-[130px] whitespace-nowrap">
                       {isInactive || isExpired ? (
                         <span className="inline-flex items-center text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                           {isInactive ? "Nonaktif" : "Kedaluwarsa"}

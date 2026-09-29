@@ -202,7 +202,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
                   onClick={() => setDurationMonths(item.months)}
                   className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
                     durationMonths === item.months
-                      ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                      ? "border-blue-600 bg-blue-600 text-white shadow-xs"
                       : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
@@ -263,7 +263,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white text-xs font-bold shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2 disabled:opacity-60"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Buat Tagihan Pembayaran</span>

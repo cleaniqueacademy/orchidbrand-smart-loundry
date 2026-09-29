@@ -31,6 +31,7 @@ import { getPublicRoute } from "./utils/routeUtils";
 import { AppModals } from "./components/modals/AppModals";
 import { WhatsAppSettingsModal } from "./components/modals/WhatsAppSettingsModal";
 import { InactiveAccountModal } from "./components/modals/InactiveAccountModal";
+import { SubscriptionPaywallModal } from "./components/modals/SubscriptionPaywallModal";
 import { OpenShiftModal } from "./components/modals/OpenShiftModal";
 import { CloseShiftModal } from "./components/modals/CloseShiftModal";
 import { WhatsAppLogsModal } from "./components/modals/WhatsAppLogsModal";
@@ -272,51 +273,82 @@ export default function App() {
   };
 
   const tourSteps: TourStep[] = useMemo(() => {
-    if (currentUserRole === "staff") {
+    if (currentUserRole === "marketing") {
       return [
         {
-          id: "shift",
-          targetId: "tour-shift-btn",
-          title: "Buka / Tutup Shift Kasir",
-          badge: "Langkah 1 dari 5",
-          description: "Sebelum melayani pelanggan, pastikan Anda membuka shift dan memasukkan modal kas awal laci kasir untuk akurasi rekonsiliasi uang fisik di akhir hari.",
-          tips: ["Selalu cek uang kembalian sebelum shift", "Rekonsiliasi otomatis saat tutup shift"],
-          preferredPlacement: "bottom",
+          id: "marketing-dashboard",
+          targetId: "sidebar-nav-marketing",
+          title: "Dashboard Affiliate & Saldo",
+          badge: "Langkah 1 dari 4",
+          description: "Pantau performa referral Anda: total outlet terdaftar, akumulasi komisi, dan status pencairan saldo mitra.",
+          tips: ["Data komisi diperbarui otomatis secara real-time saat outlet aktif", "Riwayat transfer komisi dapat dicek langsung di halaman ini"],
+          preferredPlacement: "right",
+          actionRequiredTab: "marketing",
         },
+        {
+          id: "referral-nav",
+          targetId: "sidebar-nav-referral_codes",
+          title: "Kode Referral & Link Promosi",
+          badge: "Langkah 2 dari 4",
+          description: "Akses dan salin kode kupon referral unik Anda untuk dibagikan ke calon pemilik laundry saat mereka mendaftar untuk klaim komisi.",
+          tips: ["Setiap pendaftaran baru dengan kode Anda akan otomatis tercatat ke akun Anda"],
+          preferredPlacement: "right",
+          actionRequiredTab: "referral_codes",
+        },
+        {
+          id: "ai-assistant",
+          targetId: "tour-ai-widget",
+          title: "Cleanique AI Assistant",
+          badge: "Langkah 3 dari 4",
+          description: "Konsultasikan ide copywriting promosi, edukasi fitur kasir Cleanique, dan strategi penawaran paket ke prospek laundry dengan asisten AI.",
+          preferredPlacement: "top",
+        },
+        {
+          id: "tutorial-btn",
+          targetId: "sidebar-btn-tutorial",
+          title: "Pusat Panduan & Tutorial",
+          badge: "Langkah 4 dari 4",
+          description: "Klik menu Panduan kapan saja untuk memutar ulang tur pengenalan atau melihat materi panduan mitra marketing.",
+          preferredPlacement: "right",
+        },
+      ];
+    }
+
+    if (currentUserRole === "staff") {
+      return [
         {
           id: "order-nav",
           targetId: "sidebar-nav-orders",
           title: "Meja Kasir & Input Transaksi",
-          badge: "Langkah 2 dari 5",
+          badge: "Langkah 1 dari 4",
           description: "Klik menu Kasir ini untuk mencatat pesanan kiloan/satuan baru, timbang pakaian, dan cetak nota struk kasir thermal 58mm/80mm.",
           tips: ["Bisa langsung cetak nota 58mm/80mm", "Nota digital otomatis dikirim via WhatsApp"],
           preferredPlacement: "right",
         },
         {
-          id: "whatsapp",
-          targetId: "tour-whatsapp-btn",
-          title: "Status WhatsApp Gateway",
-          badge: "Langkah 3 dari 5",
-          description: "Indikator hijau menunjukkan sistem WhatsApp outlet terhubung dan siap mengirimkan notifikasi status cucian otomatis (Antrian, Proses, Siap Ambil, Selesai) ke nomor WhatsApp pelanggan.",
-          tips: ["Pelanggan dapat melacak status cucian secara realtime via link invoice"],
-          preferredPlacement: "bottom",
+          id: "customers-nav",
+          targetId: "sidebar-nav-customers",
+          title: "Data Pelanggan Toko",
+          badge: "Langkah 2 dari 4",
+          description: "Cari riwayat transaksi pelanggan, nomor WhatsApp, serta status member atau deposit saldo laundry.",
+          preferredPlacement: "right",
         },
         {
           id: "ai-assistant",
           targetId: "tour-ai-widget",
           title: "Cleanique AI Copilot",
-          badge: "Langkah 4 dari 5",
+          badge: "Langkah 3 dari 4",
           description: "Butuh bantuan cara menghilangkan noda membandel, informasi paket, atau bingung fitur sistem? Klik tombol AI ini kapan saja untuk tanya asisten cerdas berbasis Gemini Flash.",
           tips: ["Bisa diciutkan ke pojok agar tidak menutupi tabel", "Mendukung panduan instan dan tips operasional"],
           preferredPlacement: "top",
         },
         {
           id: "help-btn",
-          targetId: "header-btn-tutorial",
+          targetId: "sidebar-btn-tutorial",
           title: "Buka Panduan Kapan Saja",
-          badge: "Langkah 5 dari 5",
-          description: "Kapan pun Anda atau rekan kasir baru membutuhkan pelatihan ulang, klik tombol 'Panduan' di header ini untuk memutar tur interaktif kembali.",
-          preferredPlacement: "bottom",
+          badge: "Langkah 4 dari 4",
+          description: "Kapan pun Anda atau rekan kasir baru membutuhkan pelatihan ulang, klik menu 'Panduan & Tutorial' di sidebar ini untuk memutar tur interaktif kembali.",
+          preferredPlacement: "right",
         },
       ];
     }
@@ -324,19 +356,10 @@ export default function App() {
     if (currentUserRole === "tenant_owner") {
       return [
         {
-          id: "shift",
-          targetId: "tour-shift-btn",
-          title: "Monitoring Shift & Kas Laci",
-          badge: "Langkah 1 dari 6",
-          description: "Pantau kasir yang sedang bertugas, modal kas awal, serta pantau rekonsiliasi kas saat shift ditutup untuk menghindari selisih uang kas fisik.",
-          tips: ["Transparansi uang kas fisik vs uang di sistem"],
-          preferredPlacement: "bottom",
-        },
-        {
           id: "orders-nav",
           targetId: "sidebar-nav-orders",
           title: "Meja Kasir & Antrian Pesanan",
-          badge: "Langkah 2 dari 6",
+          badge: "Langkah 1 dari 5",
           description: "Pusat operasional: kelola seluruh antrian cucian pelanggan, timbang kiloan, update progress cuci/setrika, pelunasan tagihan, dan cetak nota kasir.",
           preferredPlacement: "right",
         },
@@ -344,36 +367,36 @@ export default function App() {
           id: "cashflow-nav",
           targetId: "sidebar-nav-finance",
           title: "Buku Kas & Pengeluaran Toko",
-          badge: "Langkah 3 dari 6",
+          badge: "Langkah 2 dari 5",
           description: "Catat pengeluaran operasional toko (deterjen, listrik, parfum, plastik) dan ekspor laporan keuangan laba-rugi ke file Excel / PDF.",
           tips: ["Arus kas otomatis terintegrasi dengan penerimaan kasir"],
           preferredPlacement: "right",
         },
         {
           id: "whatsapp",
-          targetId: "tour-whatsapp-btn",
+          targetId: "sidebar-btn-whatsapp-settings",
           title: "WhatsApp Gateway Outlet",
-          badge: "Langkah 4 dari 6",
+          badge: "Langkah 3 dari 5",
           description: "Hubungkan nomor WhatsApp outlet Anda via scan QR (Baileys) atau atur template pesan notifikasi otomatis untuk meningkatkan loyalitas dan kepuasan pelanggan.",
           tips: ["Pelanggan dapat melacak status cucian secara realtime via link invoice"],
-          preferredPlacement: "bottom",
+          preferredPlacement: "right",
         },
         {
           id: "ai-assistant",
           targetId: "tour-ai-widget",
           title: "AI Business Copilot",
-          badge: "Langkah 5 dari 6",
+          badge: "Langkah 4 dari 5",
           description: "Asisten AI cerdas untuk membantu Anda menganalisis performa bisnis, ide promo hemat deterjen, strategi pemasaran, hingga SOP penanganan komplain pakaian.",
           tips: ["Tersedia bantuan 24/7 di pojok kanan bawah"],
           preferredPlacement: "top",
         },
         {
           id: "tutorial-btn",
-          targetId: "header-btn-tutorial",
+          targetId: "sidebar-btn-tutorial",
           title: "Panduan Interaktif Sistem",
-          badge: "Langkah 6 dari 6",
-          description: "Klik tombol 'Panduan' ini kapan saja untuk memutar ulang tur panduan atau melatih staf kasir baru di outlet Anda.",
-          preferredPlacement: "bottom",
+          badge: "Langkah 5 dari 5",
+          description: "Klik menu 'Panduan & Tutorial' di sidebar ini kapan saja untuk memutar ulang tur panduan atau melatih staf kasir baru di outlet Anda.",
+          preferredPlacement: "right",
         },
       ];
     }
@@ -407,11 +430,11 @@ export default function App() {
       },
       {
         id: "tutorial-btn",
-        targetId: "header-btn-tutorial",
+        targetId: "sidebar-btn-tutorial",
         title: "Panduan Platform",
         badge: "Langkah 4 dari 4",
-        description: "Klik tombol 'Panduan' ini kapan saja untuk memutar ulang tur fitur pusat kendali platform.",
-        preferredPlacement: "bottom",
+        description: "Klik menu 'Panduan & Tutorial' di sidebar ini kapan saja untuk memutar ulang tur fitur pusat kendali platform.",
+        preferredPlacement: "right",
       },
     ];
   }, [currentUserRole]);
@@ -525,20 +548,35 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-50/50 flex text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
-      {/* Modal / Layer Besar Pemblokiran Saat Akun Tidak Aktif / Habis Masa Aktif */}
+      {/* Modal / Layer Besar Pemblokiran Saat Akun Free User / Habis Masa Aktif / Nonaktif */}
       {!activeStatus.isActive && currentUserRole !== "superadmin" && (
-        <InactiveAccountModal
-          isOpen={true}
-          user={currentUser}
-          onRefreshStatus={async () => {
-            const isNowActive = await refreshUserSession();
-            if (isNowActive) {
-              fetchData();
-            }
-            return isNowActive;
-          }}
-          onLogout={handleLogout}
-        />
+        currentUser?.status === "inactive" ? (
+          <InactiveAccountModal
+            isOpen={true}
+            user={currentUser}
+            onRefreshStatus={async () => {
+              const isNowActive = await refreshUserSession();
+              if (isNowActive) {
+                fetchData();
+              }
+              return isNowActive;
+            }}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <SubscriptionPaywallModal
+            isOpen={true}
+            user={currentUser}
+            onRefreshStatus={async () => {
+              const isNowActive = await refreshUserSession();
+              if (isNowActive) {
+                fetchData();
+              }
+              return isNowActive;
+            }}
+            onLogout={handleLogout}
+          />
+        )
       )}
 
       {/* Shadcn Sidebar */}

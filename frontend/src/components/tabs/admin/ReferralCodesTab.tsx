@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   Tag,
   Plus,
@@ -160,66 +160,66 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
 
   return (
     <div className="space-y-6">
-      {/* Header & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-xs border border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <Tag className="w-5 h-5" />
-            </span>
-            <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-              Kode Referral & Promosi
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Kelola kupon diskon pendaftaran outlet baru dan pantau komisi kemitraan affiliate.
-          </p>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Kode Referral &amp; Promosi</h2>
+          <p className="text-xs text-zinc-500">Kelola kupon diskon pendaftaran dan pantau komisi kemitraan affiliate.</p>
         </div>
-
         {canManage && (
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer shrink-0"
+            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             Buat Kode Promo
           </button>
         )}
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Tag className="w-6 h-6" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Total Program Kupon</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Tag className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400">Total Program Kupon</span>
-            <h3 className="text-2xl font-bold text-slate-800">{codes.length}</h3>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {codes.length} <span className="text-xs font-semibold text-blue-700">Program</span>
           </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400">Total Pemakaian Kupon</span>
-            <h3 className="text-2xl font-bold text-emerald-600">
-              {totalUsageAll.toLocaleString("id-ID")} kali
-            </h3>
+          <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+            Kupon referral terdaftar
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Total Pemakaian Kupon</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <TrendingUp className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-400">Kupon Aktif Berjalan</span>
-            <h3 className="text-2xl font-bold text-slate-800">
-              {codes.filter((c) => String(c.isActive) === "true").length}
-            </h3>
+          <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
+            {totalUsageAll.toLocaleString("id-ID")} <span className="text-xs font-semibold text-emerald-700">Kali</span>
+          </div>
+          <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+            Digunakan saat registrasi cabang
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Kupon Aktif Berjalan</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-amber-950 mt-2.5 tracking-tight">
+            {codes.filter((c) => String(c.isActive) === "true").length} <span className="text-xs font-semibold text-amber-700">Aktif</span>
+          </div>
+          <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
+            Siap dibagikan dan diklaim
           </div>
         </div>
       </div>
@@ -304,9 +304,8 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Diskon */}
-                      <td className="py-3.5 px-4 font-semibold">
-                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                          <Percent className="w-3 h-3" />
+                      <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                        <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 whitespace-nowrap shrink-0">
                           {code.discountType === "percent"
                             ? `${code.discountValue}%`
                             : `Rp ${code.discountValue.toLocaleString("id-ID")}`}
@@ -314,9 +313,8 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Komisi */}
-                      <td className="py-3.5 px-4 font-semibold">
-                        <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                          <DollarSign className="w-3 h-3" />
+                      <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                        <span className="inline-flex items-center text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 whitespace-nowrap shrink-0">
                           {code.commissionType === "percent"
                             ? `${code.commissionValue}%`
                             : `Rp ${code.commissionValue.toLocaleString("id-ID")}`}
@@ -324,7 +322,7 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Outlet Terdaftar */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => {
@@ -334,18 +332,17 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                               tenants: info?.tenants || [],
                             });
                           }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 transition cursor-pointer"
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 transition cursor-pointer whitespace-nowrap shrink-0"
                           title="Lihat daftar cabang yang mendaftar menggunakan kode ini"
                         >
-                          <Users className="w-3.5 h-3.5 text-blue-600" />
                           <span>{trackMap[code.id]?.totalTenants ?? code.currentUsage ?? 0} Outlet</span>
                         </button>
                       </td>
 
                       {/* Kuota */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="font-semibold text-slate-800">
-                          {code.currentUsage} / {code.maxUsage ? code.maxUsage : "∞"}
+                          {code.currentUsage} / {code.maxUsage ? code.maxUsage : "âˆž"}
                         </div>
                         {code.maxUsage && (
                           <div className="w-20 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
@@ -360,7 +357,7 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Masa Berlaku */}
-                      <td className="py-3.5 px-4 text-[11px] text-slate-500">
+                      <td className="py-3.5 px-4 text-[11px] text-slate-500 whitespace-nowrap">
                         {code.validFrom || code.validUntil ? (
                           <>
                             <div>Mulai: {code.validFrom || "Sekarang"}</div>
@@ -372,15 +369,15 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Cakupan Outlet */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {appliesAll ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center text-[11px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                             Semua Cabang
                           </span>
                         ) : (
                           <button
                             onClick={() => handleOpenTenants(code)}
-                            className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full transition cursor-pointer"
+                            className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full transition cursor-pointer whitespace-nowrap shrink-0"
                           >
                             <Building2 className="w-3 h-3" />
                             Outlet Pilihan...
@@ -389,23 +386,15 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                       </td>
 
                       {/* Status */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                          className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                             isActive
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                               : "bg-slate-100 text-slate-500"
                           }`}
                         >
-                          {isActive ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aktif
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="w-3 h-3 text-slate-400" /> Nonaktif
-                            </>
-                          )}
+                          {isActive ? "Aktif" : "Nonaktif"}
                         </span>
                       </td>
 
@@ -617,7 +606,7 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                         Hemat: Rp 55.000/bln
                       </span>
                       <span className="text-[9.5px] text-slate-400 mt-1 block">
-                        Aktif s/d: {t.subscriptionUntil ? new Date(t.subscriptionUntil).toLocaleDateString("id-ID") : "—"}
+                        Aktif s/d: {t.subscriptionUntil ? new Date(t.subscriptionUntil).toLocaleDateString("id-ID") : "â€”"}
                       </span>
                     </div>
                   </div>

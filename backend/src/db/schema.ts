@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   subscriptionUntil: text("subscription_until"), // ISO Date string e.g. '2026-12-31'
   tenantId: text("tenant_id"), // For staff users, linked to specific tenant outlet
   isTrial: text("is_trial").notNull().default("false"), // 'true' | 'false'
+  tier: text("tier").notNull().default("pro"), // 'free' | 'pro' | 'premium'
   signupRequestId: text("signup_request_id"), // Link ke signup_requests jika daftar mandiri
   marketingUserId: text("marketing_user_id"), // Link ke marketing user jika akun ini dibuat marketing
   tutorialCompleted: text("tutorial_completed").notNull().default("false"), // 'true' | 'false'
@@ -29,6 +30,7 @@ export const tenants = pgTable("tenants", {
   address: text("address").notNull(),
   city: text("city"), // Kota/Kecamatan cabang
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
+  tier: text("tier").notNull().default("pro"), // 'free' | 'pro' | 'premium'
   subscriptionUntil: text("subscription_until"),
   waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
   services: text("services"), // JSON stringified array of LaundryService
@@ -205,6 +207,7 @@ export const plans = pgTable("plans", {
   durationMonths: doublePrecision("duration_months").notNull().default(1),
   pricePerMonth: doublePrecision("price_per_month").notNull().default(0),
   features: text("features"), // JSON array of string
+  maxBranches: doublePrecision("max_branches").notNull().default(1),
   maxWaNumbers: doublePrecision("max_wa_numbers").notNull().default(1),
   maxStaff: doublePrecision("max_staff").notNull().default(3),
   aiTokenQuotaDaily: doublePrecision("ai_token_quota_daily").notNull().default(100),

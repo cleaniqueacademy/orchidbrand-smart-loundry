@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import { db } from "../db/index";
-import { tenants } from "../db/schema";
+import { tenants, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -15,19 +15,25 @@ export interface TokenPayload {
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "cleanique_laundry_super_secret_jwt_key_2026";
 
-// ─── Cache status tenant ringan (20 detik) ───────────────────────────────────
+// ─── Cache status tenant & user ringan (20 detik) ───────────────────────────────
 interface TenantStatusCache {
   status: string;
   subscriptionUntil: string | null;
   checkedAt: number;
 }
 const tenantCache = new Map<string, TenantStatusCache>();
+const userStatusCache = new Map<string, { status: string; checkedAt: number }>();
 
-export function invalidateTenantAuthCache(tenantId?: string) {
+export function invalidateTenantAuthCache(tenantId?: string, userId?: string) {
   if (tenantId) {
     tenantCache.delete(tenantId);
   } else {
     tenantCache.clear();
+  }
+  if (userId) {
+    userStatusCache.delete(userId);
+  } else {
+    userStatusCache.clear();
   }
 }
 
@@ -111,6 +117,35 @@ export async function authMiddleware(c: Context, next: Next) {
     return c.json({ success: false, message: "Token tidak valid atau telah kedaluwarsa" }, 401);
   }
 
+  // Verifikasi status akun pengguna (jika dinonaktifkan secara sepihak oleh admin)
+  if (payload.role !== "superadmin") {
+    try {
+      let uCached = userStatusCache.get(payload.userId);
+      if (!uCached || Date.now() - uCached.checkedAt > 20000) {
+        const uRows = await db
+          .select({ status: users.status })
+          .from(users)
+          .where(eq(users.id, payload.userId));
+        if (uRows && uRows.length > 0) {
+          uCached = { status: uRows[0].status || "active", checkedAt: Date.now() };
+          userStatusCache.set(payload.userId, uCached);
+        }
+      }
+      if (uCached && uCached.status === "inactive") {
+        return c.json(
+          {
+            success: false,
+            code: "ACCOUNT_INACTIVE",
+            message: "Akun Anda telah dinonaktifkan oleh Super Admin. Hubungi pihak manajemen.",
+          },
+          403
+        );
+      }
+    } catch (err) {
+      console.warn("[authMiddleware] User status check error:", err);
+    }
+  }
+
   // Verifikasi status aktif dan masa langganan outlet secara realtime untuk peran non-superadmin
   if (payload.role !== "superadmin" && payload.tenantId) {
     try {
@@ -141,7 +176,14 @@ export async function authMiddleware(c: Context, next: Next) {
             403
           );
         }
-        if (tenantInfo.subscriptionUntil) {
+        const path = c.req.path;
+        const isExemptRoute =
+          path.startsWith("/api/subscription") ||
+          path.startsWith("/api/plans") ||
+          path.startsWith("/api/platform-settings") ||
+          path.startsWith("/api/auth");
+
+        if (tenantInfo.subscriptionUntil && !isExemptRoute) {
           const expDate = new Date(`${tenantInfo.subscriptionUntil}T23:59:59`);
           if (!isNaN(expDate.getTime()) && expDate < new Date()) {
             return c.json(

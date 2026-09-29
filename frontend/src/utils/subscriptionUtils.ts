@@ -52,9 +52,9 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
   }
 
   const isInactiveStatus = user.status === "inactive";
-  let isExpired = false;
+  let isExpired = user.isExpired === true || user.tier === "free";
   let daysRemaining = 0;
-  let formattedExpiry = "Tidak Ditentukan";
+  let formattedExpiry = user.tier === "free" ? "Akun Free (Belum Berlangganan)" : "Tidak Ditentukan";
 
   if (user.subscriptionUntil) {
     // Gunakan batas akhir hari (23:59:59) untuk tanggal yang tertera
@@ -63,7 +63,9 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
       const now = new Date();
       const diffMs = expDate.getTime() - now.getTime();
       daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      isExpired = diffMs < 0;
+      if (diffMs < 0) {
+        isExpired = true;
+      }
 
       formattedExpiry = new Intl.DateTimeFormat("id-ID", {
         day: "numeric",
@@ -71,6 +73,9 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
         year: "numeric",
       }).format(expDate);
     }
+  } else {
+    // Tanpa masa aktif langganan -> terhitung free / belum aktif
+    isExpired = true;
   }
 
   // Pengguna aktif jika tidak berstatus nonaktif DAN masa aktif belum expired
@@ -89,6 +94,13 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
       className: "bg-rose-50 text-rose-800 border-rose-200",
       dotColor: "bg-rose-500",
       description: "Akun dinonaktifkan oleh Administrator",
+    };
+  } else if (user.tier === "free") {
+    badge = {
+      label: "Free User",
+      className: "bg-zinc-100 text-zinc-700 border-zinc-200",
+      dotColor: "bg-zinc-500",
+      description: "Akun Free. Silakan aktifkan langganan Pro atau Premium.",
     };
   } else if (isExpired) {
     badge = {

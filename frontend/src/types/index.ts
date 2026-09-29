@@ -207,6 +207,7 @@ export interface Tenant {
   acquiredAt?: string | null;
   customExpenseCategories?: string[] | string | null;
   customSopRatios?: string | null;
+  tier?: AccountTier;
 }
 
 export type Role = "superadmin" | "tenant_owner" | "staff" | "marketing";
@@ -226,6 +227,8 @@ export interface User {
   marketingUserId?: string | null;
   tutorialCompleted?: boolean | string;
   metadata?: string | null;
+  tier?: AccountTier;
+  isExpired?: boolean;
 }
 
 export type DateFilterPreset = "all" | "today" | "this_week" | "this_month" | "this_year";
@@ -426,3 +429,153 @@ export interface SubscriptionSummary {
     qrisInfo: string | null;
   };
 }
+
+// ==========================================
+// Types: Subscription Tiers & Feature Gating
+// (Matt Pocock Strict Discriminated Architecture)
+// ==========================================
+
+export type AccountTier = "free" | "pro" | "premium";
+
+export interface TierCapabilities {
+  readonly canConnectThermalPrinter: boolean;
+  readonly canManageEmployees: boolean;
+  readonly canManageMultipleBranches: boolean;
+  readonly maxBranches: number;
+  readonly maxStaff: number;
+  readonly isComingSoon: boolean;
+}
+
+export interface TierDefinition extends TierCapabilities {
+  readonly id: AccountTier;
+  readonly name: string;
+  readonly badgeLabel: string;
+  readonly description: string;
+  readonly highlightFeature: string;
+  readonly pricePerMonth: number;
+}
+
+export const ACCOUNT_TIERS = {
+  free: {
+    id: "free",
+    name: "Free",
+    badgeLabel: "Gratis",
+    description: "Operasional dasar POS kasir & nota WhatsApp untuk 1 gerai laundry",
+    highlightFeature: "1 Cabang • Tanpa Karyawan • Cetak Standar",
+    pricePerMonth: 0,
+    canConnectThermalPrinter: false,
+    canManageEmployees: false,
+    canManageMultipleBranches: false,
+    maxBranches: 1,
+    maxStaff: 0,
+    isComingSoon: false,
+  },
+  pro: {
+    id: "pro",
+    name: "Pro",
+    badgeLabel: "Pro (Trial 7 Hari)",
+    description: "Paket lengkap dengan WhatsApp otomatis, laporan keuangan & asisten AI",
+    highlightFeature: "1 Cabang • WhatsApp Otomatis • Laporan Laba Rugi",
+    pricePerMonth: 60000,
+    canConnectThermalPrinter: false, // Locked until Premium release
+    canManageEmployees: false,      // Locked until Premium release
+    canManageMultipleBranches: false, // Locked until Premium release
+    maxBranches: 1,
+    maxStaff: 0,
+    isComingSoon: false,
+  },
+  premium: {
+    id: "premium",
+    name: "Premium",
+    badgeLabel: "Premium",
+    description: "Solusi enterprise multi-cabang, delegasi staf kasir & printer thermal bluetooth",
+    highlightFeature: "Multi-Cabang • Kelola Karyawan • Printer Thermal POS",
+    pricePerMonth: 100000,
+    canConnectThermalPrinter: true,
+    canManageEmployees: true,
+    canManageMultipleBranches: true,
+    maxBranches: 10,
+    maxStaff: 25,
+    isComingSoon: true, // Saat ini berstatus Coming Soon
+  },
+} as const satisfies Record<AccountTier, TierDefinition>;
+
+export type PremiumFeatureKey =
+  | "thermal_printer"
+  | "employee_management"
+  | "branch_management";
+
+export interface PremiumFeatureMeta {
+  readonly key: PremiumFeatureKey;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly badge: string;
+  readonly capabilities: readonly string[];
+  readonly releaseStatus: "coming_soon" | "in_development";
+}
+
+export const PREMIUM_FEATURES_REGISTRY = {
+  thermal_printer: {
+    key: "thermal_printer",
+    title: "Koneksi Thermal Printer POS",
+    subtitle: "Cetak nota kasir instan via Bluetooth / USB Thermal Printer (58mm / 80mm)",
+    badge: "Paket Premium • Coming Soon",
+    capabilities: [
+      "Koneksi instan Web Bluetooth & USB Serial ke printer kasir",
+      "Kustomisasi format header, footer, & QRIS pada struk kasir",
+      "Cetak nota 1-klik langsung dari modal checkout pesanan kasir",
+    ],
+    releaseStatus: "coming_soon",
+  },
+  employee_management: {
+    key: "employee_management",
+    title: "Manajemen Karyawan & Kasir",
+    subtitle: "Kelola akun staf kasir, shift kerja, dan pantau rekonsiliasi laci kas",
+    badge: "Paket Premium • Coming Soon",
+    capabilities: [
+      "Tambah akun kasir/operator terisolasi dengan pembagian hak akses terukur",
+      "Audit rekonsiliasi kas laci & log aktivitas per staf kasir",
+      "Reset sandi dan pembekuan akun staf secara fleksibel",
+    ],
+    releaseStatus: "coming_soon",
+  },
+  branch_management: {
+    key: "branch_management",
+    title: "Manajemen Multi-Cabang Outlet",
+    subtitle: "Kelola dan pantau seluruh cabang laundry dalam satu akun Owner terpadu",
+    badge: "Paket Premium • Coming Soon",
+    capabilities: [
+      "Tambah dan kelola hingga 10 gerai/cabang dalam 1 akun Owner",
+      "Pemisahan omzet, buku kas, dan laporan performa per gerai",
+      "Peralihan cepat antar cabang tanpa perlu logout akun",
+    ],
+    releaseStatus: "coming_soon",
+  },
+} as const satisfies Record<PremiumFeatureKey, PremiumFeatureMeta>;
+
+/**
+ * Type guard / Feature permission checker.
+ * Mengembalikan apakah tier tertentu diizinkan mengakses fitur premium tertentu.
+ */
+export function isFeatureAccessible(
+  tier: AccountTier | undefined | null,
+  feature: PremiumFeatureKey
+): boolean {
+  if (!tier) return false;
+  const config = ACCOUNT_TIERS[tier];
+  if (!config) return false;
+
+  switch (feature) {
+    case "thermal_printer":
+      return config.canConnectThermalPrinter;
+    case "employee_management":
+      return config.canManageEmployees;
+    case "branch_management":
+      return config.canManageMultipleBranches;
+    default: {
+      const _exhaustiveCheck: never = feature;
+      return _exhaustiveCheck;
+    }
+  }
+}
+

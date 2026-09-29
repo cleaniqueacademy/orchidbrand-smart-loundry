@@ -1,7 +1,6 @@
 import React from "react";
-import { Menu, RefreshCw, ShieldCheck, ChevronRight, DollarSign, HelpCircle } from "lucide-react";
+import { Menu, RefreshCw, ChevronRight } from "lucide-react";
 import { TabType, Role, User, CashierShift } from "../../types";
-import WhatsAppIcon from "../common/WhatsAppIcon";
 import { WAStatusData } from "../../hooks/useWhatsAppGateway";
 import { TrialBanner } from "../tabs/subscription/TrialBanner";
 import { checkUserActiveStatus } from "../../utils/subscriptionUtils";
@@ -121,93 +120,8 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         </div>
 
-        {/* Right Info & Actions - Streamlined and Minimalist */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Cashier Shift Status (Only for Staff & Owner if feature enabled) */}
-          {currentUserRole !== "superadmin" && enableCashierShift !== false && (
-            <div id="tour-shift-btn">
-              {currentShift ? (
-                <button
-                  type="button"
-                  onClick={onCloseShiftModal}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/90 hover:bg-emerald-100 transition shadow-2xs cursor-pointer text-xs"
-                  title={`Shift sedang aktif (Kas Awal: Rp ${currentShift.startingCash.toLocaleString("id-ID")}). Klik untuk tutup shift & rekonsiliasi.`}
-                >
-                  <span className="text-[11px] font-semibold">Shift Aktif</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onOpenShiftModal}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200/90 hover:bg-amber-100 transition shadow-2xs cursor-pointer text-xs"
-                  title="Shift belum dibuka. Klik untuk input modal kas awal."
-                >
-                  <DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="text-[11px] font-semibold">Buka Shift</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Super Admin Badge (Only for Super Admin, subtly styled) */}
-          {currentUserRole === "superadmin" && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md shadow-2xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
-              <span>Super Admin</span>
-            </span>
-          )}
-
-          {/* WhatsApp Gateway Status Button (Staff & Owner) */}
-          {onOpenWhatsAppModal && currentUserRole !== "superadmin" && (
-            <button
-              type="button"
-              id="tour-whatsapp-btn"
-              onClick={onOpenWhatsAppModal}
-              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${
-                waData?.waMode === "baileys"
-                  ? waData.status === "connected"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-100"
-                    : "bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-100"
-                  : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
-              }`}
-              title={
-                waData?.status === "connected"
-                  ? "WhatsApp Outlet Terhubung (Klik untuk info)"
-                  : "WhatsApp Belum Terhubung (Klik untuk pengaturan)"
-              }
-            >
-              <WhatsAppIcon
-                className={`w-3.5 h-3.5 ${
-                  waData?.waMode === "baileys"
-                    ? waData.status === "connected"
-                      ? "text-emerald-600"
-                      : "text-amber-600"
-                    : "text-zinc-500"
-                }`}
-              />
-              <span className="text-[11px] font-semibold">
-                {waData?.status === "connected" ? "WA Aktif" : "WA"}
-              </span>
-            </button>
-          )}
-
-          {/* Panduan Tutorial Button */}
-          {onOpenTutorialModal && (
-            <button
-              type="button"
-              id="header-btn-tutorial"
-              onClick={onOpenTutorialModal}
-              className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-indigo-200/90 bg-indigo-50/80 text-indigo-800 hover:bg-indigo-100 hover:border-indigo-300 transition shadow-2xs cursor-pointer"
-              title="Buka Panduan Tutorial Sistem"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="text-[11px] font-semibold hidden md:inline">Panduan</span>
-            </button>
-          )}
-
-          {/* Subtle divider before refresh */}
-          <div className="h-4 w-px bg-zinc-200 mx-0.5 hidden sm:block" />
-
+        {/* Right Info & Actions - Minimalist and Clean */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Refresh Button - Icon only */}
           <button
             onClick={onRefresh}

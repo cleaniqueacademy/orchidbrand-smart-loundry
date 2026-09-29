@@ -729,6 +729,11 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     password?: string;
     role: Role;
     tenantId?: string;
+    newOutletName?: string;
+    phone?: string;
+    address?: string;
+    commissionRateDefault?: number;
+    notes?: string;
     status: "active" | "inactive";
     subscriptionUntil?: string;
   }) => {

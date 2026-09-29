@@ -24,17 +24,17 @@ export const TrialBanner: React.FC<TrialBannerProps> = ({
   return (
     <div
       onClick={() => setActiveTab("subscription")}
-      className={`w-full cursor-pointer px-4 py-2 transition-all flex items-center justify-between text-xs font-semibold shadow-sm ${
+      className={`w-full cursor-pointer px-4 py-2 transition-all flex items-center justify-between text-xs font-semibold shadow-xs ${
         isExpired
-          ? "bg-gradient-to-r from-rose-600 to-red-600 text-white"
+          ? "bg-rose-600 text-white"
           : isUrgent
-          ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
-          : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+          ? "bg-amber-600 text-white"
+          : "bg-blue-700 text-white"
       }`}
     >
       <div className="flex items-center gap-2 max-w-4xl mx-auto flex-1">
         {isExpired ? (
-          <AlertTriangle className="w-4 h-4 shrink-0 animate-bounce" />
+          <AlertTriangle className="w-4 h-4 shrink-0" />
         ) : isTrial ? (
           <Gift className="w-4 h-4 shrink-0" />
         ) : (

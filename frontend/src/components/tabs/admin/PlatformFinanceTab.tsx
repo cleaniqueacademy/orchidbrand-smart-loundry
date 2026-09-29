@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   DollarSign,
@@ -179,70 +179,69 @@ export const PlatformFinanceTab: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200/80">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-blue-600" />
-            Arus Kas & Rekap Langganan Platform
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Pemasukan perpanjangan outlet otomatis tercatat di sini. Anda juga dapat mencatat pengeluaran platform.
-          </p>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Arus Kas &amp; Rekap Langganan</h2>
+          <p className="text-xs text-zinc-500">Pemasukan perpanjangan outlet dan pengeluaran platform tercatat di sini.</p>
         </div>
-
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+          className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>Catat Pengeluaran Platform</span>
+          <Plus className="w-3.5 h-3.5" />
+          Catat Pengeluaran
         </button>
       </div>
 
       {/* 3 Ringkasan Kartu Metrik */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         {/* Pemasukan Langganan */}
-        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
             <span>Total Pemasukan Langganan</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-emerald-700">
+          <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
             Rp {summary.totalIncome.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400">Dari perpanjangan masa aktif outlet</p>
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+            Dari perpanjangan masa aktif outlet
+          </p>
         </div>
 
         {/* Pengeluaran Platform */}
-        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
+        <div className="bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 rounded-2xl border border-rose-200/90 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
+          <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
             <span>Total Pengeluaran Platform</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-700">
+          <div className="text-xl sm:text-2xl font-bold text-rose-950 mt-2.5 tracking-tight">
             Rp {summary.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400">Server, komisi referral, kuota WA, dll.</p>
+          <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
+            Server, komisi referral, kuota WA, dll.
+          </p>
         </div>
 
-        {/* Saldo Bersih */}
-        <div className="bg-white rounded-2xl border border-zinc-200/90 p-5 shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
+        {/* Saldo Bersih - Highlighted Card */}
+        <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
             <span>Laba Bersih Kas Platform</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className={`text-2xl font-black ${summary.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"}`}>
+          <div className={`text-xl sm:text-2xl font-bold tracking-tight mt-2.5 ${summary.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"}`}>
             Rp {summary.netProfit.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-zinc-400">Saldo kas platform saat ini</p>
+          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+            Saldo kas platform saat ini
+          </p>
         </div>
       </div>
 
@@ -328,9 +327,9 @@ export const PlatformFinanceTab: React.FC = () => {
                     <td className="py-3.5 px-4 text-zinc-600 font-mono text-[11px]">
                       {r.date}
                     </td>
-                    <td className="py-3.5 px-3">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap shrink-0 ${
                           r.type === "income"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-rose-100 text-rose-800"
@@ -339,7 +338,7 @@ export const PlatformFinanceTab: React.FC = () => {
                         {r.type === "income" ? "+ Masuk" : "- Keluar"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-3 font-semibold text-zinc-700 capitalize text-[11px]">
+                    <td className="py-3.5 px-3 font-semibold text-zinc-700 capitalize text-[11px] whitespace-nowrap">
                       {r.category === "subscription"
                         ? "Langganan"
                         : r.category === "marketing_commission"
@@ -354,20 +353,19 @@ export const PlatformFinanceTab: React.FC = () => {
                       <div className="font-semibold text-zinc-900">{r.description}</div>
                       {r.outletName && (
                         <div className="text-[11px] text-zinc-500 flex items-center gap-1">
-                          <Building className="w-3 h-3 text-zinc-400" />
-                          <span>{r.outletName}</span>
+                          <Building className="w-3 h-3 text-zinc-400 shrink-0" />
+                          <span className="truncate">{r.outletName}</span>
                         </div>
                       )}
                       {r.notes && <div className="text-[10px] text-zinc-400 italic mt-0.5">{r.notes}</div>}
                     </td>
-                    <td className="py-3.5 px-3">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
                       {r.referralCode ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                          <Tag className="w-3 h-3" />
+                        <span className="inline-flex items-center text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 whitespace-nowrap shrink-0">
                           {r.referralCode}
                         </span>
                       ) : (
-                        <span className="text-zinc-400 text-[11px]">—</span>
+                        <span className="text-zinc-400 text-[11px]">â€”</span>
                       )}
                     </td>
                     <td
@@ -407,7 +405,7 @@ export const PlatformFinanceTab: React.FC = () => {
                 onClick={() => setIsModalOpen(false)}
                 className="text-zinc-400 hover:text-zinc-600 text-lg leading-none cursor-pointer"
               >
-                ×
+                Ã—
               </button>
             </div>
 

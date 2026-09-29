@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   X,
   CheckCircle2,
-  Compass,
-  ArrowRight,
 } from "lucide-react";
 import { TabType } from "../../types";
 
@@ -248,7 +245,7 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
       <div
         ref={popoverRef}
         style={popoverStyle}
-        className="relative bg-white border border-zinc-200/90 text-zinc-900 rounded-2xl shadow-2xl shadow-zinc-950/25 p-5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3.5"
+        className="relative bg-white border border-zinc-200 text-zinc-900 rounded-2xl shadow-xl p-5 animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3.5"
       >
         {/* Directional Arrow Notch pointing directly to target element */}
         {targetRect && (
@@ -268,14 +265,9 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
 
         {/* Popover Header */}
         <div className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-700 border border-blue-100 shadow-2xs">
-              <Compass className="h-4 w-4" />
-            </span>
-            <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">
-              {step.badge}
-            </span>
-          </div>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 uppercase tracking-wide">
+            {step.badge}
+          </span>
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
@@ -355,7 +347,7 @@ export const SpotlightTourOverlay: React.FC<SpotlightTourOverlayProps> = ({
             <button
               type="button"
               onClick={isLast ? onFinish : onNext}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-sm shadow-blue-600/25 active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-semibold text-white shadow-xs active:scale-95 transition-all cursor-pointer"
             >
               {isLast ? (
                 <>

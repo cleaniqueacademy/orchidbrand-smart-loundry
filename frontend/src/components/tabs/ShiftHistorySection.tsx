@@ -152,33 +152,30 @@ export const ShiftHistorySection: React.FC<ShiftHistorySectionProps> = ({ tenant
                           ? `Rp ${s.actualCashTotal.toLocaleString("id-ID")}`
                           : "-"}
                       </td>
-                      <td className="py-3 px-3 text-right font-bold">
+                      <td className="py-3 px-3 text-right font-bold whitespace-nowrap">
                         {isOpen ? (
-                          <span className="text-zinc-400 text-[11px]">Sedang Aktif</span>
+                          <span className="text-zinc-400 text-[11px] whitespace-nowrap">Sedang Aktif</span>
                         ) : discrepancy === 0 ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 text-[11px]">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-emerald-600 text-[11px]">
                             <span>Pas (Rp 0)</span>
                           </span>
                         ) : discrepancy > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-amber-600 text-[11px]">
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-amber-600 text-[11px]">
                             <span>+Rp {discrepancy.toLocaleString("id-ID")}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-rose-600 text-[11px]">
-                            <AlertCircle className="w-3.5 h-3.5" />
+                          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-rose-600 text-[11px]">
                             <span>-Rp {Math.abs(discrepancy).toLocaleString("id-ID")}</span>
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         {isOpen ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="whitespace-nowrap shrink-0 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                             Aktif
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          <span className="whitespace-nowrap shrink-0 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
                             Ditutup
                           </span>
                         )}

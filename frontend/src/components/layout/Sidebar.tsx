@@ -214,9 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               isCollapsed ? "justify-center px-0 py-2.5" : "justify-between px-3 py-2"
             } rounded-xl text-left text-xs transition-colors cursor-pointer relative ${
               isActive
-                ? isSuperAdmin
-                  ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold shadow-xs"
-                  : "bg-zinc-900 text-white font-semibold shadow-xs"
+                ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium"
             }`}
           >
@@ -382,8 +380,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Grup Notifikasi / Integrasi (Khusus Tenant Owner) */}
-          {!isStaff && !isSuperAdmin && !isMarketing && (
+          {/* Grup Notifikasi / Integrasi (Tenant Owner & Staff) */}
+          {!isSuperAdmin && !isMarketing && onOpenWhatsAppModal && (
             <div>
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />
@@ -457,7 +455,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title={currentUser?.name || (isSuperAdmin ? "Admin Pusat" : "Budi Santoso")}
           >
             <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5"} min-w-0`}>
-              <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-900 to-blue-850 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs border border-blue-700/50">
                 {currentUser?.name
                   ? currentUser.name.slice(0, 2).toUpperCase()
                   : isSuperAdmin ? "SA" : "OP"}
@@ -499,7 +497,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
                     <span className="font-semibold text-blue-950">
-                      {isSuperAdmin ? "Super Admin" : isStaff ? "Staff" : "Tenant Owner"}
+                      {isSuperAdmin ? "Super Admin" : isStaff ? "Staff" : isMarketing ? "Mitra Marketing" : "Tenant Owner"}
                     </span>
                     <span>·</span>
                     <span className="text-emerald-700 font-medium">Aktif</span>

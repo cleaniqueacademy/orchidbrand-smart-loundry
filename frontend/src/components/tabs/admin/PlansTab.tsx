@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, CheckCircle2, XCircle, Sparkles, RefreshCw, Layers } from "lucide-react";
+﻿import React, { useState, useEffect } from "react";
+import { Plus, Edit2, Trash2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { api } from "../../../utils/api";
 import { Plan } from "../../../types";
 import { PlanFormModal } from "./PlanFormModal";
@@ -50,24 +50,18 @@ export const PlansTab: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <Layers className="w-6 h-6 text-indigo-600" />
-            <span>Manajemen Paket & Harga Langganan</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Atur pilihan harga bulanan, kuota nomor WhatsApp, batasan kasir, dan fitur per paket.
-          </p>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Paket &amp; Harga Langganan</h2>
+          <p className="text-xs text-zinc-500">Atur harga bulanan, kuota WhatsApp, batasan kasir, dan fitur per paket.</p>
         </div>
-
         <button
           onClick={handleCreate}
-          className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2 self-start sm:self-auto"
+          className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Paket Baru</span>
+          <Plus className="w-3.5 h-3.5" />
+          Tambah Paket
         </button>
       </div>
 

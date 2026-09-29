@@ -136,7 +136,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
         {/* Modal Header */}
         <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20">
+            <div className="w-10 h-10 rounded-xl bg-blue-700 text-white flex items-center justify-center shadow-xs">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
@@ -372,7 +372,7 @@ export const ExtendSubscriptionModal: React.FC<ExtendSubscriptionModalProps> = (
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-900/20 transition disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               <span>{submitting ? "Memperpanjang..." : "Simpan Perpanjangan"}</span>
               <ArrowRight className="w-3.5 h-3.5" />

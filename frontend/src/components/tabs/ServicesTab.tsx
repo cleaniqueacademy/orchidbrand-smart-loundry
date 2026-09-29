@@ -234,37 +234,44 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-zinc-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold shrink-0">
-            <Layers className="w-5 h-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Total Paket Layanan</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Layers className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold text-zinc-400">Total Paket Layanan</p>
-            <p className="text-lg font-black text-zinc-900">{servicesList.length} Paket</p>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
+            {servicesList.length} <span className="text-xs font-semibold text-blue-700">Paket</span>
           </div>
+          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">Katalog aktif di outlet</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-zinc-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Layanan Aktif di POS</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold text-zinc-400">Layanan Aktif di POS</p>
-            <p className="text-lg font-black text-emerald-700">
-              {servicesList.filter((s) => s.status === "active").length} Layanan
-            </p>
+          <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
+            {servicesList.filter((s) => s.status === "active").length} <span className="text-xs font-semibold text-emerald-700">Layanan</span>
           </div>
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">Bisa dipilih kasir saat input order</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-zinc-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold shrink-0">
-            <Clock className="w-5 h-5" />
+        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Durasi SLA Standar</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold text-zinc-400">Durasi Pengerjaan Standar</p>
-            <p className="text-lg font-black text-amber-800">24 – 48 Jam</p>
+          <div className="text-xl sm:text-2xl font-bold text-amber-950 mt-2.5 tracking-tight">
+            24 – 48 <span className="text-xs font-semibold text-amber-700">Jam</span>
           </div>
+          <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">Target pengerjaan reguler</p>
         </div>
       </div>
 
@@ -340,8 +347,8 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
                     <td className="py-3 px-3 text-center text-zinc-600">
                       {service.minOrder || 1} {service.unit}
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                    <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200 whitespace-nowrap shrink-0">
                         <Clock className="w-3 h-3 text-zinc-500" />
                         {service.durationHours
                           ? service.durationHours >= 24
@@ -350,9 +357,9 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
                           : "48 Jam"}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] font-bold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-bold whitespace-nowrap shrink-0 ${
                           service.status === "active"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-zinc-100 text-zinc-500 border border-zinc-200"

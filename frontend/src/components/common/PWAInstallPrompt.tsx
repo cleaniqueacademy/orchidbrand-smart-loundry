@@ -74,6 +74,18 @@ const checkIsDismissed = (): boolean => {
   return false;
 };
 
+const isAuthRoute = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname;
+  return (
+    path === "/" ||
+    path === "/login" ||
+    path.startsWith("/login") ||
+    path === "/register" ||
+    path.startsWith("/register")
+  );
+};
+
 export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(() => checkIsInstalled());
@@ -100,8 +112,10 @@ export const PWAInstallPrompt: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
-      // Jangan tampilkan jika sudah di-dismiss atau sudah di-install
-      if (checkIsDismissed() || checkIsInstalled()) {
+      const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_token");
+
+      // Jangan tampilkan jika sudah di-dismiss, sudah di-install, atau sedang di auth publik
+      if (checkIsDismissed() || checkIsInstalled() || isPublicAuth) {
         return;
       }
 
@@ -131,9 +145,11 @@ export const PWAInstallPrompt: React.FC = () => {
 
     // 5. Timer fallback untuk memunculkan notifikasi di browser tanpa event beforeinstallprompt (misal Safari iOS)
     let fallbackTimer: any = null;
-    if (!checkIsDismissed() && !checkIsInstalled()) {
+    const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_token");
+
+    if (!checkIsDismissed() && !checkIsInstalled() && !isPublicAuth) {
       fallbackTimer = setTimeout(() => {
-        if (!checkIsInstalled() && !checkIsDismissed()) {
+        if (!checkIsInstalled() && !checkIsDismissed() && !isAuthRoute()) {
           setShowToast(true);
         }
       }, 2500);
@@ -185,6 +201,13 @@ export const PWAInstallPrompt: React.FC = () => {
     return null;
   }
 
+  // Jika sedang di halaman login / register publik dan tidak sedang membuka modal panduan manual, jangan render popup
+  const isPublicAuthPage = isAuthRoute() && !localStorage.getItem("cleanique_token");
+
+  if (isPublicAuthPage && !showGuideModal) {
+    return null;
+  }
+
   // Jika sudah ditutup oleh user dan tidak sedang membuka modal panduan manual, jangan render apapun
   if (isDismissed && !showGuideModal) {
     return null;
@@ -204,12 +227,9 @@ export const PWAInstallPrompt: React.FC = () => {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="fixed bottom-4 right-4 left-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-sm sm:max-w-md w-auto"
           >
-            <div className="relative overflow-hidden rounded-3xl bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] p-4 sm:p-5 text-zinc-900 ring-1 ring-black/5">
-              {/* Top Accent Gradient Bar */}
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-
-              {/* Ambient Glow */}
-              <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-emerald-500/10 blur-2xl" />
+            <div className="relative overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-xl p-4 sm:p-5 text-zinc-900">
+              {/* Top Accent Bar */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-blue-600" />
 
               {/* Close Button */}
               <button
@@ -233,15 +253,11 @@ export const PWAInstallPrompt: React.FC = () => {
                     alt="Cleanique Logo"
                     className="h-full w-full object-contain rounded-xl"
                   />
-                  <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs">
-                    <Sparkles className="h-2.5 w-2.5" />
-                  </span>
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60 uppercase tracking-wide">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60 uppercase tracking-wide">
                       Aplikasi Kasir POS
                     </span>
                   </div>

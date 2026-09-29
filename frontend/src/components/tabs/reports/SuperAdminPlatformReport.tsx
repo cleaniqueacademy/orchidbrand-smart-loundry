@@ -375,20 +375,17 @@ export const SuperAdminPlatformReport: React.FC<SuperAdminPlatformReportProps> =
                     </td>
 
                     {/* Subscription Status */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 min-w-[130px] whitespace-nowrap">
                       {row.subscriptionStatus === "active" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           <span>Aktif</span>
                         </span>
                       ) : row.subscriptionStatus === "expiring_soon" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                           <span>Sisa {row.daysRemaining} Hari</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
                           <span>Kadaluarsa</span>
                         </span>
                       )}

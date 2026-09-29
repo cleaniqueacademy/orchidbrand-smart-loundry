@@ -224,84 +224,78 @@ export const StaffOverviewTab: React.FC<StaffOverviewTabProps> = ({
       {/* 4 KPI Alur Pengerjaan Cucian Operasional */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Antrean Cuci */}
-        <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-              Perlu Dicuci
-            </span>
+        <div className="bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 rounded-2xl border border-blue-300 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
+          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+            <span>Perlu Dicuci</span>
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <Waves className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
             {pendingOrders.length} <span className="text-xs font-semibold text-blue-700">Nota</span>
           </div>
-          <p className="text-[11px] text-blue-700 font-medium mt-1">
+          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
             Menunggu / sedang dicuci
           </p>
         </div>
 
         {/* Pengeringan & Setrika */}
-        <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              Kering & Setrika
-            </span>
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Kering & Setrika</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
               <Shirt className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-amber-950 tracking-tight">
             {finishingOrders.length} <span className="text-xs font-semibold text-amber-700">Nota</span>
           </div>
-          <p className="text-[11px] text-amber-700 font-medium mt-1">
+          <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
             Tahap finishing cucian
           </p>
         </div>
 
         {/* Siap Diambil */}
-        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Siap Diambil
-            </span>
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+            <span>Siap Diambil</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-emerald-950 tracking-tight">
             {readyOrders.length} <span className="text-xs font-semibold text-emerald-700">Nota</span>
           </div>
-          <p className="text-[11px] text-emerald-700 font-medium mt-1">
+          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
             Selesai di rak penyimpanan
           </p>
         </div>
 
         {/* Perhatian SLA */}
-        <div className={`rounded-2xl border p-4 sm:p-5 shadow-sm ${
+        <div className={`rounded-2xl border p-4 sm:p-5 shadow-sm relative overflow-hidden group transition ${
           lateSlaOrders.length > 0
-            ? "border-rose-300 bg-gradient-to-br from-rose-50 via-red-50/40 to-white"
-            : "border-zinc-200 bg-white"
+            ? "border-rose-300/90 bg-gradient-to-br from-rose-50/90 via-red-50/40 to-white hover:border-rose-400"
+            : "border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white hover:border-indigo-300"
         }`}>
           <div className="flex items-center justify-between">
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${
-              lateSlaOrders.length > 0 ? "text-rose-800" : "text-zinc-600"
+            <span className={`text-xs font-semibold ${
+              lateSlaOrders.length > 0 ? "text-rose-800" : "text-indigo-800"
             }`}>
               Prioritas SLA
             </span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs ${
-              lateSlaOrders.length > 0 ? "bg-rose-500 text-white" : "bg-zinc-100 text-zinc-500"
+              lateSlaOrders.length > 0 ? "bg-rose-500 text-white" : "bg-indigo-500 text-white"
             }`}>
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5 text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
             {lateSlaOrders.length} <span className={`text-xs font-semibold ${
-              lateSlaOrders.length > 0 ? "text-rose-700" : "text-zinc-500"
+              lateSlaOrders.length > 0 ? "text-rose-700" : "text-indigo-700"
             }`}>Nota</span>
           </div>
-          <p className={`text-[11px] font-medium mt-1 ${
-            lateSlaOrders.length > 0 ? "text-rose-700" : "text-zinc-400"
+          <p className={`text-[11px] font-medium mt-1 truncate ${
+            lateSlaOrders.length > 0 ? "text-rose-700" : "text-indigo-700/90"
           }`}>
             {lateSlaOrders.length > 0 ? "Lewat batas target jam selesai!" : "Semua pengerjaan tepat waktu"}
           </p>
@@ -349,7 +343,7 @@ export const StaffOverviewTab: React.FC<StaffOverviewTabProps> = ({
                         {order.invoiceNo}
                       </span>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           order.paymentStatus === "paid"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-amber-100 text-amber-800"

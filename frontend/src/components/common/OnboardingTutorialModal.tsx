@@ -1,14 +1,5 @@
 import React from "react";
-import {
-  Sparkles,
-  Compass,
-  X,
-  Store,
-  Clock,
-  MessageCircle,
-  Bot,
-  ArrowRight,
-} from "lucide-react";
+import { X, ArrowRight } from "lucide-react";
 import { Role } from "../../types";
 import { ModalWrapper } from "./ModalWrapper";
 
@@ -22,6 +13,142 @@ export interface OnboardingTutorialModalProps {
   outletName?: string;
 }
 
+interface RoleTourConfig {
+  badge: string;
+  modalTitle: string;
+  greetingText: (userName: string, outletName: string) => React.ReactNode;
+  highlights: { title: string; desc: string }[];
+}
+
+const getRoleConfig = (role: Role = "staff"): RoleTourConfig => {
+  if (role === "marketing") {
+    return {
+      badge: "Tour Kemitraan Affiliate",
+      modalTitle: "Mulai Tour Mitra Marketing?",
+      greetingText: (userName) => (
+        <span>
+          Halo <strong className="text-slate-900">{userName}</strong>, selamat bergabung sebagai{" "}
+          <strong className="text-slate-900">Mitra Marketing / Affiliate</strong>! Ikuti tour singkat
+          (±1 menit) untuk menguasai alur pemantauan pendaftaran dan komisi Anda.
+        </span>
+      ),
+      highlights: [
+        {
+          title: "Dashboard Affiliate",
+          desc: "Pantau total komisi, status pencairan, dan outlet aktif yang menggunakan kode Anda.",
+        },
+        {
+          title: "Kode Referral Promo",
+          desc: "Kelola dan bagikan kode kupon promo Anda untuk menarik pendaftaran outlet laundry baru.",
+        },
+        {
+          title: "Pencairan Saldo & Rekening",
+          desc: "Atur nomor rekening tujuan transfer dan riwayat bukti pembayaran komisi mitra.",
+        },
+        {
+          title: "Asisten AI Affiliate",
+          desc: "Konsultasi materi promosi, ide copywriting penawaran, dan edukasi fitur Cleanique.",
+        },
+      ],
+    };
+  }
+
+  if (role === "tenant_owner") {
+    return {
+      badge: "Tour Manajemen Outlet",
+      modalTitle: "Mulai Tour Manajemen Outlet?",
+      greetingText: (userName, outletName) => (
+        <span>
+          Halo <strong className="text-slate-900">{userName}</strong>, selamat bergabung di{" "}
+          <strong className="text-slate-900">{outletName}</strong>! Ikuti tour singkat (±1 menit) untuk
+          menguasai alur operasional kasir dan keuangan outlet Anda.
+        </span>
+      ),
+      highlights: [
+        {
+          title: "Monitoring Shift & Kasir",
+          desc: "Pantau kasir bertugas, modal kas awal laci, dan rekonsiliasi kas saat pergantian shift.",
+        },
+        {
+          title: "Operasional Kasir & Order",
+          desc: "Pusat antrian cucian kiloan/satuan, timbang pakaian, dan nota digital WhatsApp otomatis.",
+        },
+        {
+          title: "Laporan & Buku Kas",
+          desc: "Pantau omzet harian, catat pengeluaran toko, dan analisa laporan laba-rugi terpadu.",
+        },
+        {
+          title: "AI Business Copilot",
+          desc: "Analisis performa bisnis, audit efisiensi bahan, dan konsultasi strategi omzet 24/7.",
+        },
+      ],
+    };
+  }
+
+  if (role === "superadmin") {
+    return {
+      badge: "Tour Pusat Kendali",
+      modalTitle: "Mulai Tour Pusat Kendali?",
+      greetingText: (userName) => (
+        <span>
+          Halo <strong className="text-slate-900">{userName}</strong>, selamat datang di{" "}
+          <strong className="text-slate-900">Pusat Kendali Cleanique</strong>! Ikuti tour singkat untuk
+          memahami navigasi master data dan manajemen multi-tenant.
+        </span>
+      ),
+      highlights: [
+        {
+          title: "Kelola Outlet & Akun",
+          desc: "Pantau seluruh tenant mitra laundry yang aktif, status langganan, dan aktivasi akun.",
+        },
+        {
+          title: "Billing & Paket Langganan",
+          desc: "Kelola master paket langganan, invoice perpanjangan, dan verifikasi bukti pembayaran.",
+        },
+        {
+          title: "Program Referral Platform",
+          desc: "Manajemen kode referral affiliate, verifikasi komisi marketing, dan kupon promo.",
+        },
+        {
+          title: "Cleanique AI Copilot",
+          desc: "Bantuan diagnosis sistem, navigasi cepat platform, dan audit data multi-cabang.",
+        },
+      ],
+    };
+  }
+
+  // Default: Staff / Kasir
+  return {
+    badge: "Tour Meja Kasir",
+    modalTitle: "Mulai Tour Meja Kasir?",
+    greetingText: (userName, outletName) => (
+      <span>
+        Halo <strong className="text-slate-900">{userName}</strong>, selamat bertugas di{" "}
+        <strong className="text-slate-900">{outletName}</strong>! Ikuti tour singkat (±1 menit) untuk
+        menguasai alur kerja meja kasir dan operasional harian.
+      </span>
+    ),
+    highlights: [
+      {
+        title: "Meja Kasir POS",
+        desc: "Entri order kiloan/satuan, timbang pakaian, dan proses transaksi pesanan dengan cepat.",
+      },
+      {
+        title: "Buka / Tutup Shift",
+        desc: "Input modal kas awal laci dan rekonsiliasi kas fisik saat pergantian shift kasir.",
+      },
+      {
+        title: "WhatsApp Gateway",
+        desc: "Nota digital dan informasi cucian selesai otomatis dikirim ke nomor WhatsApp pelanggan.",
+      },
+      {
+        title: "AI Kasir Helper",
+        desc: "Panduan instan penanganan noda pakaian, jenis bahan, dan bantuan operasional kasir.",
+      },
+    ],
+  };
+};
+
 export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = ({
   isOpen,
   onClose,
@@ -33,7 +160,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
 }) => {
   if (!isOpen) return null;
 
-  const isStaff = currentUserRole === "staff";
+  const roleConfig = getRoleConfig(currentUserRole);
 
   const handleStartTour = () => {
     onClose();
@@ -49,86 +176,51 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
 
   return (
     <ModalWrapper isOpen={isOpen} onClose={handleSkipTour} maxWidth="max-w-md">
-      <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden text-zinc-900">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden text-slate-900">
         {/* Top Header Accent Banner */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-5 sm:p-6 text-white relative">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-5 sm:p-6 text-white relative border-b border-white/10">
           <button
             type="button"
             onClick={handleSkipTour}
-            className="absolute top-4 right-4 p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className="absolute top-4 right-4 p-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
             title="Lewati Tour"
           >
             <X className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-sm">
-              <Compass className="w-6 h-6 text-white animate-pulse" />
-            </div>
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white uppercase tracking-wider">
-                <Sparkles className="w-3 h-3" />
-                Tour Pengenalan
-              </span>
-              <h3 className="text-base sm:text-lg font-bold text-white mt-1 leading-tight">
-                Mulai Tour Aplikasi?
-              </h3>
-            </div>
+          <div className="space-y-1">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+              {roleConfig.badge}
+            </span>
+            <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
+              {roleConfig.modalTitle}
+            </h3>
           </div>
         </div>
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-4">
-          <div>
-            <p className="text-xs text-zinc-600 leading-relaxed">
-              Halo <strong className="text-zinc-900">{userName}</strong>, selamat bergabung di{" "}
-              <strong className="text-zinc-900">{outletName}</strong>! Apakah Anda ingin mengikuti
-              tour pengenalan antarmuka singkat (±1 menit) untuk menguasai alur kerja sistem?
-            </p>
-          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            {roleConfig.greetingText(userName, outletName)}
+          </p>
 
           {/* Feature Highlights Grid */}
-          <div className="space-y-2 bg-zinc-50/80 rounded-xl p-3 border border-zinc-200/70">
-            <div className="flex items-center gap-2.5 text-xs text-zinc-700">
-              <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                <Store className="w-3.5 h-3.5" />
+          <div className="space-y-2 bg-slate-50/90 rounded-2xl p-3.5 border border-slate-200/80">
+            {roleConfig.highlights.map((item, idx) => (
+              <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700">
+                <span className="text-emerald-600 font-bold text-xs leading-none shrink-0 mt-0.5">
+                  ✓
+                </span>
+                <p className="leading-snug">
+                  <strong className="text-slate-900">{item.title}:</strong>{" "}
+                  <span className="text-slate-600">{item.desc}</span>
+                </p>
               </div>
-              <span>
-                <strong>Meja Kasir POS:</strong> Entri order kiloan/satuan & cetak nota.
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2.5 text-xs text-zinc-700">
-              <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                <Clock className="w-3.5 h-3.5" />
-              </div>
-              <span>
-                <strong>Buka/Tutup Shift:</strong> Rekonsiliasi kas awal & uang fisik laci.
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2.5 text-xs text-zinc-700">
-              <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <MessageCircle className="w-3.5 h-3.5" />
-              </div>
-              <span>
-                <strong>WhatsApp Gateway:</strong> Nota & pelacakan resi otomatis pelanggan.
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2.5 text-xs text-zinc-700">
-              <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-                <Bot className="w-3.5 h-3.5" />
-              </div>
-              <span>
-                <strong>{isStaff ? "AI Kasir Helper:" : "Asisten AI Bisnis:"}</strong> Bantuan cepat &
-                analisa langsung di layar.
-              </span>
-            </div>
+            ))}
           </div>
 
-          <p className="text-[11px] text-zinc-500 text-center">
-            💡 Tour akan memandu langsung dengan lampu sorot (spotlight) di layar Anda.
+          <p className="text-[11px] text-slate-400 text-center">
+            Tour akan memandu langsung dengan penyorot (spotlight) di layar Anda.
           </p>
 
           {/* Action Buttons */}
@@ -136,7 +228,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
             <button
               type="button"
               onClick={handleStartTour}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-900/15 transition cursor-pointer"
             >
               <span>Ya, Mulai Tour Aplikasi</span>
               <ArrowRight className="w-4 h-4" />
@@ -145,7 +237,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
             <button
               type="button"
               onClick={handleSkipTour}
-              className="w-full py-2 px-4 rounded-xl text-zinc-500 hover:text-zinc-800 text-xs font-medium transition cursor-pointer"
+              className="w-full py-2 px-4 rounded-xl text-slate-400 hover:text-slate-700 text-xs font-medium transition cursor-pointer"
             >
               Lewati, Saya Sudah Paham
             </button>
@@ -155,3 +247,4 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
     </ModalWrapper>
   );
 };
+

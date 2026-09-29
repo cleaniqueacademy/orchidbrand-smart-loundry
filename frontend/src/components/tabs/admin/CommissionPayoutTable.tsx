@@ -68,26 +68,26 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
     switch (status) {
       case "paid":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Sudah Ditransfer
+          <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap shrink-0">
+            Sudah Ditransfer
           </span>
         );
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-            <Clock className="w-3 h-3 text-blue-600" /> Disetujui (Siap Cair)
+          <span className="inline-flex items-center text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 whitespace-nowrap shrink-0">
+            Disetujui (Siap Cair)
           </span>
         );
       case "rejected":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">
-            <XCircle className="w-3 h-3 text-rose-600" /> Ditolak
+          <span className="inline-flex items-center text-[11px] font-semibold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
+            Ditolak
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
-            <Clock className="w-3 h-3 text-amber-600" /> Menunggu Review
+          <span className="inline-flex items-center text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 whitespace-nowrap shrink-0">
+            Menunggu Review
           </span>
         );
     }

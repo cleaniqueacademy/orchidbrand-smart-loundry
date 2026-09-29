@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { UserPlus, Search, RefreshCw, CheckCircle2, Tag, Calendar, Store } from "lucide-react";
 import { api } from "../../../utils/api";
 import { SignupRequest } from "../../../types";
@@ -38,16 +38,11 @@ export const SignupsTab: React.FC = () => {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <UserPlus className="w-6 h-6 text-indigo-600" />
-            <span>Riwayat Pendaftaran Mandiri</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Daftar seluruh outlet yang mendaftar secara mandiri melalui form publik.
-          </p>
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Pendaftaran Mandiri</h2>
+          <p className="text-xs text-zinc-500">Daftar outlet yang mendaftar secara mandiri melalui form publik.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -122,19 +117,17 @@ export const SignupsTab: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">
                       {req.city || "-"}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {req.referralCode ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                          <Tag className="w-3 h-3" />
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                           <span>{req.referralCode}</span>
                         </span>
                       ) : (
                         <span className="text-slate-400 italic">Organik</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 border border-emerald-200 dark:border-emerald-800">
-                        <CheckCircle2 className="w-3 h-3" />
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 border border-emerald-200 dark:border-emerald-800">
                         <span>Aktif (Trial)</span>
                       </span>
                     </td>

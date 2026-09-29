@@ -45,6 +45,7 @@ export async function initPostgresTables() {
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_user_id TEXT;`;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_completed TEXT NOT NULL DEFAULT 'false';`;
     await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS metadata TEXT;`;
+    await client`ALTER TABLE users ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'pro';`;
 
     await client`
       CREATE TABLE IF NOT EXISTS tenants (
@@ -88,6 +89,7 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS acquired_at TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_expense_categories TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS custom_sop_ratios TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'pro';`;
 
     await client`
       CREATE TABLE IF NOT EXISTS customers (
@@ -277,6 +279,37 @@ export async function initPostgresTables() {
         created_at TEXT NOT NULL,
         updated_at TEXT
       );
+    `;
+    await client`ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_branches DOUBLE PRECISION NOT NULL DEFAULT 1;`;
+
+    // Ensure Default Subscription Plans (Pro: Rp 60.000 & Premium: Rp 100.000)
+    await client`
+      INSERT INTO plans (
+        id, code, name, description, duration_months, price_per_month, features,
+        max_wa_numbers, max_staff, ai_token_quota_daily, is_trial_allowed, is_active,
+        sort_order, max_branches, created_at
+      )
+      VALUES 
+        (
+          'plan-pro', 'pro', 'Paket Pro',
+          'Akses penuh POS kasir, nota WhatsApp otomatis, laporan buku kas untuk 1 gerai laundry.',
+          1, 60000,
+          '["Kasir POS & Transaksi Realtime","Nota WhatsApp Otomatis ke Pelanggan","Laporan Omzet & Buku Kas","1 Cabang Gerai","50 Kuota Asisten AI/Hari"]',
+          1, 3, 50, 'true', 'true', 1, 1, CURRENT_DATE::text
+        ),
+        (
+          'plan-premium', 'premium', 'Paket Premium',
+          'Solusi enterprise: koneksi thermal printer POS, multi-cabang (10 gerai), dan manajemen multi-karyawan kasir.',
+          1, 100000,
+          '["Koneksi Thermal Printer POS (Bluetooth/USB)","Multi-Cabang (Hingga 10 Gerai)","Manajemen Multi-Karyawan & Hak Akses Kasir","Semua Fitur Paket Pro","Prioritas Dukungan Teknis"]',
+          2, 25, 100, 'false', 'true', 2, 10, CURRENT_DATE::text
+        )
+      ON CONFLICT (code) DO UPDATE SET 
+        name = EXCLUDED.name,
+        price_per_month = EXCLUDED.price_per_month,
+        max_branches = EXCLUDED.max_branches,
+        features = EXCLUDED.features,
+        description = EXCLUDED.description;
     `;
 
     await client`
