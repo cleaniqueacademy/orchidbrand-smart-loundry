@@ -372,7 +372,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   tabIndex={-1}
                   aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer bg-transparent border-none"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -403,18 +403,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="relative mt-2 flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 text-sm font-bold text-white transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
+              className="relative mt-2 flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
             >
+              <span>Masuk</span>
               {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-100" />
-                  <span>Memeriksa Akun...</span>
-                </>
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
               ) : (
-                <>
-                  <span>Masuk</span>
-                  <ArrowRight className="h-4 w-4" />
-                </>
+                <ArrowRight className="h-4 w-4" />
               )}
             </button>
 

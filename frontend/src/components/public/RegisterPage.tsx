@@ -525,7 +525,7 @@ export const RegisterPage: React.FC = () => {
                       tabIndex={-1}
                       aria-label={showPassword ? "Sembunyikan sandi" : "Lihat sandi"}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer bg-transparent border-none"
                     >
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
@@ -601,22 +601,16 @@ export const RegisterPage: React.FC = () => {
               </button>
             </div>
 
-            {/* SUBMIT BUTTON */}
             <button
               type="submit"
               disabled={loading}
-              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 text-sm font-bold text-white transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
+              className="relative flex w-full h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
             >
+              <span>Daftar & Mulai Trial {trialDays} Hari Gratis</span>
               {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-100" />
-                  <span>Menyiapkan Akun Outlet...</span>
-                </>
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-white" />
               ) : (
-                <>
-                  <span>Daftar & Mulai Trial {trialDays} Hari Gratis</span>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                </>
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
               )}
             </button>
 
