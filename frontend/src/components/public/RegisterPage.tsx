@@ -614,7 +614,7 @@ export const RegisterPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span>Daftar & Mulai Trial 7 Hari</span>
+                  <span>Daftar & Mulai Trial {trialDays} Hari Gratis</span>
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </>
               )}
