@@ -16,6 +16,10 @@ node_modules/
 .bun/
 **/.bun
 **/.bun/
+.bun-tmp
+.bun-tmp/
+**/.bun-tmp
+**/.bun-tmp/
 bun.lockb
 **/bun.lockb
 
@@ -53,6 +57,11 @@ build/
 !**/.env.example
 user.txt
 users.txt
+**/user.txt
+**/users.txt
+andry.txt
+**/andry.txt
+*.local.txt
 
 # --- Database & Storage (SQLite) ---
 *.db
@@ -108,4 +117,28 @@ coverage/
 *.zip
 *.tar.gz
 *.rar
+*.7z
+*.tar
+*.gz
+
+# --- Documents & Binary Office Files ---
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+*.pdf
+
+# --- Temporary & Scratch Files ---
+*.tmp
+*.temp
+tmp/
+temp/
+scratch/
+
+# --- Documentation & Internal Notes ---
+docs/
+docs/**
+
 

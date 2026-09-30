@@ -64,7 +64,7 @@ export const ReferralCodeShareBox: React.FC<ReferralCodeShareBoxProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold leading-tight">Bagikan Kode Referral</h3>
-              <p className="text-xs text-blue-100 mt-0.5">Promosikan dan raih komisi affiliate</p>
+              <p className="text-xs text-blue-100 mt-0.5">Promosikan dan bagikan kode referral tim marketing</p>
             </div>
           </div>
           <button

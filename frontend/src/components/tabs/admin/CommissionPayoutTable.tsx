@@ -103,14 +103,14 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama affiliate atau kode promo..."
+            placeholder="Cari tim marketing atau kode referral..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-xs text-slate-500 font-medium">Status Komisi:</span>
+          <span className="text-xs text-slate-500 font-medium">Status Insentif:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -132,9 +132,9 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10.5px]">
                 <th className="py-3.5 px-4">Tanggal & Ref Code</th>
-                <th className="py-3.5 px-4">Mitra Marketing</th>
+                <th className="py-3.5 px-4">Tim Marketing</th>
                 <th className="py-3.5 px-4">Nilai Transaksi Dasar</th>
-                <th className="py-3.5 px-4">Jumlah Komisi</th>
+                <th className="py-3.5 px-4">Jumlah Insentif</th>
                 <th className="py-3.5 px-4">Status Pencairan</th>
                 {isSuperadmin && <th className="py-3.5 px-4 text-right">Aksi Admin</th>}
               </tr>
@@ -142,8 +142,16 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={isSuperadmin ? 6 : 5} className="py-12 text-center text-slate-400">
-                    Belum ada riwayat komisi yang sesuai
+                  <td colSpan={isSuperadmin ? 6 : 5} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700">Belum Ada Riwayat Insentif</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Catatan insentif dari perpanjangan paket langganan outlet akan muncul di sini secara otomatis.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -167,9 +175,9 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
                         <div className="text-[11px] text-slate-400 mt-1">{dateStr}</div>
                       </td>
 
-                      {/* Mitra Marketing */}
+                      {/* Tim Marketing IndoTech */}
                       <td className="py-3.5 px-4 font-semibold text-slate-800">
-                        {comm.marketingName || "Mitra Affiliate"}
+                        {comm.marketingName || "Tim Marketing"}
                       </td>
 
                       {/* Nilai Transaksi */}
@@ -177,7 +185,7 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
                         Rp {comm.baseAmount.toLocaleString("id-ID")}
                       </td>
 
-                      {/* Jumlah Komisi */}
+                      {/* Jumlah Insentif */}
                       <td className="py-3.5 px-4">
                         <span className="font-bold text-emerald-600 font-mono text-xs">
                           Rp {comm.commissionAmount.toLocaleString("id-ID")}

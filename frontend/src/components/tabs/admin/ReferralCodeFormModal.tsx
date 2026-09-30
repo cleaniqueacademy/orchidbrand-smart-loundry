@@ -117,7 +117,7 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
               <h3 className="text-base font-bold leading-tight">
                 {initialData ? "Ubah Kode Referral" : "Buat Kode Referral Baru"}
               </h3>
-              <p className="text-xs text-blue-100 mt-0.5">Konfigurasi kupon promosi & komisi affiliate</p>
+              <p className="text-xs text-blue-100 mt-0.5">Konfigurasi kupon promosi & insentif marketing</p>
             </div>
           </div>
           <button
@@ -215,7 +215,7 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
           {/* Komisi Marketing */}
           <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-3">
             <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Komisi Untuk Affiliate / Marketing
+              <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Insentif Tim Marketing IndoTech
             </span>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -246,7 +246,7 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
 
             {userRole === "superadmin" && marketingProfiles.length > 0 && (
               <div>
-                <label className="block text-slate-600 mb-1 font-medium">Mitra Marketing Pemilik Kode</label>
+                <label className="block text-slate-600 mb-1 font-medium">Anggota Tim Marketing Pemilik Kode</label>
                 <select
                   value={marketingProfileId}
                   onChange={(e) => setMarketingProfileId(e.target.value)}
@@ -255,7 +255,7 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
                   <option value="">-- Tanpa Marketing Khusus (Milik Platform Pusat) --</option>
                   {marketingProfiles.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.userName || "Affiliate"} ({m.phone})
+                      {m.userName || "Marketing"} ({m.phone})
                     </option>
                   ))}
                 </select>

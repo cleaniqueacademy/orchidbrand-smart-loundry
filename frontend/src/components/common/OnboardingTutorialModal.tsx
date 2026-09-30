@@ -23,18 +23,18 @@ interface RoleTourConfig {
 const getRoleConfig = (role: Role = "staff"): RoleTourConfig => {
   if (role === "marketing") {
     return {
-      badge: "Tour Kemitraan Affiliate",
-      modalTitle: "Mulai Tour Mitra Marketing?",
+      badge: "Tour Tim Marketing IndoTech",
+      modalTitle: "Mulai Tour Tim Marketing IndoTech?",
       greetingText: (userName) => (
         <span>
           Halo <strong className="text-slate-900">{userName}</strong>, selamat bergabung sebagai{" "}
-          <strong className="text-slate-900">Mitra Marketing / Affiliate</strong>! Ikuti tour singkat
+          <strong className="text-slate-900">Tim Marketing IndoTech</strong>! Ikuti tour singkat
           (±1 menit) untuk menguasai alur pemantauan pendaftaran dan komisi Anda.
         </span>
       ),
       highlights: [
         {
-          title: "Dashboard Affiliate",
+          title: "Dashboard Marketing",
           desc: "Pantau total komisi, status pencairan, dan outlet aktif yang menggunakan kode Anda.",
         },
         {
@@ -43,10 +43,10 @@ const getRoleConfig = (role: Role = "staff"): RoleTourConfig => {
         },
         {
           title: "Pencairan Saldo & Rekening",
-          desc: "Atur nomor rekening tujuan transfer dan riwayat bukti pembayaran komisi mitra.",
+          desc: "Atur nomor rekening tujuan transfer dan riwayat insentif tim marketing.",
         },
         {
-          title: "Asisten AI Affiliate",
+          title: "Asisten AI Marketing",
           desc: "Konsultasi materi promosi, ide copywriting penawaran, dan edukasi fitur Cleanique.",
         },
       ],
@@ -99,7 +99,7 @@ const getRoleConfig = (role: Role = "staff"): RoleTourConfig => {
       highlights: [
         {
           title: "Kelola Outlet & Akun",
-          desc: "Pantau seluruh tenant mitra laundry yang aktif, status langganan, dan aktivasi akun.",
+          desc: "Pantau seluruh tenant cabang laundry yang aktif, status langganan, dan aktivasi akun.",
         },
         {
           title: "Billing & Paket Langganan",
@@ -107,7 +107,7 @@ const getRoleConfig = (role: Role = "staff"): RoleTourConfig => {
         },
         {
           title: "Program Referral Platform",
-          desc: "Manajemen kode referral affiliate, verifikasi komisi marketing, dan kupon promo.",
+          desc: "Manajemen kode referral, verifikasi insentif marketing, dan kupon promo.",
         },
         {
           title: "Cleanique AI Copilot",
@@ -155,7 +155,7 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
   onComplete,
   onStartSpotlightTour,
   currentUserRole = "staff",
-  userName = "Mitra",
+  userName = "Marketing",
   outletName = "Cleanique Laundry",
 }) => {
   if (!isOpen) return null;

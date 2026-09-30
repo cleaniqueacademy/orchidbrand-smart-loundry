@@ -249,6 +249,7 @@ export type TabType =
   | "logs"
   | "marketing"
   | "referral_codes"
+  | "registered_tenants"
   | "subscription"
   | "plans"
   | "signups"
@@ -545,7 +546,7 @@ export const PREMIUM_FEATURES_REGISTRY = {
     subtitle: "Kelola dan pantau seluruh cabang laundry dalam satu akun Owner terpadu",
     badge: "Paket Premium • Coming Soon",
     capabilities: [
-      "Tambah dan kelola hingga 10 gerai/cabang dalam 1 akun Owner",
+      "Tambah dan kelola Hingga 5 Gerai/cabang dalam 1 akun Owner",
       "Pemisahan omzet, buku kas, dan laporan performa per gerai",
       "Peralihan cepat antar cabang tanpa perlu logout akun",
     ],

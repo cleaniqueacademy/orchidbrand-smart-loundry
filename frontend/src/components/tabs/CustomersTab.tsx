@@ -34,6 +34,7 @@ import {
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Customer, Order, Role, Tenant, DateFilterPreset } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 
 interface CustomersTabProps {
   customers: Customer[];
@@ -860,6 +861,18 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
           </div>
         }
         emptyMessage="Tidak ada pelanggan yang sesuai dengan filter atau kata kunci pencarian."
+        emptyContent={
+          <EmptyStateWalkthrough
+            icon={<Users className="w-5 h-5 text-zinc-400" />}
+            title="Belum Ada Data Pelanggan Terdaftar"
+            description="Database kontak pelanggan laundry masih kosong atau tidak ada data yang cocok dengan kata kunci pencarian."
+            tips={[
+              "Data pelanggan baru otomatis tersimpan saat kasir menginput nama & nomor WhatsApp pada kasir order.",
+              "Nomor WhatsApp pelanggan digunakan untuk pengiriman nota digital & pemberitahuan cucian otomatis.",
+              "Riwayat kunjungan, total transaksi, dan status loyalitas pelanggan dapat dipantau langsung dari tabel ini.",
+            ]}
+          />
+        }
         initialPageSize={10}
       />
 

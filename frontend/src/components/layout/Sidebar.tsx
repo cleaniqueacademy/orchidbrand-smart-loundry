@@ -152,17 +152,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Menu Super Admin: Ringkas, Terintegrasi & Tanpa Redundansi
   const superAdminNav = [
     { id: "overview" as TabType, label: "Dashboard", icon: Building2 },
-    { id: "tenants" as TabType, label: "Kelola Outlet & Akun", icon: Store },
+    { id: "tenants" as TabType, label: "Kelola Outlet", icon: Store },
+    { id: "users" as TabType, label: "Kelola Pengguna", icon: Users },
     { id: "invoices" as TabType, label: "Arus Kas & Rekap Langganan", icon: CreditCard },
+    { id: "marketing" as TabType, label: "Tim Marketing", icon: UserCheck },
     { id: "referral_codes" as TabType, label: "Kode Referral", icon: Tag },
     { id: "settings_platform" as TabType, label: "Setting Platform", icon: Sliders },
     { id: "logs" as TabType, label: "Data Log", icon: Activity },
   ];
 
-  // Menu Marketing: Dashboard Affiliate & Kode Referral
+  // Menu Marketing: Dashboard Marketing & Laundry Terdaftar
   const marketingNav = [
-    { id: "marketing" as TabType, label: "Dashboard Affiliate", icon: DollarSign },
-    { id: "referral_codes" as TabType, label: "Kode Referral", icon: Tag },
+    { id: "marketing" as TabType, label: "Dashboard Marketing", icon: DollarSign },
+    { id: "registered_tenants" as TabType, label: "Laundry Terdaftar", icon: Store },
   ];
 
   // Menu Staff: Meja Kerja Kasir & Operasional
@@ -303,14 +305,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {isSuperAdmin
                     ? "Cleanique Pusat"
                     : isMarketing
-                    ? "Affiliate Partner"
+                    ? "Tim Marketing IndoTech"
                     : currentTenant?.outletName || "Cabang Laundry"}
                 </div>
                 <div className="text-[11px] text-zinc-400 font-medium truncate">
                   {isSuperAdmin
                     ? "Super Admin"
                     : isMarketing
-                    ? "Mitra Marketing"
+                    ? "Divisi Pemasaran"
                     : isStaff
                     ? "Kasir Outlet"
                     : "Owner Cabang"}
@@ -343,13 +345,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {renderNavButtons(superAdminNav)}
             </div>
           ) : isMarketing ? (
-            /* Grup Khusus Marketing Affiliate */
+            /* Grup Khusus Tim Marketing */
             <div>
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />
               ) : (
                 <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                  Menu Affiliate
+                  Pemasaran IndoTech
                 </div>
               )}
               {renderNavButtons(marketingNav)}
@@ -497,7 +499,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-zinc-600">
                     <span className="font-semibold text-blue-950">
-                      {isSuperAdmin ? "Super Admin" : isStaff ? "Staff" : isMarketing ? "Mitra Marketing" : "Tenant Owner"}
+                      {isSuperAdmin ? "Super Admin" : isStaff ? "Staff" : isMarketing ? "Tim Marketing IndoTech" : "Tenant Owner"}
                     </span>
                     <span>·</span>
                     <span className="text-emerald-700 font-medium">Aktif</span>

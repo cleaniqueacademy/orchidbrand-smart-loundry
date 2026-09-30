@@ -1,211 +1,298 @@
 import { db } from "./index";
-import { users, marketingProfiles, referralCodes } from "./schema";
-import { eq, or } from "drizzle-orm";
+import {
+  users,
+  marketingProfiles,
+  referralCodes,
+  referralCodeTenants,
+  referralEvents,
+  marketingCommissions,
+} from "./schema";
+import { eq, ne } from "drizzle-orm";
 
 export const MARKETING_SEEDS = [
   {
     userId: "user-marketing-01",
-    slug: "ubai",
-    name: "Ubai (Marketing)",
-    email: "ubai@cleaniquelaundry.com",
-    phone: "081298765401",
-    code: "UBAI",
-    bankName: "BRI",
-    bankAccount: "034101002345501",
-  },
-  {
-    userId: "user-marketing-02",
-    slug: "adit",
-    name: "Adit (Marketing)",
-    email: "adit@cleaniquelaundry.com",
-    phone: "081298765402",
-    code: "ADIT",
-    bankName: "BCA",
-    bankAccount: "8820456123",
-  },
-  {
-    userId: "user-marketing-03",
-    slug: "bhangkit",
-    name: "Bhangkit (Marketing)",
-    email: "bhangkit@cleaniquelaundry.com",
-    phone: "081298765403",
-    code: "BHANGKIT",
-    bankName: "Mandiri",
-    bankAccount: "1370019283741",
-  },
-  {
-    userId: "user-marketing-04",
     slug: "ragil",
-    name: "Ragil (Marketing)",
+    name: "Ragil Slamet Riyadi",
     email: "ragil@cleaniquelaundry.com",
-    phone: "081298765404",
-    code: "RAGIL",
+    phone: "081298765401",
+    code: "4MBPQ2",
     bankName: "BNI",
     bankAccount: "0219837465",
   },
   {
+    userId: "user-marketing-02",
+    slug: "bhangkit",
+    name: "Bhangkit Cahya Nugraha",
+    email: "bhangkit@cleaniquelaundry.com",
+    phone: "081298765402",
+    code: "Q5R2VK",
+    bankName: "Mandiri",
+    bankAccount: "1370019283741",
+  },
+  {
+    userId: "user-marketing-03",
+    slug: "yusuf",
+    name: "Muhammad Yusuf Setiawan",
+    email: "yusuf@cleaniquelaundry.com",
+    phone: "081298765403",
+    code: "6LH39J",
+    bankName: "BCA",
+    bankAccount: "8820456123",
+  },
+  {
+    userId: "user-marketing-04",
+    slug: "subandi",
+    name: "Muhammad Subandi",
+    email: "subandi@cleaniquelaundry.com",
+    phone: "081298765404",
+    code: "PC9Q8A",
+    bankName: "BRI",
+    bankAccount: "034101002345501",
+  },
+  {
     userId: "user-marketing-05",
-    slug: "arif",
-    name: "Arif (Marketing)",
-    email: "arif@cleaniquelaundry.com",
+    slug: "nauffal",
+    name: "Muhammad Nauffal Yushi",
+    email: "nauffal@cleaniquelaundry.com",
     phone: "081298765405",
-    code: "ARIF",
+    code: "PYWD3R",
+    bankName: "Mandiri",
+    bankAccount: "1390038475629",
+  },
+  {
+    userId: "user-marketing-06",
+    slug: "haryanto",
+    name: "Haryanto",
+    email: "haryanto@cleaniquelaundry.com",
+    phone: "081298765406",
+    code: "QLDU42",
     bankName: "BCA",
     bankAccount: "7140928341",
   },
   {
-    userId: "user-marketing-06",
-    slug: "syams",
-    name: "Syams (Marketing)",
-    email: "syams@cleaniquelaundry.com",
-    phone: "081298765406",
-    code: "SYAMS",
-    bankName: "Mandiri",
-    bankAccount: "1380029384752",
-  },
-  {
     userId: "user-marketing-07",
-    slug: "salim",
-    name: "Salim (Marketing)",
-    email: "salim@cleaniquelaundry.com",
-    phone: "081298765407",
-    code: "SALIM",
-    bankName: "BSI",
-    bankAccount: "7182938475",
-  },
-  {
-    userId: "user-marketing-08",
     slug: "doni",
-    name: "Doni (Marketing)",
+    name: "Doni Seirawan",
     email: "doni@cleaniquelaundry.com",
-    phone: "081298765408",
-    code: "DONI",
+    phone: "081298765407",
+    code: "F8FDXJ",
     bankName: "BCA",
     bankAccount: "6291039482",
   },
   {
+    userId: "user-marketing-08",
+    slug: "avianditya",
+    name: "Avianditya DwiChandra Kusuma",
+    email: "avianditya@cleaniquelaundry.com",
+    phone: "081298765408",
+    code: "Y2NY3B",
+    bankName: "BCA",
+    bankAccount: "8820456124",
+  },
+  {
     userId: "user-marketing-09",
-    slug: "nova",
-    name: "Nova (Marketing)",
-    email: "nova@cleaniquelaundry.com",
+    slug: "pradhita",
+    name: "Pradhita Wahyu Setyawan",
+    email: "pradhita@cleaniquelaundry.com",
     phone: "081298765409",
-    code: "NOVA",
+    code: "W2KU6Z",
     bankName: "BRI",
     bankAccount: "034201004928502",
   },
   {
     userId: "user-marketing-10",
-    slug: "naufal",
-    name: "Naufal (Marketing)",
-    email: "naufal@cleaniquelaundry.com",
+    slug: "syamsuddin",
+    name: "Lam Syamsuddin",
+    email: "syamsuddin@cleaniquelaundry.com",
     phone: "081298765410",
-    code: "NAUFAL",
+    code: "46PXLK",
     bankName: "Mandiri",
-    bankAccount: "1390038475629",
+    bankAccount: "1380029384752",
+  },
+  {
+    userId: "user-marketing-11",
+    slug: "khoirudin",
+    name: "Muhammad Khoirudin Salim",
+    email: "khoirudin@cleaniquelaundry.com",
+    phone: "081298765411",
+    code: "FJ4KFK",
+    bankName: "BSI",
+    bankAccount: "7182938475",
+  },
+  {
+    userId: "user-marketing-12",
+    slug: "arif",
+    name: "Arif Rif'an",
+    email: "arif@cleaniquelaundry.com",
+    phone: "081298765412",
+    code: "JY6DJW",
+    bankName: "BCA",
+    bankAccount: "7140928342",
+  },
+  {
+    userId: "user-marketing-13",
+    slug: "abdullah",
+    name: "Abdullah Yahya",
+    email: "abdullah@cleaniquelaundry.com",
+    phone: "081298765413",
+    code: "PR5LKN",
+    bankName: "BNI",
+    bankAccount: "0219837466",
+  },
+  {
+    userId: "user-marketing-14",
+    slug: "zidane",
+    name: "Zidane Ibnu Maulana",
+    email: "zidane@cleaniquelaundry.com",
+    phone: "081298765414",
+    code: "SD3EYP",
+    bankName: "BSI",
+    bankAccount: "7182938476",
+  },
+  {
+    userId: "user-marketing-15",
+    slug: "ilham",
+    name: "Ilham Kurniawan",
+    email: "ilham@cleaniquelaundry.com",
+    phone: "081298765415",
+    code: "S4V25Q",
+    bankName: "BRI",
+    bankAccount: "034101002345502",
+  },
+  {
+    userId: "user-marketing-16",
+    slug: "ubaidillah",
+    name: "Ubaidillah Azhar Nur Royyan",
+    email: "ubaidillah@cleaniquelaundry.com",
+    phone: "081298765416",
+    code: "QFGR9H",
+    bankName: "BRI",
+    bankAccount: "034101002345503",
+  },
+  {
+    userId: "user-marketing-17",
+    slug: "iqbal",
+    name: "M. IQBAL AROFQI",
+    email: "iqbal@cleaniquelaundry.com",
+    phone: "081298765417",
+    code: "DE8LHC",
+    bankName: "Mandiri",
+    bankAccount: "1370019283742",
   },
 ];
 
 export async function seedMarketingUsers() {
-  console.log("Seeding 10 marketing users and referral codes...");
+  console.log("Memulai pembaruan 17 akun Tim Marketing IndoTech Cleanique...");
   const today = new Date().toISOString();
   const passwordHash = await Bun.password.hash("marketing123", { algorithm: "bcrypt", cost: 10 });
 
+  // 1. DROP SEMUA USER MARKETING DAN KODE REFERRAL SEBELUMNYA (TERMASUK CLEANHEMAT)
+  try {
+    const existingMktUsers = await db.select().from(users).where(eq(users.role, "marketing"));
+    const mktUserIds = existingMktUsers.map((u) => u.id);
+
+    console.log(`Menghapus ${mktUserIds.length} akun marketing lama...`);
+
+    // Hapus semua data riwayat komisi dan kode referral lama
+    const oldCodes = await db.select().from(referralCodes);
+
+    for (const c of oldCodes) {
+      await db.delete(referralCodeTenants).where(eq(referralCodeTenants.referralCodeId, c.id));
+      await db.delete(referralEvents).where(eq(referralEvents.referralCodeId, c.id));
+      await db.delete(marketingCommissions).where(eq(marketingCommissions.referralCodeId, c.id));
+      await db.delete(referralCodes).where(eq(referralCodes.id, c.id));
+    }
+
+    for (const uid of mktUserIds) {
+      const profs = await db.select().from(marketingProfiles).where(eq(marketingProfiles.userId, uid));
+      for (const p of profs) {
+        await db.delete(marketingCommissions).where(eq(marketingCommissions.marketingProfileId, p.id));
+      }
+      await db.delete(marketingProfiles).where(eq(marketingProfiles.userId, uid));
+    }
+
+    // Hapus profil platform lama jika ada
+    await db.delete(marketingProfiles).where(eq(marketingProfiles.id, "mkt-prof-platform"));
+
+    // Bersihkan referensi marketingUserId di users lain jika ada
+    await db.update(users).set({ marketingUserId: null });
+
+    // Hapus user marketing lama
+    for (const uid of mktUserIds) {
+      await db.delete(users).where(eq(users.id, uid));
+    }
+
+    console.log("✅ Berhasil drop semua user marketing dan kode referral lama.");
+  } catch (err: any) {
+    console.warn("Notice saat membersihkan marketing users:", err.message);
+  }
+
+  // 2. INSERT 17 MITRA MARKETING BARU
   for (const item of MARKETING_SEEDS) {
     const userId = item.userId;
     const profileId = `mkt-prof-${item.slug}`;
     const codeId = `ref-code-${item.slug}`;
 
-    // 1. Check or insert user
-    const existingUsers = await db
-      .select()
-      .from(users)
-      .where(or(eq(users.id, userId), eq(users.email, item.email)));
+    // Insert User
+    await db.insert(users).values({
+      id: userId,
+      name: item.name,
+      email: item.email,
+      passwordHash,
+      role: "marketing",
+      status: "active",
+      createdAt: today,
+    });
 
-    let actualUserId = userId;
-    if (existingUsers.length === 0) {
-      await db.insert(users).values({
-        id: userId,
-        name: item.name,
-        email: item.email,
-        passwordHash,
-        role: "marketing",
-        status: "active",
-        createdAt: today,
-      });
-      console.log(`Created user: ${item.name} (${item.email})`);
-    } else {
-      actualUserId = existingUsers[0].id;
-    }
+    // Insert Marketing Profile
+    await db.insert(marketingProfiles).values({
+      id: profileId,
+      userId: userId,
+      phone: item.phone,
+      bankName: item.bankName,
+      bankAccountNumber: item.bankAccount,
+      bankAccountName: item.name.toUpperCase(),
+      commissionRateDefault: 5000,
+      totalEarned: 0,
+      totalWithdrawn: 0,
+      notes: `Mitra Marketing Cleanique - ${item.name}`,
+      createdAt: today,
+    });
 
-    // 2. Check or insert marketing profile
-    const existingProfiles = await db
-      .select()
-      .from(marketingProfiles)
-      .where(eq(marketingProfiles.userId, actualUserId));
+    // Insert Referral Code (6 Karakter Random Huruf & Angka Kapital)
+    await db.insert(referralCodes).values({
+      id: codeId,
+      code: item.code,
+      name: `Kode Referral ${item.name}`,
+      description: `Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Komisi Rp 5.000/bulan untuk ${item.name}.`,
+      discountType: "fixed",
+      discountValue: 5000,
+      commissionType: "fixed",
+      commissionValue: 5000,
+      maxUsage: null,
+      currentUsage: 0,
+      isActive: "true",
+      appliesToAllTenants: "true",
+      marketingProfileId: profileId,
+      createdByUserId: userId,
+      createdAt: today,
+    });
 
-    let actualProfileId = profileId;
-    if (existingProfiles.length === 0) {
-      await db.insert(marketingProfiles).values({
-        id: profileId,
-        userId: actualUserId,
-        phone: item.phone,
-        bankName: item.bankName,
-        bankAccountNumber: item.bankAccount,
-        bankAccountName: item.name.replace(" (Marketing)", "").toUpperCase(),
-        commissionRateDefault: 5000,
-        totalEarned: 0,
-        totalWithdrawn: 0,
-        notes: `Mitra Marketing Cleanique - ${item.name}`,
-        createdAt: today,
-      });
-      console.log(`Created marketing profile: ${item.name}`);
-    } else {
-      actualProfileId = existingProfiles[0].id;
-    }
-
-    // 3. Check or insert referral code
-    const existingCodes = await db
-      .select()
-      .from(referralCodes)
-      .where(eq(referralCodes.code, item.code));
-
-    if (existingCodes.length === 0) {
-      await db.insert(referralCodes).values({
-        id: codeId,
-        code: item.code,
-        name: `Kode Referral ${item.name.replace(" (Marketing)", "")}`,
-        description: `Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Komisi Rp 5.000/bulan untuk ${item.name}.`,
-        discountType: "fixed",
-        discountValue: 5000,
-        commissionType: "fixed",
-        commissionValue: 5000,
-        maxUsage: null,
-        currentUsage: 0,
-        isActive: "true",
-        appliesToAllTenants: "true",
-        marketingProfileId: actualProfileId,
-        createdByUserId: actualUserId,
-        createdAt: today,
-      });
-      console.log(`Created referral code: ${item.code} for profile ${actualProfileId}`);
-    } else {
-      if (!existingCodes[0].marketingProfileId) {
-        await db
-          .update(referralCodes)
-          .set({ marketingProfileId: actualProfileId })
-          .where(eq(referralCodes.id, existingCodes[0].id));
-      }
-    }
+    console.log(`+ [Kode: ${item.code}] ${item.name} (${item.email})`);
   }
 
-  console.log("✅ 10 Marketing users & referral codes seeding completed successfully!");
+  console.log("✅ Berhasil men-generate 17 akun mitra marketing & kode referral 6 karakter.");
 }
 
 if (import.meta.main) {
   seedMarketingUsers()
-    .then(() => process.exit(0))
+    .then(() => {
+      console.log("Selesai.");
+      process.exit(0);
+    })
     .catch((err) => {
-      console.error(err);
+      console.error("Gagal:", err);
       process.exit(1);
     });
 }

@@ -178,7 +178,7 @@ marketingRoutes.post("/profiles", requireRole(["superadmin"]), async (c) => {
       bankName,
       bankAccountNumber,
       bankAccountName,
-      commissionRateDefault = 10,
+      commissionRateDefault = 5000,
       notes,
     } = body;
 
@@ -223,7 +223,7 @@ marketingRoutes.post("/profiles", requireRole(["superadmin"]), async (c) => {
         bankName: bankName ? String(bankName).trim() : null,
         bankAccountNumber: bankAccountNumber ? String(bankAccountNumber).trim() : null,
         bankAccountName: bankAccountName ? String(bankAccountName).trim() : null,
-        commissionRateDefault: Number(commissionRateDefault) || 0,
+        commissionRateDefault: Number(commissionRateDefault) || 5000,
         totalEarned: 0,
         totalWithdrawn: 0,
         notes: notes ? String(notes).trim() : null,
@@ -232,14 +232,53 @@ marketingRoutes.post("/profiles", requireRole(["superadmin"]), async (c) => {
       })
       .returning();
 
+    // Generate 6-karakter kode referral unik (huruf & angka kapital acak)
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let generatedCode = "";
+    let isUnique = false;
+    while (!isUnique) {
+      let candidate = "";
+      for (let i = 0; i < 6; i++) {
+        candidate += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const existing = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(sql`UPPER(${referralCodes.code})`, candidate));
+      if (existing.length === 0) {
+        generatedCode = candidate;
+        isUnique = true;
+      }
+    }
+
+    const codeId = newId("ref-code");
+    await db.insert(referralCodes).values({
+      id: codeId,
+      code: generatedCode,
+      name: `Kode Referral ${String(name).trim()}`,
+      description: `Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Insentif Rp 5.000/bulan untuk ${String(name).trim()}.`,
+      discountType: "fixed",
+      discountValue: 5000,
+      commissionType: "fixed",
+      commissionValue: 5000,
+      maxUsage: null,
+      currentUsage: 0,
+      isActive: "true",
+      appliesToAllTenants: "true",
+      marketingProfileId: profile.id,
+      createdByUserId: userId,
+      createdAt: today,
+    });
+
     return c.json({
       success: true,
-      message: "Mitra marketing berhasil didaftarkan",
+      message: "Anggota tim marketing berhasil didaftarkan dan kode referral resmi otomatis dibuat",
       data: {
         userId,
         profileId: profile.id,
         name,
         email: cleanEmail,
+        referralCode: generatedCode,
       },
     });
   } catch (err: any) {

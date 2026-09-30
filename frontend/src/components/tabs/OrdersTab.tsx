@@ -620,8 +620,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           <EmptyStateWalkthrough
             title="Belum Ada Pesanan Laundry Aktif"
             description="Pelanggan baru datang? Catat cucian kiloan atau satuan dengan cepat, pilih layanan, dan langsung cetak nota struk thermal."
-            actionLabel={!isSuperAdmin ? "+ Buat Order Baru Pertama" : undefined}
-            onAction={!isSuperAdmin ? onOpenOrderModal : undefined}
             tips={[
               "Bisa langsung timbang kiloan atau input item satuan (bedcover, sepatu).",
               "Nota otomatis terkirim ke WhatsApp pelanggan jika nomor WA diisi.",

@@ -20,6 +20,7 @@ import { Service, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { useConfirm } from "../common/ConfirmContext";
 import { authHeaders } from "../../utils/api";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 
 interface ServicesTabProps {
   tenantId: string;
@@ -328,8 +329,17 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
                 ))
               ) : filteredServices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-400">
-                    Tidak ada paket layanan yang ditemukan. Klik tombol Tambah Layanan di atas.
+                  <td colSpan={7} className="py-6">
+                    <EmptyStateWalkthrough
+                      icon={<Tag className="w-5 h-5 text-zinc-400" />}
+                      title="Belum Ada Paket Layanan Laundry"
+                      description="Tambahkan daftar paket cuci kiloan, satuan (sepatu, bedcover, jas), atau express untuk mulai menerima order."
+                      tips={[
+                        "Tentukan harga per unit (per kg, per pcs, atau per meter) dan minimal order.",
+                        "Atur durasi pengerjaan (SLA) agar estimasi selesai di nota dan WhatsApp otomatis akurat.",
+                        "Layanan dapat diaktifkan atau dinonaktifkan sementara sewaktu-waktu sesuai ketersediaan kapasitas outlet.",
+                      ]}
+                    />
                   </td>
                 </tr>
               ) : (

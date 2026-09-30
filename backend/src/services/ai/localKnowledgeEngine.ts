@@ -52,6 +52,14 @@ export function generateLocalFallbackReply(
     lower.includes("ganti password")
   ) {
     if (lower.includes("jam buka") || lower.includes("jam operasional") || lower.includes("jam kerja")) {
+      if (role === "superadmin") {
+        return (
+          `⏰ **Informasi Jam Operasional Cabang (Super Admin):**\n\n` +
+          `Jam operasional masing-masing cabang diatur secara mandiri oleh Pemilik Outlet di menu Pengaturan mereka.\n` +
+          `Sebagai Super Admin, Anda dapat menginspeksi atau mengelola data seluruh cabang melalui menu **Kelola Outlet**.\n\n` +
+          `[ACTION:NAVIGATE:tenants]`
+        );
+      }
       return (
         `⏰ **Panduan Mengatur Jam Buka Outlet:**\n\n` +
         `1. Masuk ke menu **Pengaturan** di bilah navigasi kiri.\n` +
@@ -67,6 +75,20 @@ export function generateLocalFallbackReply(
     }
 
     if (lower.includes("rekening") || lower.includes("qris") || lower.includes("bank")) {
+      if (role === "superadmin") {
+        return (
+          `💳 **Panduan Mengatur Rekening Penampung Platform (Super Admin):**\n\n` +
+          `1. Buka menu **Setting Platform** di sidebar kiri.\n` +
+          `2. Pada bagian **Rekening Pembayaran Langganan SaaS**, masukkan:\n` +
+          `   • **Nama Bank Pusat** (misal: BCA, Mandiri, BRI)\n` +
+          `   • **Nomor Rekening** penampung biaya langganan\n` +
+          `   • **Atas Nama Rekening** resmi platform\n` +
+          `   • **Info / Tautan QRIS Platform**\n` +
+          `3. Klik **Simpan Pengaturan Platform**.\n\n` +
+          `ℹ️ *Manfaat:* Rekening ini otomatis muncul pada invoice tagihan langganan yang dibayarkan oleh seluruh pemilik outlet.\n\n` +
+          `[ACTION:NAVIGATE:settings_platform]`
+        );
+      }
       return (
         `💳 **Panduan Mengatur Rekening Bank & QRIS Outlet:**\n\n` +
         `1. Buka menu **Pengaturan**.\n` +
@@ -82,6 +104,16 @@ export function generateLocalFallbackReply(
     }
 
     if (lower.includes("tambah kasir") || lower.includes("tambah staf") || lower.includes("staf") || lower.includes("staff")) {
+      if (role === "superadmin") {
+        return (
+          `👥 **Panduan Manajemen Pengguna & Staf (Super Admin):**\n\n` +
+          `1. Buka menu **Kelola Pengguna** di sidebar kiri.\n` +
+          `2. Klik tombol **+ Tambah Pengguna**.\n` +
+          `3. Pilih peran (**Staf Kasir**, **Pemilik Outlet**, atau **Tim Marketing**), isi nama, email, password, dan cabang outlet terkait.\n` +
+          `4. Klik simpan untuk menerbitkan akun baru.\n\n` +
+          `[ACTION:NAVIGATE:users]`
+        );
+      }
       return (
         `👥 **Panduan Manajemen Akun Kasir / Staf Outlet:**\n\n` +
         `1. Buka menu **Pengaturan** (hanya bisa diakses oleh Pemilik Outlet/Super Admin).\n` +
@@ -113,6 +145,16 @@ export function generateLocalFallbackReply(
     }
 
     // Panduan setting umum
+    if (role === "superadmin") {
+      return (
+        `⚙️ **Pusat Konfigurasi Platform (Role: Super Admin):**\n\n` +
+        `1. **Setting Platform:** Rekening bank penampung SaaS, WhatsApp Gateway resmi HQ, dan pengaturan biaya langganan.\n` +
+        `2. **Kelola Outlet:** Manajemen cabang, verifikasi status aktif, dan data outlet.\n` +
+        `3. **Kelola Pengguna:** Kontrol hak akses seluruh Super Admin, Owner, Kasir, dan Tim Marketing.\n\n` +
+        `[ACTION:NAVIGATE:settings_platform]`
+      );
+    }
+
     return (
       `⚙️ **Pusat Pengaturan Outlet (Settings Guide):**\n\n` +
       `Di menu **Pengaturan**, Pemilik Outlet dapat mengonfigurasi:\n` +
@@ -251,6 +293,16 @@ export function generateLocalFallbackReply(
     lower.includes("excel") ||
     lower.includes("pdf")
   ) {
+    if (role === "superadmin") {
+      return (
+        `💰 **Arus Kas & Rekap Langganan Platform (Super Admin):**\n\n` +
+        `Sebagai Super Admin HQ, Anda memantau keuangan platform di menu **Arus Kas & Rekap Langganan**:\n` +
+        `1. **Verifikasi Invoice:** Periksa dan setujui bukti bayar perpanjangan langganan dari seluruh cabang outlet.\n` +
+        `2. **Omset Platform:** Pantau total pendapatan SaaS bulanan & tahunan secara terpusat.\n` +
+        `3. **Pencairan Komisi:** Rekap insentif tim marketing yang siap dipayout.\n\n` +
+        `[ACTION:NAVIGATE:invoices]`
+      );
+    }
     if (lower.includes("laporan") || lower.includes("excel") || lower.includes("pdf")) {
       return (
         `📈 **Panduan Cetak Laporan Keuangan (PDF & Excel):**\n\n` +
@@ -279,6 +331,14 @@ export function generateLocalFallbackReply(
   // 6. PANDUAN MASTER LAYANAN (Owner & Superadmin)
   // =========================================================================
   if (lower.includes("layanan") || lower.includes("tarif") || lower.includes("harga") || lower.includes("kiloan")) {
+    if (role === "superadmin") {
+      return (
+        `🏷️ **Informasi Layanan & Tarif Cabang (Super Admin):**\n\n` +
+        `Tarif dan paket cucian diatur secara mandiri oleh masing-masing pemilik outlet di menu Layanan mereka.\n` +
+        `Sebagai Super Admin, Anda dapat menginspeksi outlet terkait pada menu **Kelola Outlet**.\n\n` +
+        `[ACTION:NAVIGATE:tenants]`
+      );
+    }
     return (
       `🏷️ **Panduan Master Tarif & Layanan Laundry:**\n\n` +
       `1. Masuk ke menu **Layanan**.\n` +
@@ -306,6 +366,17 @@ export function generateLocalFallbackReply(
   // 8. PANDUAN LANGGANAN & INVOICE OUTLET (Owner)
   // =========================================================================
   if (lower.includes("langganan") || lower.includes("paket") || lower.includes("perpanjang") || lower.includes("invoice")) {
+    if (role === "superadmin") {
+      return (
+        `⏰ **Verifikasi Langganan & Tagihan Cabang (Super Admin):**\n\n` +
+        `Sebagai Super Admin, Anda memverifikasi bukti pembayaran langganan outlet pada menu **Arus Kas & Rekap Langganan**:\n` +
+        `1. Buka menu **Arus Kas & Rekap Langganan**.\n` +
+        `2. Cek daftar invoice yang berstatus *Menunggu Verifikasi*.\n` +
+        `3. Periksa kesesuaian nominal transfer dan bukti bayar.\n` +
+        `4. Klik **Setujui / Verifikasi** untuk langsung mengaktifkan masa aktif cabang.\n\n` +
+        `[ACTION:NAVIGATE:invoices]`
+      );
+    }
     return (
       `⏰ **Panduan Langganan Aplikasi & Perpanjangan Outlet:**\n\n` +
       `1. Masuk ke menu **Langganan** di navigasi samping.\n` +
@@ -347,7 +418,7 @@ export function generateLocalFallbackReply(
         `4. 📝 **Pendaftar Mandiri:** Verifikasi pendaftar baru dari website publik.\n` +
         `5. 💳 **Verifikasi Tagihan:** Konfirmasi bukti bayar langganan cabang.\n` +
         `6. 📦 **Paket & Harga:** Konfigurasi skema paket langganan.\n` +
-        `7. 🏷️ **Kode Referral & Mitra Marketing:** Manajemen affiliate dan komisi promosi.\n` +
+        `7. 🏷️ **Kode Referral & Tim Marketing:** Manajemen tim pemasaran IndoTech dan insentif promosi.\n` +
         `8. ⚙️ **Setting Platform:** Konfigurasi rekening bank pusat & gateway WA HQ.\n` +
         `9. 📜 **Data Log:** Audit trail aktivitas sistem dan pengiriman pesan.\n\n` +
         `[ACTION:NAVIGATE:tenants]`
@@ -356,9 +427,10 @@ export function generateLocalFallbackReply(
 
     if (role === "marketing") {
       return (
-        `💼 **Peta Menu Mitra Marketing (Role: Affiliate Marketing):**\n\n` +
-        `1. 🏷️ **Mitra Marketing:** Pantau kode referral unik Anda, statistik klik, dan jumlah tenant yang mendaftar.\n` +
-        `2. 💰 **Riwayat Komisi:** Cek akumulasi komisi dari setiap outlet langganan yang menggunakan kode Anda.`
+        `💼 **Peta Menu Tim Marketing IndoTech (Role: Marketing):**\n\n` +
+        `1. 🏷️ **Dashboard Marketing:** Pantau kode referral resmi Anda, jumlah outlet yang mendaftar, dan rekening bank penerima insentif.\n` +
+        `2. 💰 **Riwayat Insentif:** Cek akumulasi insentif bulanan dari setiap outlet aktif yang berlangganan menggunakan kode Anda.\n\n` +
+        `[ACTION:NAVIGATE:marketing]`
       );
     }
 

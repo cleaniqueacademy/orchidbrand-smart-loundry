@@ -20,7 +20,7 @@ export interface RBACCheckResult {
  *    - Master Tarif / Ubah Harga Layanan
  *    - Tagihan, Invoice, Paket Langganan Outlet, Cabang Lain
  * 2. Pemilik Outlet ('tenant_owner'): TIDAK BOLEH mengakses fitur Superadmin platform pusat.
- * 3. Mitra Marketing ('marketing'): HANYA BOLEH mengakses seputar referral & komisi.
+ * 3. Tim Marketing IndoTech ('marketing'): HANYA BOLEH mengakses seputar referral & insentif.
  */
 export function checkRoleAccessViolation(
   message: string,
@@ -243,7 +243,7 @@ export function checkRoleAccessViolation(
   }
 
   // =========================================================================
-  // 3. MITRA MARKETING: HANYA BERWENANG ATAS REFERRAL & KOMISI
+  // 3. TIM MARKETING INDOTECH: HANYA BERWENANG ATAS REFERRAL & INSENTIF
   // =========================================================================
   if (isMarketing) {
     if (
@@ -258,10 +258,10 @@ export function checkRoleAccessViolation(
     ) {
       return {
         isForbidden: true,
-        reason: "Mitra marketing hanya berwenang atas program referral.",
+        reason: "Tim marketing hanya berwenang atas program referral & promosi.",
         reply:
-          `⛔ **Akses Terbatas (Role Mitra Marketing):**\n\n` +
-          `Akun Anda terdaftar sebagai **Mitra Marketing (Affiliate)**. Anda hanya memiliki akses ke dashboard referral, statistik tautan promosi, dan riwayat komisi Anda.\n\n` +
+          `⛔ **Akses Terbatas (Role Tim Marketing IndoTech):**\n\n` +
+          `Akun Anda terdaftar sebagai **Tim Marketing IndoTech**. Anda memiliki akses penuh ke dashboard pemasaran, statistik kode referral, dan riwayat insentif Anda.\n\n` +
           `Operasional toko laundry dan meja kasir dikelola langsung oleh staf dan pemilik outlet masing-masing.`,
       };
     }

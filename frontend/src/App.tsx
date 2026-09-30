@@ -17,6 +17,7 @@ import { ServicesTab } from "./components/tabs/ServicesTab";
 import { SystemLogsTab } from "./components/tabs/SystemLogsTab";
 import { ReferralCodesTab } from "./components/tabs/admin/ReferralCodesTab";
 import { MarketingTab } from "./components/tabs/admin/MarketingTab";
+import { RegisteredTenantsTab } from "./components/tabs/marketing/RegisteredTenantsTab";
 import { SubscriptionTab } from "./components/tabs/subscription/SubscriptionTab";
 import { PlansTab } from "./components/tabs/admin/PlansTab";
 import { SignupsTab } from "./components/tabs/admin/SignupsTab";
@@ -50,29 +51,40 @@ export default function App() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [marketingAutoCreate, setMarketingAutoCreate] = useState(false);
 
   // Public Route State (/register, /register-success, etc.)
   const [publicRoute, setPublicRoute] = useState<string | null>(() => getPublicRoute());
 
-  // Public Tracking Page State (URL /track/:invoiceNo or ?track=... or ?invoice=...)
+  // Public Tracking Page State (URL /track, /track/, /track/:invoiceNo or ?track=... or ?invoice=...)
   const [trackingInvoice, setTrackingInvoice] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    const match = window.location.pathname.match(/\/track\/([^/?#]+)/);
+    const path = window.location.pathname;
+    // Detect /track or /track/ (empty invoice) — show tracking page with blank form
+    if (path === "/track" || path === "/track/") return "";
+    const match = path.match(/\/track\/([^/?#]+)/);
     if (match && match[1]) return decodeURIComponent(match[1]);
     const params = new URLSearchParams(window.location.search);
-    return params.get("track") || params.get("invoice") || null;
+    const qTrack = params.get("track") || params.get("invoice");
+    if (qTrack !== null) return qTrack;
+    return null;
   });
 
   useEffect(() => {
     const handlePopState = () => {
       setPublicRoute(getPublicRoute());
-      const match = window.location.pathname.match(/\/track\/([^/?#]+)/);
-      if (match && match[1]) {
-        setTrackingInvoice(decodeURIComponent(match[1]));
+      const path = window.location.pathname;
+      if (path === "/track" || path === "/track/") {
+        setTrackingInvoice("");
       } else {
-        const params = new URLSearchParams(window.location.search);
-        const inv = params.get("track") || params.get("invoice");
-        setTrackingInvoice(inv ? decodeURIComponent(inv) : null);
+        const match = path.match(/\/track\/([^/?#]+)/);
+        if (match && match[1]) {
+          setTrackingInvoice(decodeURIComponent(match[1]));
+        } else {
+          const params = new URLSearchParams(window.location.search);
+          const inv = params.get("track") || params.get("invoice");
+          setTrackingInvoice(inv !== null ? decodeURIComponent(inv) : null);
+        }
       }
     };
     window.addEventListener("popstate", handlePopState);
@@ -148,7 +160,7 @@ export default function App() {
 
   // Route Guard berdasarkan Role:
   // 1. Super Admin: Laundry Cleanique & Troubleshooting Hub
-  // 2. Marketing: Khusus Dashboard Affiliate & Kode Referral
+  // 2. Marketing: Khusus Dashboard Marketing & Kode Referral
   // 3. Staff: Khusus Operasional Kasir
   // 4. Tenant Owner: Seluruh Operasional Toko miliknya
   useEffect(() => {
@@ -175,7 +187,7 @@ export default function App() {
         setActiveTab("overview");
       }
     } else if (currentUserRole === "marketing") {
-      const allowedMarketingTabs: TabType[] = ["marketing", "referral_codes", "ai"];
+      const allowedMarketingTabs: TabType[] = ["marketing", "registered_tenants", "referral_codes", "ai"];
       if (!allowedMarketingTabs.includes(activeTab)) {
         setActiveTab("marketing");
       }
@@ -278,22 +290,22 @@ export default function App() {
         {
           id: "marketing-dashboard",
           targetId: "sidebar-nav-marketing",
-          title: "Dashboard Affiliate & Saldo",
+          title: "Dashboard Marketing & Insentif",
           badge: "Langkah 1 dari 4",
-          description: "Pantau performa referral Anda: total outlet terdaftar, akumulasi komisi, dan status pencairan saldo mitra.",
+          description: "Pantau performa referral Anda: total outlet terdaftar, akumulasi insentif, dan status pencairan tim marketing.",
           tips: ["Data komisi diperbarui otomatis secara real-time saat outlet aktif", "Riwayat transfer komisi dapat dicek langsung di halaman ini"],
           preferredPlacement: "right",
           actionRequiredTab: "marketing",
         },
         {
           id: "referral-nav",
-          targetId: "sidebar-nav-referral_codes",
-          title: "Kode Referral & Link Promosi",
+          targetId: "sidebar-nav-registered_tenants",
+          title: "Laundry Terdaftar",
           badge: "Langkah 2 dari 4",
-          description: "Akses dan salin kode kupon referral unik Anda untuk dibagikan ke calon pemilik laundry saat mereka mendaftar untuk klaim komisi.",
+          description: "Pantau daftar outlet laundry yang mendaftar menggunakan kode referral Anda beserta status masa uji coba dan langganannya.",
           tips: ["Setiap pendaftaran baru dengan kode Anda akan otomatis tercatat ke akun Anda"],
           preferredPlacement: "right",
-          actionRequiredTab: "referral_codes",
+          actionRequiredTab: "registered_tenants",
         },
         {
           id: "ai-assistant",
@@ -308,7 +320,7 @@ export default function App() {
           targetId: "sidebar-btn-tutorial",
           title: "Pusat Panduan & Tutorial",
           badge: "Langkah 4 dari 4",
-          description: "Klik menu Panduan kapan saja untuk memutar ulang tur pengenalan atau melihat materi panduan mitra marketing.",
+          description: "Klik menu Panduan kapan saja untuk memutar ulang tur pengenalan atau melihat materi panduan tim marketing IndoTech.",
           preferredPlacement: "right",
         },
       ];
@@ -406,9 +418,9 @@ export default function App() {
       {
         id: "tenants-nav",
         targetId: "sidebar-nav-tenants",
-        title: "Manajemen Mitra Tenant",
+        title: "Manajemen Tenant Outlet",
         badge: "Langkah 1 dari 4",
-        description: "Akses master data seluruh mitra laundry: status langganan, masa aktif paket, dan monitoring outlet.",
+        description: "Akses master data seluruh outlet laundry: status langganan, masa aktif paket, dan monitoring cabang.",
         preferredPlacement: "right",
       },
       {
@@ -416,7 +428,7 @@ export default function App() {
         targetId: "sidebar-nav-invoices",
         title: "Paket Langganan & Billing",
         badge: "Langkah 2 dari 4",
-        description: "Kelola master paket langganan, harga referral affiliate, dan verifikasi bukti bayar langganan mitra.",
+        description: "Kelola master paket langganan, kode referral, dan verifikasi bukti bayar langganan outlet.",
         preferredPlacement: "right",
       },
       {
@@ -424,7 +436,7 @@ export default function App() {
         targetId: "tour-ai-widget",
         title: "Cleanique AI Assistant",
         badge: "Langkah 3 dari 4",
-        description: "Asisten AI untuk troubleshooting sistem, navigasi cepat menu platform, serta analisis perkembangan outlet mitra secara real-time.",
+        description: "Asisten AI untuk troubleshooting sistem, navigasi cepat menu platform, serta analisis perkembangan outlet secara real-time.",
         tips: ["Tersedia bantuan teknis dan panduan operasional multi-cabang"],
         preferredPlacement: "top",
       },
@@ -796,11 +808,25 @@ export default function App() {
               )}
 
               {activeTab === "referral_codes" && (
-                <ReferralCodesTab currentUser={currentUser || undefined} />
+                <ReferralCodesTab
+                  currentUser={currentUser || undefined}
+                  onNavigateToMarketing={() => {
+                    setActiveTab("marketing" as TabType);
+                    setMarketingAutoCreate(true);
+                  }}
+                />
+              )}
+
+              {activeTab === "registered_tenants" && (
+                <RegisteredTenantsTab currentUser={currentUser || undefined} />
               )}
 
               {activeTab === "marketing" && (
-                <MarketingTab currentUser={currentUser || undefined} />
+                <MarketingTab
+                  currentUser={currentUser || undefined}
+                  autoOpenCreate={marketingAutoCreate}
+                  onCreated={() => setMarketingAutoCreate(false)}
+                />
               )}
 
               {activeTab === "subscription" && (

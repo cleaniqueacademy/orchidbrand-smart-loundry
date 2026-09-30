@@ -38,14 +38,19 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   onOpenUserModal,
   setActiveTab,
 }) => {
-  // Sort tenants by total omset descending and apply limit break of top 5 for dashboard
-  const sortedTenants = [...tenants].sort((a, b) => (b.totalOmset || 0) - (a.totalOmset || 0));
+  // Sort tenants by subscription urgency for platform monitoring
+  const sortedTenants = [...tenants].sort((a, b) => {
+    const timeA = a.subscriptionUntil ? new Date(a.subscriptionUntil).getTime() : Infinity;
+    const timeB = b.subscriptionUntil ? new Date(b.subscriptionUntil).getTime() : Infinity;
+    return timeA - timeB;
+  });
   const topTenants = sortedTenants.slice(0, 5);
 
   // User role counts
   const ownerCount = users.filter((u) => u.role === "tenant_owner").length;
   const staffCount = users.filter((u) => u.role === "staff").length;
   const adminCount = users.filter((u) => u.role === "superadmin").length;
+  const marketingCount = users.filter((u) => u.role === "marketing").length;
 
   const now = new Date();
   const activeTenantsCount = tenants.filter((t) => {
@@ -159,15 +164,15 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
         </div>
       </div>
 
-      {/* Performa Cabang Table */}
+      {/* Status Cabang & Lisensi Table */}
       <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
         <div className="px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-sky-50/40 via-blue-50/20 to-transparent flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-zinc-900 text-sm">
-              Performa Cabang
+              Status Cabang & Lisensi
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Kontribusi omset dan volume pesanan masing-masing cabang
+              Status operasional, paket, dan masa aktif langganan platform cabang toko
             </p>
           </div>
           <button
@@ -184,10 +189,9 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             <thead className="bg-zinc-50/70 border-b border-zinc-100 text-[11px] font-medium text-zinc-500">
               <tr>
                 <th className="py-2.5 px-5 font-medium">Cabang</th>
-                <th className="py-2.5 px-5 font-medium">Pemilik</th>
-                <th className="py-2.5 px-5 text-center font-medium">Total Pesanan</th>
-                <th className="py-2.5 px-5 text-right font-medium">Total Omset</th>
-                <th className="py-2.5 px-5 text-center font-medium">Status Langganan</th>
+                <th className="py-2.5 px-5 font-medium">Pemilik & Kontak</th>
+                <th className="py-2.5 px-5 text-center font-medium">Paket Lisensi</th>
+                <th className="py-2.5 px-5 text-center font-medium">Status Lisensi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -216,27 +220,49 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                       <div className="font-medium text-zinc-700">{t.owner?.name || "Budi Santoso"}</div>
                       <div className="text-[11px] text-zinc-400 font-mono">{t.phone}</div>
                     </td>
-                    <td className="py-3 px-5 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-900 border border-sky-200/80">
-                        {t.totalOrders || 0} Order
-                      </span>
-                    </td>
-                    <td className="py-3 px-5 text-right font-bold text-emerald-700 text-xs whitespace-nowrap">
-                      Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
+                    <td className="py-3 px-5 text-center whitespace-nowrap">
+                      <div className="text-xs font-semibold text-zinc-800">
+                        {t.referralCodeId || t.source === "referral" ? "Referral" : "Reguler"}
+                      </div>
+                      <div className="text-[10.5px] text-zinc-400 font-mono mt-0.5">
+                        {t.referralCodeId || t.source === "referral" ? "Rp 55.000/bln" : "Rp 60.000/bln"}
+                      </div>
                     </td>
                     <td className="py-3 px-5 text-center min-w-[130px] whitespace-nowrap">
                       {isInactive || isExpired ? (
-                        <span className="inline-flex items-center text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          {isInactive ? "Nonaktif" : "Kedaluwarsa"}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            {isInactive ? "Nonaktif" : "Kedaluwarsa"}
+                          </span>
+                          <span className="text-[10px] text-rose-500/80 font-mono mt-0.5">
+                            {t.subscriptionUntil
+                              ? `Habis ${new Date(t.subscriptionUntil).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                              : "Masa aktif habis"}
+                          </span>
+                        </div>
                       ) : isExpiringSoon ? (
-                        <span className="inline-flex items-center text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          Kritis ({daysLeft}h)
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            Kritis ({daysLeft}h lagi)
+                          </span>
+                          <span className="text-[10px] text-amber-700/80 font-mono mt-0.5">
+                            s.d {new Date(t.subscriptionUntil!).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        </div>
                       ) : (
-                        <span className="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                          Aktif
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Aktif
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                            {t.subscriptionUntil
+                              ? `s.d ${new Date(t.subscriptionUntil).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                              : "Permanen"}
+                          </span>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -469,7 +495,11 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             </div>
 
             <div className="p-4 space-y-2.5">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-violet-200/80 hover:bg-violet-50/20 transition">
+              <div
+                onClick={() => setActiveTab("users")}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-violet-200/80 hover:bg-violet-50/20 transition cursor-pointer"
+                title="Lihat seluruh Super Admin"
+              >
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-700 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
                     SA
@@ -482,7 +512,11 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                 <span className="text-xs font-bold text-violet-900 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-md font-mono">{adminCount} Akun</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-sky-200/80 hover:bg-sky-50/20 transition">
+              <div
+                onClick={() => setActiveTab("users")}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-sky-200/80 hover:bg-sky-50/20 transition cursor-pointer"
+                title="Lihat seluruh Tenant Owner"
+              >
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
                     TO
@@ -495,7 +529,11 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                 <span className="text-xs font-bold text-sky-900 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md font-mono">{ownerCount} Akun</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-emerald-200/80 hover:bg-emerald-50/20 transition">
+              <div
+                onClick={() => setActiveTab("users")}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-emerald-200/80 hover:bg-emerald-50/20 transition cursor-pointer"
+                title="Lihat seluruh Kasir & Staff"
+              >
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
                     ST
@@ -506,6 +544,23 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                   </div>
                 </div>
                 <span className="text-xs font-bold text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">{staffCount} Akun</span>
+              </div>
+
+              <div
+                onClick={() => setActiveTab("users")}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 border border-zinc-100 hover:border-amber-200/80 hover:bg-amber-50/20 transition cursor-pointer"
+                title="Lihat seluruh Tim Marketing IndoTech"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                    MK
+                  </div>
+                  <div>
+                    <div className="font-semibold text-zinc-900 text-xs">Tim Marketing</div>
+                    <div className="text-[10px] text-zinc-400">Divisi Pemasaran IndoTech</div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-mono">{marketingCount} Akun</span>
               </div>
             </div>
           </div>

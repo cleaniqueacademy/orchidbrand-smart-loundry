@@ -51,6 +51,28 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
     };
   }
 
+  // Tim Marketing IndoTech (tidak memerlukan subscription outlet, status ditentukan oleh user.status)
+  if (user.role === "marketing") {
+    const isInactive = user.status === "inactive";
+    return {
+      isActive: !isInactive,
+      isExpired: false,
+      isInactiveStatus: isInactive,
+      daysRemaining: 99999,
+      formattedExpiry: "Tim Internal",
+      statusBadge: {
+        label: isInactive ? "Nonaktif" : "Aktif",
+        className: isInactive
+          ? "bg-rose-50 text-rose-800 border-rose-200"
+          : "bg-amber-50 text-amber-800 border-amber-200",
+        dotColor: isInactive ? "bg-rose-500" : "bg-amber-500",
+        description: isInactive
+          ? "Akun tim marketing dinonaktifkan"
+          : "Akun Tim Marketing IndoTech aktif",
+      },
+    };
+  }
+
   const isInactiveStatus = user.status === "inactive";
   let isExpired = user.isExpired === true || user.tier === "free";
   let daysRemaining = 0;

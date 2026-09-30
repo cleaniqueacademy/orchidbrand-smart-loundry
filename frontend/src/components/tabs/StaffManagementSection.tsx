@@ -19,6 +19,7 @@ import { User } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { authHeaders } from "../../utils/api";
 import { ModalWrapper } from "../common/ModalWrapper";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 
 interface StaffManagementSectionProps {
   tenantId: string;
@@ -273,12 +274,17 @@ export const StaffManagementSection: React.FC<StaffManagementSectionProps> = ({
           ))}
         </div>
       ) : staffList.length === 0 ? (
-        <div className="py-10 text-center bg-zinc-50/50 rounded-xl border border-dashed border-zinc-200">
-          <Users className="w-9 h-9 text-zinc-300 mx-auto mb-2 opacity-80" />
-          <p className="text-xs font-bold text-zinc-700">Belum Ada Akun Kasir Tambahan</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">
-            Klik tombol "Tambah Kasir" di atas untuk membuatkan akun khusus bagi karyawan/staf kasir Anda.
-          </p>
+        <div className="py-2">
+          <EmptyStateWalkthrough
+            icon={<Users className="w-5 h-5 text-zinc-400" />}
+            title="Belum Ada Akun Staf Kasir"
+            description="Tambahkan akun khusus bagi karyawan atau kasir Anda agar mereka dapat login dengan hak akses terisolasi."
+            tips={[
+              "Staf kasir hanya memiliki akses ke meja kasir POS, order cucian, dan buku kas shift mereka sendiri.",
+              "Owner dapat mengatur status aktif/nonaktif atau mereset kata sandi staf kapan saja.",
+              "Seluruh aktivitas transaksi dan buka/tutup shift kasir tercatat dalam audit log sistem.",
+            ]}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

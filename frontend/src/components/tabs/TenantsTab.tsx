@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Building2, Store, DollarSign, ShoppingBag, KeyRound, CreditCard, Pencil, Sparkles, Tag, Clock } from "lucide-react";
+import { Plus, Building2, Store, KeyRound, CreditCard, Pencil, Sparkles, Clock, CheckCircle2 } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { ResetPasswordModal } from "../modals/ResetPasswordModal";
@@ -36,8 +36,18 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
   const [tenantToEdit, setTenantToEdit] = useState<Tenant | null>(null);
   const [tenantToExtend, setTenantToExtend] = useState<Tenant | null>(null);
 
-  const totalOmsetAll = tenants.reduce((sum, t) => sum + (t.totalOmset || 0), 0);
-  const totalOrdersAll = tenants.reduce((sum, t) => sum + (t.totalOrders || 0), 0);
+  const activeTenantsCount = tenants.filter((t) => {
+    const isInactive = t.status === "inactive";
+    const isExpired = t.subscriptionUntil && new Date(t.subscriptionUntil).getTime() < Date.now();
+    return !isInactive && !isExpired;
+  }).length;
+
+  const expiringOrExpiredCount = tenants.filter((t) => {
+    if (t.status === "inactive") return true;
+    if (!t.subscriptionUntil) return false;
+    const diff = new Date(t.subscriptionUntil).getTime() - Date.now();
+    return diff <= 7 * 86400000;
+  }).length;
 
   const filteredTenants = tenants.filter((t) => {
     const q = searchQuery.toLowerCase();
@@ -143,55 +153,84 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         );
       },
     },
-    // 4. Status & Tarif
+    // 4. Paket Lisensi Platform
     {
-      id: "status",
-      header: "Status / Tarif",
+      id: "package",
+      header: "Paket Lisensi",
       align: "center",
-      className: "min-w-[160px] whitespace-nowrap",
+      className: "min-w-[130px] whitespace-nowrap",
       cell: (t) => {
-        const isActive = (t.status || "active") === "active";
-        const dateStr = t.subscriptionUntil || "2026-12-31";
-        const diffDays = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
-        const isExpired = diffDays < 0;
         const hasReferral = Boolean(t.referralCodeId || t.source === "referral");
         return (
-          <div className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
-            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
-              isActive ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"
-            }`}>
-              {isActive ? "Aktif" : "Nonaktif"}
+          <div className="text-center text-xs">
+            <span className="font-semibold text-zinc-800">
+              {hasReferral ? "Referral" : "Reguler"}
             </span>
-            <span className={`text-[9.5px] font-semibold shrink-0 whitespace-nowrap ${isExpired ? "text-rose-500" : diffDays <= 7 ? "text-amber-500" : "text-zinc-400"}`}>
-              {isExpired ? "Expired" : `${diffDays}h lagi`}
-            </span>
-            {hasReferral ? (
-              <span className="whitespace-nowrap px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0" title="Terdaftar dengan kode referral: Tarif Rp 55.000/bln">
-                Ref (55k)
-              </span>
-            ) : (
-              <span className="whitespace-nowrap px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-zinc-50 text-zinc-500 border border-zinc-200 shrink-0" title="Tarif standar: Rp 60.000/bln">
-                Reg (60k)
-              </span>
-            )}
+            <div className="text-[10.5px] text-zinc-400 font-mono mt-0.5">
+              {hasReferral ? "Rp 55.000/bln" : "Rp 60.000/bln"}
+            </div>
           </div>
         );
       },
     },
-    // 5. Omset + Pesanan (digabung)
+    // 5. Status & Masa Aktif (Clean indicator without heavy badge clutter)
     {
-      id: "stats",
-      header: "Omset / Order",
-      align: "right",
-      className: "w-[110px]",
-      cell: (t) => (
-        <div className="text-right">
-          <div className="font-bold text-emerald-700 text-xs whitespace-nowrap">
-            Rp {(t.totalOmset || 0).toLocaleString("id-ID")}
+      id: "status",
+      header: "Status Lisensi",
+      align: "center",
+      className: "min-w-[140px] whitespace-nowrap",
+      cell: (t) => {
+        const isActive = (t.status || "active") === "active";
+        const dateStr = t.subscriptionUntil || "2026-12-31";
+        const expDate = new Date(dateStr);
+        const diffDays = Math.ceil((expDate.getTime() - Date.now()) / 86400000);
+        const isExpired = diffDays < 0;
+        const isExpiringSoon = diffDays <= 7 && diffDays >= 0;
+
+        if (!isActive || isExpired) {
+          return (
+            <div className="flex flex-col items-center">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                {!isActive ? "Nonaktif" : "Kedaluwarsa"}
+              </span>
+              <span className="text-[10px] text-rose-500/80 font-mono mt-0.5">
+                {t.subscriptionUntil
+                  ? `Habis ${expDate.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                  : "Masa aktif habis"}
+              </span>
+            </div>
+          );
+        }
+
+        if (isExpiringSoon) {
+          return (
+            <div className="flex flex-col items-center">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                Kritis ({diffDays}h lagi)
+              </span>
+              <span className="text-[10px] text-amber-700/80 font-mono mt-0.5">
+                s.d {expDate.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex flex-col items-center">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Aktif
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono mt-0.5">
+              {t.subscriptionUntil
+                ? `s.d ${expDate.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                : "Permanen"}
+            </span>
           </div>
-          <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">{t.totalOrders || 0} pesanan</div>
-        </div>
-      ),
+        );
+      },
     },
     // 6. Actions (Perpanjang & Edit)
     {
@@ -228,7 +267,7 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Data Cabang</h2>
-          <p className="text-xs text-zinc-500">Daftar dan pantau seluruh cabang laundry.</p>
+          <p className="text-xs text-zinc-500">Daftar cabang outlet mitra, status lisensi, dan masa aktif langganan platform.</p>
         </div>
         <button
           onClick={onOpenTenantModal}
@@ -251,37 +290,37 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
             {tenants.length} <span className="text-xs font-semibold text-blue-700">Cabang</span>
           </div>
           <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
-            {tenants.filter(t => t.status === "active").length} cabang aktif beroperasi
+            {activeTenantsCount} cabang aktif beroperasi
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
           <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-            <span>Total Omset</span>
+            <span>Langganan Aktif</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <DollarSign className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
-            Rp {(totalOmsetAll / 1000000).toFixed(1)}jt
+            {activeTenantsCount} <span className="text-xs font-semibold text-emerald-700">Outlet</span>
           </div>
           <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
-            Semua cabang terdaftar (lunas)
+            Lisensi sistem aktif & berjalan normal
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
-          <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
-            <span>Total Pesanan</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-xs">
-              <ShoppingBag className="w-4 h-4" />
+        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+            <span>Perlu Perpanjangan</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-            {totalOrdersAll} <span className="text-xs font-semibold text-indigo-700">Order</span>
+          <div className="text-xl sm:text-2xl font-bold text-amber-950 mt-2.5 tracking-tight">
+            {expiringOrExpiredCount} <span className="text-xs font-semibold text-amber-700">Outlet</span>
           </div>
-          <div className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
-            Akumulasi transaksi jaringan
+          <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
+            Masa aktif lisensi ≤ 7 hari atau habis
           </div>
         </div>
       </div>

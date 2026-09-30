@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   CheckCircle2,
@@ -10,11 +10,24 @@ import {
   Calendar,
   AlertCircle,
   RefreshCw,
-  ExternalLink,
   ChevronRight,
   ShieldCheck,
+  Package,
+  Wind,
+  Star,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
+
+// Icons per step
+const StepIcons = [
+  <Package className="w-4 h-4" />,
+  <RefreshCw className="w-4 h-4" />,
+  <Wind className="w-4 h-4" />,
+  <Star className="w-4 h-4" />,
+  <CheckCircle2 className="w-4 h-4" />,
+];
 
 interface PublicTrackingPageProps {
   initialInvoiceNo?: string;

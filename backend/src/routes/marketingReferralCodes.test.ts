@@ -6,25 +6,15 @@ import { eq } from "drizzle-orm";
 import marketingRoutes from "./marketing";
 import referralRoutes from "./referralCodes";
 import { signToken } from "../middleware/auth";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("Marketing Users & Referral Codes Requirements", () => {
   const app = new Hono();
   app.route("/api/marketing", marketingRoutes);
   app.route("/api/referral-codes", referralRoutes);
 
-  it("harus memiliki 10 kode referral dan profil marketing terkait", async () => {
-    const requiredCodes = [
-      "UBAI",
-      "ADIT",
-      "BHANGKIT",
-      "RAGIL",
-      "ARIF",
-      "SYAMS",
-      "SALIM",
-      "DONI",
-      "NOVA",
-      "NAUFAL",
-    ];
+  it("harus memiliki 17 kode referral dan profil marketing terkait", async () => {
+    const requiredCodes = MARKETING_SEEDS.map((s) => s.code);
 
     for (const codeStr of requiredCodes) {
       const [foundCode] = await db
@@ -57,16 +47,16 @@ describe("Marketing Users & Referral Codes Requirements", () => {
   });
 
   it("marketing user dapat melihat jumlah tenant dan daftar tenant yang menggunakan kodenya di /api/marketing/me", async () => {
-    // 1. Generate auth token for Adit
-    const [aditUser] = await db
+    const testMkt = MARKETING_SEEDS[0];
+    const [sampleUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, "adit@cleaniquelaundry.com"));
+      .where(eq(users.email, testMkt.email));
 
-    expect(aditUser).toBeDefined();
+    expect(sampleUser).toBeDefined();
 
     const token = await signToken({
-      userId: aditUser.id,
+      userId: sampleUser.id,
       role: "marketing",
       tenantId: null,
     });
@@ -87,20 +77,21 @@ describe("Marketing Users & Referral Codes Requirements", () => {
     expect(typeof meJson.data.totalTenantsCount).toBe("number");
     expect(Array.isArray(meJson.data.tenants)).toBe(true);
 
-    const aditCode = meJson.data.codes.find((c: any) => c.code === "ADIT");
-    expect(aditCode).toBeDefined();
-    expect(typeof aditCode.tenantCount).toBe("number");
-    expect(Array.isArray(aditCode.tenants)).toBe(true);
+    const mktCode = meJson.data.codes.find((c: any) => c.code === testMkt.code);
+    expect(mktCode).toBeDefined();
+    expect(typeof mktCode.tenantCount).toBe("number");
+    expect(Array.isArray(mktCode.tenants)).toBe(true);
   });
 
   it("marketing user dapat mengakses /api/referral-codes/track dan hanya melihat kodenya sendiri", async () => {
-    const [aditUser] = await db
+    const testMkt = MARKETING_SEEDS[0];
+    const [sampleUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, "adit@cleaniquelaundry.com"));
+      .where(eq(users.email, testMkt.email));
 
     const token = await signToken({
-      userId: aditUser.id,
+      userId: sampleUser.id,
       role: "marketing",
       tenantId: null,
     });
@@ -116,45 +107,46 @@ describe("Marketing Users & Referral Codes Requirements", () => {
     expect(trackJson.success).toBe(true);
     expect(Array.isArray(trackJson.data)).toBe(true);
     for (const item of trackJson.data) {
-      expect(item.code).toBe("ADIT");
+      expect(item.code).toBe(testMkt.code);
       expect(typeof item.totalTenants).toBe("number");
       expect(Array.isArray(item.tenants)).toBe(true);
     }
   });
 
   it("ketika tenant menerapkan kode referral, marketing user melihat penambahan tenant di dashboardnya", async () => {
-    // 1. Ambil tenant uji coba dan kode ARIF
+    const testMkt = MARKETING_SEEDS[1];
+    // 1. Ambil tenant uji coba dan kode marketing
     const [tenant] = await db.select().from(tenants).limit(1);
     expect(tenant).toBeDefined();
 
-    const [arifUser] = await db
+    const [mktUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, "arif@cleaniquelaundry.com"));
-    expect(arifUser).toBeDefined();
+      .where(eq(users.email, testMkt.email));
+    expect(mktUser).toBeDefined();
 
-    // 2. Hubungkan tenant ini ke kode ARIF
-    const [arifCode] = await db
+    // 2. Hubungkan tenant ini ke kode marketing
+    const [mktCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "ARIF"));
-    expect(arifCode).toBeDefined();
+      .where(eq(referralCodes.code, testMkt.code));
+    expect(mktCode).toBeDefined();
 
     await db
       .update(tenants)
-      .set({ referralCodeId: arifCode.id, source: "referral" })
+      .set({ referralCodeId: mktCode.id, source: "referral" })
       .where(eq(tenants.id, tenant.id));
 
-    // 3. Login / query me untuk Arif
-    const arifToken = await signToken({
-      userId: arifUser.id,
+    // 3. Login / query me untuk marketing user
+    const mktToken = await signToken({
+      userId: mktUser.id,
       role: "marketing",
       tenantId: null,
     });
 
     const meRes = await app.request("/api/marketing/me", {
       headers: {
-        Authorization: `Bearer ${arifToken}`,
+        Authorization: `Bearer ${mktToken}`,
       },
     });
 
@@ -169,10 +161,10 @@ describe("Marketing Users & Referral Codes Requirements", () => {
     const foundTenant = meJson.data.tenants.find((t: any) => t.id === tenant.id);
     expect(foundTenant).toBeDefined();
     expect(foundTenant.outletName).toBe(tenant.outletName);
-    expect(foundTenant.referralCode).toBe("ARIF");
+    expect(foundTenant.referralCode).toBe(testMkt.code);
 
     // Di dalam codes[0].tenants juga ada
-    const codeObj = meJson.data.codes.find((c: any) => c.code === "ARIF");
+    const codeObj = meJson.data.codes.find((c: any) => c.code === testMkt.code);
     expect(codeObj).toBeDefined();
     expect(codeObj.tenantCount).toBeGreaterThanOrEqual(1);
     expect(codeObj.tenants.some((t: any) => t.id === tenant.id)).toBe(true);

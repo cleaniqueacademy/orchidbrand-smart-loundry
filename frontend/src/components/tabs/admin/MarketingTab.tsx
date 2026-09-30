@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UserCheck,
   Plus,
@@ -17,6 +17,13 @@ import {
   Users,
   ExternalLink,
   X,
+  Copy,
+  Check,
+  Search,
+  Filter,
+  ShieldCheck,
+  Tag,
+  MessageCircle,
 } from "lucide-react";
 import { User, MarketingProfile } from "../../../types";
 import { useMarketing, MarketingReferralCode } from "../../../hooks/useMarketing";
@@ -26,9 +33,11 @@ import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
 
 interface MarketingTabProps {
   currentUser?: User;
+  autoOpenCreate?: boolean;
+  onCreated?: () => void;
 }
 
-export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
+export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpenCreate, onCreated }) => {
   const {
     profiles,
     commissions,
@@ -54,6 +63,12 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
   const [shareCode, setShareCode] = useState<any>(null);
   const [selectedCodeForTenants, setSelectedCodeForTenants] = useState<MarketingReferralCode | null>(null);
 
+  // Marketing self search & filters
+  const [tenantSearch, setTenantSearch] = useState("");
+  const [tenantStatusFilter, setTenantStatusFilter] = useState<string>("all");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
   useEffect(() => {
     if (isSuperadmin) {
       fetchProfiles();
@@ -69,6 +84,14 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
     setIsFormModalOpen(true);
   };
 
+  // Auto-open create modal jika dinavigasi dari halaman lain
+  useEffect(() => {
+    if (autoOpenCreate && isSuperadmin) {
+      setSelectedProfileForEdit(null);
+      setIsFormModalOpen(true);
+    }
+  }, [autoOpenCreate, isSuperadmin]);
+
   const handleOpenEdit = (profile: MarketingProfile) => {
     setSelectedProfileForEdit(profile);
     setIsFormModalOpen(true);
@@ -78,9 +101,59 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
     if (selectedProfileForEdit) {
       return await updateProfile(selectedProfileForEdit.id, data);
     } else {
-      return await createProfile(data);
+      const res = await createProfile(data);
+      if (res?.success) {
+        onCreated?.();
+      }
+      return res;
     }
   };
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2500);
+    } catch {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2500);
+    }
+  };
+
+  const handleCopyLink = async (code: string) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
+    const shareUrl = `${origin}/register?ref=${code}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(code);
+      setTimeout(() => setCopiedLink(null), 2500);
+    } catch {
+      setCopiedLink(code);
+      setTimeout(() => setCopiedLink(null), 2500);
+    }
+  };
+
+  const handleDirectWhatsAppShare = (code: string) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
+    const shareUrl = `${origin}/register?ref=${code}`;
+    const text = `Halo! Gunakan kode referral resmi tim marketing "${code}" saat mendaftar di Laundry Cleanique untuk mendapatkan potongan langganan Rp 5.000/bulan dan GRATIS uji coba 7 hari!\n\nDaftar sekarang di:\n${shareUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  // Filtered tenants for marketing user
+  const filteredTenants = (meData?.tenants || []).filter((t) => {
+    if (tenantStatusFilter === "active" && t.status !== "active") return false;
+    if (tenantStatusFilter === "trial" && !t.isTrial) return false;
+    if (tenantStatusFilter === "subscribed" && (t.isTrial || t.status !== "active")) return false;
+    const q = tenantSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      t.outletName.toLowerCase().includes(q) ||
+      (t.city && t.city.toLowerCase().includes(q)) ||
+      (t.phone && t.phone.toLowerCase().includes(q)) ||
+      (t.referralCode && t.referralCode.toLowerCase().includes(q))
+    );
+  });
 
   // Calculations for Superadmin
   const totalEarnedAll = profiles.reduce((acc, p) => acc + (p.totalEarned || 0), 0);
@@ -89,27 +162,61 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
-            {isSuperadmin ? "Mitra Affiliate & Marketing" : "Dashboard Kemitraan Affiliate"}
-          </h2>
-          <p className="text-xs text-zinc-500">
-            {isSuperadmin
-              ? "Kelola akun marketing, atur komisi, dan proses pencairan reward."
-              : "Pantau performa kode referral, rincian komisi, dan rekening pencairan."}
-          </p>
-        </div>
-        {isSuperadmin && (
+      {/* Superadmin Header */}
+      {isSuperadmin && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
+              Tim Marketing IndoTech
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Kelola akun marketing internal, atur insentif performa, dan proses pencairan dana.
+            </p>
+          </div>
           <button
             onClick={handleOpenCreate}
             className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            Tambah Mitra
+            Tambah Anggota
           </button>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Marketing Dedicated Hero Banner */}
+      {isMarketing && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-5 sm:p-6 text-white shadow-sm border border-blue-800/40">
+          <div className="relative z-10 space-y-1.5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-blue-300">
+              Divisi Pemasaran IndoTech · Produk Bersama Cleanique
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+              Halo, {currentUser?.name || meData?.profile?.userName || "Tim Marketing"}!
+            </h1>
+            <p className="text-xs md:text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+              Pantau performa kode referral resmi Anda, verifikasi outlet yang mendaftar, dan akumulasi insentif performa pemasaran secara transparan.
+            </p>
+          </div>
+
+          {/* Quick Info Box */}
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
+            <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+              <div className="font-semibold text-white">Diskon Outlet Baru</div>
+              <div className="text-[11px] text-blue-200/70 mt-0.5">Potongan Rp 5.000/bln + Free Trial 7 Hari</div>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+              <div className="font-semibold text-white">Insentif Tim Marketing</div>
+              <div className="text-[11px] text-emerald-200/70 mt-0.5">Rp 5.000/bln per outlet aktif berlangganan</div>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+              <div className="font-semibold text-white">Pencairan Insentif</div>
+              <div className="text-[11px] text-amber-200/70 mt-0.5">Ditransfer ke rekening bank setelah disetujui</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Superadmin View */}
       {isSuperadmin && (
@@ -118,13 +225,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
               <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
-                <span>Total Mitra Marketing</span>
+                <span>Total Tim Marketing</span>
                 <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                   <Briefcase className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-zinc-900 mt-2.5 tracking-tight">
-                {profiles.length} <span className="text-xs font-semibold text-blue-700">Mitra</span>
+                {profiles.length} <span className="text-xs font-semibold text-blue-700">Anggota</span>
               </div>
               <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
                 Akun promosi aktif
@@ -133,7 +240,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
 
             <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
               <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-                <span>Total Komisi Ditransfer</span>
+                <span>Total Insentif Ditransfer</span>
                 <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                   <DollarSign className="w-4 h-4" />
                 </div>
@@ -142,7 +249,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 Rp {totalWithdrawnAll.toLocaleString("id-ID")}
               </div>
               <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
-                Pencairan reward terbayar
+                Pencairan insentif terbayar
               </div>
             </div>
 
@@ -154,7 +261,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
-                {pendingCommissionsCount} <span className="text-xs font-semibold text-amber-700">Komisi</span>
+                {pendingCommissionsCount} <span className="text-xs font-semibold text-amber-700">Insentif</span>
               </div>
               <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
                 Permohonan pencairan dana
@@ -168,21 +275,21 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
               onClick={() => setActiveSubTab("profiles")}
               className={`pb-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
                 activeSubTab === "profiles"
-                  ? "border-indigo-600 text-indigo-600"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              Daftar Mitra Marketing ({profiles.length})
+              Daftar Tim Marketing IndoTech ({profiles.length})
             </button>
             <button
               onClick={() => setActiveSubTab("payouts")}
               className={`pb-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
                 activeSubTab === "payouts"
-                  ? "border-indigo-600 text-indigo-600"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              Pencairan & Riwayat Komisi ({commissions.length})
+              Pencairan & Riwayat Insentif ({commissions.length})
             </button>
           </div>
 
@@ -193,9 +300,9 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10.5px]">
-                      <th className="py-3.5 px-4">Nama Mitra & Kontak</th>
+                      <th className="py-3.5 px-4">Nama Anggota & Kontak</th>
                       <th className="py-3.5 px-4">Rekening Pencairan</th>
-                      <th className="py-3.5 px-4">Komisi Default</th>
+                      <th className="py-3.5 px-4">Insentif per Perpanjangan</th>
                       <th className="py-3.5 px-4">Total Penghasilan</th>
                       <th className="py-3.5 px-4">Sudah Dicairkan</th>
                       <th className="py-3.5 px-4 text-right">Aksi</th>
@@ -205,13 +312,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                     {loading ? (
                       <tr>
                         <td colSpan={6} className="py-12 text-center text-slate-400">
-                          Memuat data mitra marketing...
+                          Memuat data tim marketing...
                         </td>
                       </tr>
                     ) : profiles.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-12 text-center text-slate-400">
-                          Belum ada mitra marketing yang didaftarkan
+                          Belum ada anggota tim marketing yang didaftarkan
                         </td>
                       </tr>
                     ) : (
@@ -219,7 +326,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                         <tr key={p.id} className="hover:bg-slate-50/50 transition">
                           {/* Nama & Kontak */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-800 text-xs">{p.userName || "Mitra"}</div>
+                            <div className="font-bold text-slate-800 text-xs">{p.userName || "Marketing"}</div>
                             <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
                               <Mail className="w-3 h-3 text-slate-400" /> {p.userEmail}
                             </div>
@@ -239,9 +346,16 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                             </div>
                           </td>
 
-                          {/* Komisi % */}
-                          <td className="py-3.5 px-4 font-bold text-indigo-600">
-                            {p.commissionRateDefault}%
+                          {/* Insentif Default */}
+                          <td className="py-3.5 px-4 font-bold text-blue-600">
+                            <div>
+                              {p.commissionRateDefault && p.commissionRateDefault > 100
+                                ? `Rp ${Number(p.commissionRateDefault).toLocaleString("id-ID")}`
+                                : p.commissionRateDefault && p.commissionRateDefault > 0
+                                ? `${p.commissionRateDefault}%`
+                                : "Rp 5.000"}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-normal">per perpanjangan</span>
                           </td>
 
                           {/* Total Earned */}
@@ -259,7 +373,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                             <button
                               onClick={() => handleOpenEdit(p)}
                               className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"
-                              title="Ubah Profil Mitra"
+                              title="Ubah Profil Anggota"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -284,7 +398,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
         </>
       )}
 
-      {/* Marketing Affiliate Self Dashboard */}
+      {/* Marketing Self Dashboard */}
       {isMarketing && (
         <>
           {/* Summary Cards */}
@@ -300,28 +414,28 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 {meData?.totalTenantsCount ?? 0} <span className="text-xs font-semibold text-blue-700">Outlet</span>
               </div>
               <div className="text-[11px] text-blue-700 font-medium mt-1 truncate">
-                Memakai kode referral Anda
+                Mendaftar dengan kode Anda
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-indigo-50/90 via-violet-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
               <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
-                <span>Total Komisi Terakumulasi</span>
+                <span>Total Insentif Terakumulasi</span>
                 <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <DollarSign className="w-4 h-4" />
+                  <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-indigo-950 mt-2.5 tracking-tight">
                 Rp {(meData?.commissionsSummary?.totalEarned || 0).toLocaleString("id-ID")}
               </div>
               <div className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
-                Akumulasi reward afiliasi
+                Akumulasi insentif performa
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
               <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-                <span>Sudah Ditransfer</span>
+                <span>Insentif Sudah Ditransfer</span>
                 <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
@@ -330,13 +444,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 Rp {(meData?.commissionsSummary?.totalWithdrawn || 0).toLocaleString("id-ID")}
               </div>
               <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
-                Pencairan komisi selesai
+                Telah masuk rekening bank
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
               <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
-                <span>Saldo Menunggu</span>
+                <span>Menunggu Pencairan</span>
                 <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
                   <Clock className="w-4 h-4" />
                 </div>
@@ -345,31 +459,26 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                 Rp {(meData?.commissionsSummary?.pendingCommission || 0).toLocaleString("id-ID")}
               </div>
               <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
-                Menunggu verifikasi pencairan
+                Menunggu verifikasi admin
               </div>
             </div>
           </div>
 
-          {/* Rekening Tujuan Box */}
+          {/* Rekening Penerima Insentif Box */}
           {meData?.profile && (
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-indigo-300" />
+            <div className="p-5 rounded-2xl bg-slate-900 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-800">
+              <div>
+                <span className="text-xs text-slate-400 font-medium">Rekening Bank Penerima Insentif</span>
+                <div className="text-base font-bold mt-0.5 tracking-wide text-white">
+                  {meData.profile.bankName} — {meData.profile.bankAccountNumber}
                 </div>
-                <div>
-                  <span className="text-xs text-indigo-200">Rekening Tujuan Pencairan Komisi</span>
-                  <div className="text-sm font-bold mt-0.5">
-                    {meData.profile.bankName} â€” {meData.profile.bankAccountNumber}
-                  </div>
-                  <div className="text-xs text-indigo-200">a.n {meData.profile.bankAccountName}</div>
-                </div>
+                <div className="text-xs text-slate-400 mt-0.5">Atas Nama: {meData.profile.bankAccountName}</div>
               </div>
               <button
                 onClick={() => handleOpenEdit(meData.profile!)}
-                className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-xs transition cursor-pointer self-start sm:self-auto"
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition cursor-pointer self-start sm:self-auto"
               >
-                Ubah Rekening
+                Ubah Rekening Bank
               </button>
             </div>
           )}
@@ -378,65 +487,108 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-800">Kode Referral Aktif Anda</h3>
+                <h3 className="text-sm font-bold text-slate-800">Kode Referral Resmi Anda</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Bagikan kode referral Anda ke pemilik laundry untuk mendapatkan komisi tetap per bulan.
+                  Bagikan kode referral resmi Anda ke pemilik laundry untuk memberikan diskon Rp 5.000/bln dan mendapatkan insentif bulanan.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {meData?.codes && meData.codes.length > 0 ? (
                 meData.codes.map((c) => (
                   <div
                     key={c.id}
-                    className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex flex-col justify-between gap-3"
+                    className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/60 via-indigo-50/30 to-white border border-blue-200/70 shadow-xs flex flex-col justify-between gap-4"
                   >
                     <div>
+                      {/* Top Bar: Code & Outlet Count */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-bold text-blue-700 text-sm tracking-wide bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 shadow-2xs">
-                          {c.code}
-                        </span>
-                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md text-[11px]">
-                          <Users className="w-3 h-3" />
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-blue-900 text-base tracking-widest bg-white px-3 py-1 rounded-xl border border-blue-300 shadow-xs">
+                            {c.code}
+                          </span>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Resmi IndoTech
+                          </span>
+                        </div>
+                        <span className="font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-lg text-xs">
                           {c.tenantCount ?? c.currentUsage ?? 0} Outlet
                         </span>
                       </div>
-                      <p className="text-xs text-slate-700 font-medium mt-2">{c.name}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-500">
-                        <span>Diskon: {c.discountType === "percent" ? `${c.discountValue}%` : `Rp ${(c.discountValue || 0).toLocaleString("id-ID")}`}</span>
-                        <span>â€¢</span>
-                        <span>Komisi: {c.commissionType === "percent" ? `${c.commissionValue}%` : `Rp ${(c.commissionValue || 0).toLocaleString("id-ID")}`}</span>
-                        <span>â€¢</span>
-                        <span>Pemakaian: {c.currentUsage || 0}x</span>
+
+                      <p className="text-xs font-semibold text-slate-800 mt-3">{c.name}</p>
+
+                      {/* Benefit Info (clean text, no badge clutter) */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-600">
+                        <span>Diskon Outlet: <strong className="text-blue-700">Rp 5.000/bln</strong></span>
+                        <span>Insentif: <strong className="text-emerald-700">Rp 5.000/bln</strong></span>
+                        <span>Total Pemakaian: <strong className="text-slate-900">{c.currentUsage || 0}x</strong></span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-100/60">
+                    {/* Action buttons */}
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-blue-100">
+                      {/* Copy Code */}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(c.code)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                          copiedCode === c.code
+                            ? "bg-emerald-600 text-white shadow-2xs"
+                            : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs"
+                        }`}
+                      >
+                        {copiedCode === c.code ? "Tersalin!" : "Salin Kode"}
+                      </button>
+
+                      {/* Copy Link */}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(c.code)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                          copiedLink === c.code
+                            ? "bg-emerald-600 text-white shadow-2xs"
+                            : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs"
+                        }`}
+                      >
+                        {copiedLink === c.code ? "Link Tersalin!" : "Salin Link"}
+                      </button>
+
+                      {/* WhatsApp Share */}
+                      <button
+                        type="button"
+                        onClick={() => handleDirectWhatsAppShare(c.code)}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition cursor-pointer"
+                        title="Bagikan langsung ke WhatsApp"
+                      >
+                        WhatsApp
+                      </button>
+
+                      {/* Detail & QR */}
+                      <button
+                        type="button"
+                        onClick={() => setShareCode(c)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition cursor-pointer"
+                      >
+                        QR &amp; Detail
+                      </button>
+
                       {(c.tenantCount ?? 0) > 0 && (
                         <button
                           type="button"
                           onClick={() => setSelectedCodeForTenants(c)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold text-xs transition cursor-pointer"
                         >
-                          <Users className="w-3.5 h-3.5 text-blue-600" />
                           Lihat Outlet ({c.tenantCount})
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setShareCode(c)}
-                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer shrink-0"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        Bagikan
-                      </button>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="col-span-2 py-6 text-center text-xs text-slate-400">
-                  Anda belum memiliki kode referral khusus. Hubungi Super Admin untuk dibuatkan kode.
+                <div className="col-span-2 py-8 text-center text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  Anda belum memiliki kode referral khusus. Hubungi Super Admin Cleanique untuk dibuatkan kode referral resmi.
                 </div>
               )}
             </div>
@@ -444,25 +596,62 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
 
           {/* Dedicated Section: Daftar Outlet yang Menggunakan Kode Referral Anda */}
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Store className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-800">
                   Daftar Outlet yang Menggunakan Kode Referral Anda
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Total {meData?.totalTenantsCount || 0} outlet aktif yang terdaftar menggunakan kode referral milik Anda
+                  Total {meData?.totalTenantsCount || 0} outlet aktif yang mendaftar menggunakan kode referral Anda
                 </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={tenantSearch}
+                    onChange={(e) => setTenantSearch(e.target.value)}
+                    placeholder="Cari nama outlet, kota..."
+                    className="w-full sm:w-48 bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  {tenantSearch && (
+                    <button
+                      onClick={() => setTenantSearch("")}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={tenantStatusFilter}
+                  onChange={(e) => setTenantStatusFilter(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="trial">Trial 7 Hari</option>
+                  <option value="subscribed">Berlangganan</option>
+                </select>
               </div>
             </div>
 
-            {(!meData?.tenants || meData.tenants.length === 0) ? (
-              <div className="py-10 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-600">Belum ada outlet yang mendaftar dengan kode Anda</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Bagikan kode referral Anda ke pemilik laundry untuk mulai mengumpulkan komisi bulanan.
+            {filteredTenants.length === 0 ? (
+              <div className="py-10 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200">
+                <h4 className="text-xs font-bold text-slate-700">Belum Ada Outlet Terdaftar</h4>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+                  {tenantSearch || tenantStatusFilter !== "all"
+                    ? "Tidak ada data outlet yang sesuai dengan filter pencarian Anda."
+                    : "Belum ada cabang laundry yang mendaftar menggunakan kode referral Anda."}
                 </p>
+                <div className="mt-4 p-3 bg-white border border-slate-200/80 rounded-xl max-w-lg mx-auto text-left text-[11px] text-slate-600">
+                  <span className="font-semibold text-blue-900 block mb-1">Tips Pemasaran Tim IndoTech:</span>
+                  Bagikan kode referral resmi atau tautan pendaftaran Anda ke pemilik laundry. Setiap pendaftar baru berhak atas potongan langganan Rp 5.000/bulan dan uji coba gratis selama 7 hari.
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-slate-100">
@@ -478,7 +667,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {meData.tenants.map((t) => (
+                    {filteredTenants.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/60 transition">
                         <td className="py-3 px-4">
                           <div className="font-bold text-slate-800">{t.outletName}</div>
@@ -493,11 +682,9 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                               href={`https://wa.me/${t.phone.replace(/^0/, "62").replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 font-medium"
+                              className="text-emerald-600 hover:text-emerald-700 font-medium"
                             >
-                              <Phone className="w-3 h-3" />
                               {t.phone}
-                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                             </a>
                           ) : (
                             <span className="text-slate-400">-</span>
@@ -537,28 +724,18 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
             )}
           </div>
 
-          {/* Riwayat Komisi Self */}
+          {/* Riwayat Insentif Self */}
           <div className="space-y-2">
-            <h3 className="text-sm font-bold text-slate-800">Riwayat Komisi Transaksi</h3>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Riwayat Insentif Pemasaran</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Daftar perolehan insentif dari pembayaran dan perpanjangan paket langganan outlet aktif.
+              </p>
+            </div>
             <CommissionPayoutTable commissions={commissions} isSuperadmin={false} />
           </div>
         </>
       )}
-
-      {/* Modal Form Edit / Create */}
-      <MarketingFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSubmit={handleFormSubmit}
-        initialData={selectedProfileForEdit}
-      />
-
-      {/* Share Box Modal */}
-      <ReferralCodeShareBox
-        isOpen={!!shareCode}
-        onClose={() => setShareCode(null)}
-        code={shareCode}
-      />
 
       {/* Modal Tracked Tenants per specific Referral Code */}
       {selectedCodeForTenants && (
@@ -566,8 +743,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <Store className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-bold text-slate-800">
                   Outlet Pengguna Kode:{" "}
                   <span className="font-mono text-blue-700 font-black">
                     {selectedCodeForTenants.code}
@@ -609,11 +785,9 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
                               href={`https://wa.me/${t.phone.replace(/^0/, "62").replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-[11px]"
+                              className="text-emerald-600 hover:text-emerald-700 font-medium text-[11px]"
                             >
-                              <Phone className="w-3 h-3" />
                               {t.phone}
-                              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                             </a>
                           </div>
                         )}
@@ -667,7 +841,10 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser }) => {
       {/* Modal Form Edit / Create */}
       <MarketingFormModal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          onCreated?.();
+        }}
         onSubmit={handleFormSubmit}
         initialData={selectedProfileForEdit}
       />

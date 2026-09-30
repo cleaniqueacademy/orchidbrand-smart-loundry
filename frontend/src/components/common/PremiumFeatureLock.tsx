@@ -55,10 +55,10 @@ export const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40">
+    <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 min-h-[480px] sm:min-h-[520px]">
       {/* ─── Layer Konten Di Bawah (Disabled, Blurred & Non-Interactive) ─── */}
       <div
-        className="pointer-events-none select-none filter blur-[2px] opacity-40 grayscale-[15%] transition-all duration-300"
+        className="pointer-events-none select-none filter blur-[2px] opacity-40 grayscale-[15%] transition-all duration-300 min-h-[460px] sm:min-h-[500px]"
         aria-hidden="true"
         tabIndex={-1}
       >
@@ -66,10 +66,10 @@ export const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
       </div>
 
       {/* ─── Layer Glassmorphism Overlay (Coming Soon Notice) ─── */}
-      <div className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-6 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xs transition-all">
-        <div className="relative w-full max-w-lg rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 p-6 sm:p-7 shadow-lg text-center animate-in fade-in zoom-in-95 duration-200">
+      <div className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-6 bg-white/75 dark:bg-slate-950/75 backdrop-blur-xs transition-all overflow-y-auto">
+        <div className="relative w-full max-w-lg rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200 my-auto">
           {/* Badge Crown Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold tracking-wide uppercase mb-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold tracking-wide uppercase mb-2.5">
             <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>Paket Premium</span>
             <span className="w-1 h-1 rounded-full bg-amber-500 mx-0.5" />
@@ -77,17 +77,17 @@ export const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
           </div>
 
           {/* Feature Title & Subtitle */}
-          <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+          <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
             {title}
           </h3>
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1.5 leading-relaxed">
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
             {subtitle}
           </p>
 
           {/* Feature Capabilities Checklist */}
           {capabilities.length > 0 && (
-            <div className="mt-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 text-left space-y-2">
-              <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
+            <div className="mt-3.5 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 text-left space-y-1.5">
+              <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-0.5">
                 <span>Manfaat Utama Fitur Ini:</span>
               </div>
               {capabilities.map((item, idx) => (
@@ -100,7 +100,7 @@ export const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
             <button
               type="button"
               onClick={handleNotifyMe}
@@ -137,7 +137,7 @@ export const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
           </div>
 
           {/* Safe Tier Notice Footer */}
-          <div className="mt-4 pt-3 border-t border-zinc-200/60 dark:border-zinc-800 flex items-center justify-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <div className="mt-3.5 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800 flex items-center justify-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
             <Lock className="w-3 h-3 text-zinc-400" />
             <span>Saat ini akun Anda menggunakan paket Free/Pro aktif.</span>
           </div>

@@ -17,6 +17,7 @@ import {
   expenses,
 } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("subscription routes integration tests", () => {
   const app = new Hono();
@@ -56,7 +57,7 @@ describe("subscription routes integration tests", () => {
       phone: `0819${Date.now().toString().slice(-8)}`,
       email: `subroute_${Date.now()}@test.com`,
       password: "password123",
-      referralCode: "CLEANHEMAT",
+      referralCode: MARKETING_SEEDS[0].code,
     });
 
     testTenantId = signup.data!.tenantId;
@@ -237,21 +238,21 @@ describe("subscription routes integration tests", () => {
       },
       body: JSON.stringify({
         tenantId: testTenantId,
-        referralCode: "CLEANHEMAT",
+        referralCode: MARKETING_SEEDS[0].code,
       }),
     });
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.referralCode).toBe("CLEANHEMAT");
+    expect(body.data.referralCode).toBe(MARKETING_SEEDS[0].code);
 
     // Cek ringkasan langganan sekarang memiliki kode referral kembali
     const sumRes = await app.request("/api/subscription/summary", {
       headers: { Authorization: `Bearer ${ownerToken}` },
     });
     const sumBody = await sumRes.json();
-    expect(sumBody.data.referralCodeUsed).toBe("CLEANHEMAT");
+    expect(sumBody.data.referralCodeUsed).toBe(MARKETING_SEEDS[0].code);
   });
 });
 

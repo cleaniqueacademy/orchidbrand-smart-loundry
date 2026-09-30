@@ -22,7 +22,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
   const [bankName, setBankName] = useState("BCA");
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankAccountName, setBankAccountName] = useState("");
-  const [commissionRateDefault, setCommissionRateDefault] = useState<number>(10);
+  const [commissionRateDefault, setCommissionRateDefault] = useState<number>(5000);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -36,7 +36,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
       setBankName(initialData.bankName || "BCA");
       setBankAccountNumber(initialData.bankAccountNumber || "");
       setBankAccountName(initialData.bankAccountName || "");
-      setCommissionRateDefault(initialData.commissionRateDefault || 10);
+      setCommissionRateDefault(initialData.commissionRateDefault || 5000);
       setNotes(initialData.notes || "");
     } else {
       setName("");
@@ -46,7 +46,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
       setBankName("BCA");
       setBankAccountNumber("");
       setBankAccountName("");
-      setCommissionRateDefault(10);
+      setCommissionRateDefault(5000);
       setNotes("");
     }
     setError("");
@@ -62,7 +62,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
     }
 
     if (!initialData && (!email.trim() || !password.trim())) {
-      setError("Email dan password akun wajib diisi untuk pendaftaran mitra baru");
+      setError("Email dan password akun wajib diisi untuk pendaftaran anggota tim marketing baru");
       return;
     }
 
@@ -109,9 +109,9 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold leading-tight">
-                {initialData ? "Ubah Data Mitra Marketing" : "Tambah Mitra Affiliate Baru"}
+                {initialData ? "Ubah Data Tim Marketing" : "Tambah Anggota Tim Marketing Baru"}
               </h3>
-              <p className="text-xs text-blue-100 mt-0.5">Akun login & rekening pencairan komisi</p>
+              <p className="text-xs text-blue-100 mt-0.5">Akun login & rekening pencairan insentif</p>
             </div>
           </div>
           <button
@@ -177,7 +177,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="marketing@mitra.com"
+                    placeholder="marketing@indotech.com"
                     className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
@@ -205,7 +205,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
           {/* Informasi Rekening Bank */}
           <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100 space-y-3">
             <span className="font-bold text-blue-950 flex items-center gap-1.5">
-              <CreditCard className="w-4 h-4 text-blue-600" /> Rekening Bank Pembayaran Komisi
+              <CreditCard className="w-4 h-4 text-blue-600" /> Rekening Bank Penerima Insentif
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -255,19 +255,21 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Komisi Default (%)
+                Insentif per Perpanjangan (Rp)
               </label>
               <div className="relative">
-                <Percent className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
                 <input
                   type="number"
                   min="0"
-                  max="100"
+                  step="500"
                   value={commissionRateDefault}
                   onChange={(e) => setCommissionRateDefault(Number(e.target.value))}
+                  placeholder="5000"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-800 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
+              <p className="text-[10px] text-slate-400 mt-1">Standar resmi: Rp 5.000 / perpanjangan outlet</p>
             </div>
 
             <div>
@@ -297,7 +299,7 @@ export const MarketingFormModal: React.FC<MarketingFormModalProps> = ({
               className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {submitting ? "Menyimpan..." : initialData ? "Simpan Perubahan" : "Daftarkan Mitra"}
+              {submitting ? "Menyimpan..." : initialData ? "Simpan Perubahan" : "Simpan Anggota"}
             </button>
           </div>
         </form>

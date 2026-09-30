@@ -1,4 +1,4 @@
-﻿# Laundry Cleanique - Smart Laundry 🧺
+# Laundry Cleanique - Smart Laundry 🧺
 ### Platform Multi-Tenant SaaS Manajemen Operasional & Kasir Laundry Modern
 
 Platform Multi-Tenant SaaS berbasis **Bun**, dirancang khusus untuk memenuhi kebutuhan nyata bisnis laundry perumahan dan multi-cabang modern. Dibangun dengan arsitektur terpisah yang bersih: **Frontend SPA (Vite + React 18 + TypeScript + Tailwind CSS)** dan **Backend REST API (Bun + Hono.js + Drizzle ORM + PostgreSQL + Baileys WhatsApp Gateway)**.
@@ -92,11 +92,13 @@ cleanique-smart-laundry/
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── vite.config.ts
-│
+├── docs/                     # Dokumentasi arsitektur, PRD, TODO, changelog & aset
+│   ├── PRD.md               # Product Requirements Document v2.0
+│   ├── TODO.md              # Roadmap & Status Fitur
+│   ├── PLAN_REFERRAL_AI.md  # Rencana teknis AI & Referral
+│   └── README.md            # Indeks dokumentasi
 ├── docker-compose.yml        # Multi-container Postgres + Backend + Frontend
 ├── package.json              # Root Bun workspaces (`bun dev`)
-├── PRD.md                    # Product Requirements Document v2.0
-├── TODO.md                   # Roadmap & Status Fitur
 └── README.md
 ```
 
@@ -154,5 +156,5 @@ bun run db:push
 ---
 
 ## 📑 Dokumentasi Resmi & Roadmap
-- 📘 **[Product Requirements Document (PRD v2.0)](file:///c:/KAIRAV/project/orchidbrand-loundy/PRD.md)**: Spesifikasi arsitektur lengkap, alur kasir, aturan WhatsApp, portal tracking publik, dan skema database relasional.
-- 📋 **[TODO List & Roadmap](file:///c:/KAIRAV/project/orchidbrand-loundy/TODO.md)**: Status fitur selesai dan prioritas backlog yang siap dikerjakan (P0 Cek Resi Publik, Master Layanan & SLA, Enkripsi Password & JWT).
+- 📘 **[Product Requirements Document (PRD v2.0)](docs/PRD.md)**: Spesifikasi arsitektur lengkap, alur kasir, aturan WhatsApp, portal tracking publik, dan skema database relasional.
+- 📋 **[TODO List & Roadmap](docs/TODO.md)**: Status fitur selesai dan prioritas backlog yang siap dikerjakan (P0 Cek Resi Publik, Master Layanan & SLA, Enkripsi Password & JWT).

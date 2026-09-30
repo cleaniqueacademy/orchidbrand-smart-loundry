@@ -268,50 +268,9 @@ export async function seedInitialData(force = true) {
     ]);
 
     // ----------------------------------------------------
-    // 8. 10 Marketing Users, Profiles, & Referral Codes
+    // 8. 17 Akun Tim Marketing IndoTech & Kode Referral (6-Char)
     // ----------------------------------------------------
     await seedMarketingUsers();
-
-    // ----------------------------------------------------
-    // 9. Kode Referral Platform Resmi: CLEANHEMAT
-    // (Menjamin kompatibilitas promo umum & test suite)
-    // ----------------------------------------------------
-    const platformMktProfileId = "mkt-prof-platform";
-    await db.insert(marketingProfiles).values({
-      id: platformMktProfileId,
-      userId: admin1Id,
-      phone: "081299881122",
-      bankName: "BCA",
-      bankAccountNumber: "8830-1928-3341",
-      bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
-      commissionRateDefault: 0,
-      totalEarned: 0,
-      totalWithdrawn: 0,
-      notes: "Profil Akun Platform untuk Kode Resmi CLEANHEMAT",
-      createdAt: today,
-    });
-
-    await db.insert(referralCodes).values([
-      {
-        id: "ref-code-cleanhemat",
-        code: "CLEANHEMAT",
-        name: "Promo Resmi Cleanique Hemat",
-        description: "Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Komisi Rp 5.000/bulan.",
-        discountType: "fixed",
-        discountValue: 5000,
-        commissionType: "fixed",
-        commissionValue: 5000,
-        maxUsage: null,
-        currentUsage: 0,
-        validFrom: "2026-01-01",
-        validUntil: "2028-12-31",
-        isActive: "true",
-        appliesToAllTenants: "true",
-        marketingProfileId: platformMktProfileId,
-        createdByUserId: admin1Id,
-        createdAt: today,
-      },
-    ]);
 
     // CATATAN PRODUKSI:
     // Tabel orders, customers, expenses, shifts, waLogs TIDAK di-seed dummy.
@@ -329,13 +288,12 @@ export async function seedInitialData(force = true) {
     console.log("  - Email  : owner.jongke@cleaniquelaundry.com");
     console.log("  - Pass   : owner123");
     console.log("-------------------------------------------------");
-    console.log("📢 10 MITRA MARKETING & KODE REFERRAL:");
+    console.log("📢 17 ANGGOTA TIM MARKETING INDOTECH & KODE REFERRAL (6-CHAR):");
     MARKETING_SEEDS.forEach((mkt, idx) => {
       console.log(`  ${idx + 1}. [Kode: ${mkt.code.padEnd(8)}] ${mkt.name} (${mkt.email} / marketing123)`);
     });
-    console.log("  + [Kode: CLEANHEMAT] Kode Promo Platform");
     console.log("-------------------------------------------------");
-    console.log("📦 DATA OPERASIONAL: BERSIH (0 Orders, 0 Customers, 0 Expenses)");
+    console.log("📦 DATA OPERASIONAL: BERSIH (0 Orders, 0 Customers, 0 Expenses, 0 Staff)");
     console.log("=================================================");
   } catch (err: any) {
     console.error("❌ Seed error:", err);

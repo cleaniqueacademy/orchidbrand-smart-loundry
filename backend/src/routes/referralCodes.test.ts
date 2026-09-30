@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { Hono } from "hono";
 import referralRoutes from "./referralCodes";
 import { signToken } from "../middleware/auth";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("referralCodes routes integration tests", () => {
   const app = new Hono();
@@ -27,11 +28,12 @@ describe("referralCodes routes integration tests", () => {
   });
 
   it("GET /api/referral-codes/validate - memvalidasi kode valid dari seed", async () => {
-    const res = await app.request("/api/referral-codes/validate?code=CLEANHEMAT");
+    const validCode = MARKETING_SEEDS[0].code;
+    const res = await app.request(`/api/referral-codes/validate?code=${validCode}`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.code).toBe("CLEANHEMAT");
+    expect(body.data.code).toBe(validCode);
     expect(body.data.discountType).toBe("fixed");
     expect(body.data.discountValue).toBe(5000); // Rp 5.000/bulan
   });

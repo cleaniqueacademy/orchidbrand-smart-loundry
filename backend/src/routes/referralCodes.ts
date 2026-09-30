@@ -164,9 +164,9 @@ referralRoutes.get("/track", requireRole(["superadmin", "marketing"]), async (c)
 
 /**
  * Buat kode referral baru
- * Role: superadmin atau marketing
+ * Role: superadmin
  */
-referralRoutes.post("/", requireRole(["superadmin", "marketing"]), async (c) => {
+referralRoutes.post("/", requireRole(["superadmin"]), async (c) => {
   try {
     const user = getUser(c);
     const body = await c.req.json();
@@ -274,8 +274,9 @@ referralRoutes.get("/:id", async (c) => {
 
 /**
  * Update kode referral
+ * Role: superadmin
  */
-referralRoutes.put("/:id", requireRole(["superadmin", "marketing"]), async (c) => {
+referralRoutes.put("/:id", requireRole(["superadmin"]), async (c) => {
   try {
     const user = getUser(c);
     const id = c.req.param("id");

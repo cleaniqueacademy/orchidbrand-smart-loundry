@@ -22,6 +22,7 @@ import {
 } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { registerNewTenant } from "./signupService";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("subscriptionService integration tests", () => {
   let testTenantId: string;
@@ -57,7 +58,7 @@ describe("subscriptionService integration tests", () => {
       phone: `0811${Date.now().toString().slice(-8)}`,
       email: `sub_test_${Date.now()}@test.com`,
       password: "password123",
-      referralCode: "CLEANHEMAT",
+      referralCode: MARKETING_SEEDS[0].code,
     });
 
     expect(res.success).toBe(true);
@@ -72,13 +73,13 @@ describe("subscriptionService integration tests", () => {
     expect(summary?.isTrial).toBe(true);
     expect(summary?.isActive).toBe(true);
     expect(summary?.daysRemaining).toBeGreaterThanOrEqual(6);
-    expect(summary?.referralCodeUsed).toBe("CLEANHEMAT");
+    expect(summary?.referralCodeUsed).toBe(MARKETING_SEEDS[0].code);
   });
 
   it("getApplicablePrice menghitung harga dan diskon referral", async () => {
     const calc = await getApplicablePrice(testTenantId);
     expect(calc.basePrice).toBe(60000); // Rp 60.000/bulan flat
-    // CLEANHEMAT memberikan diskon fixed Rp 5.000/bulan
+    // referral memberikan diskon fixed Rp 5.000/bulan
     expect(calc.discountAmount).toBe(5000);
     expect(calc.finalPrice).toBe(55000); // 60.000 - 5.000
   });

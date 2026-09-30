@@ -831,7 +831,7 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
         id: mpId,
         userId: newUserId,
         phone: phone || null,
-        commissionRateDefault: commissionRateDefault ? Number(commissionRateDefault) : 10,
+        commissionRateDefault: commissionRateDefault ? Number(commissionRateDefault) : 5000,
         totalEarned: 0,
         totalWithdrawn: 0,
         notes: notes || null,

@@ -1,22 +1,16 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Tag,
   Plus,
   Search,
   Share2,
-  Percent,
-  DollarSign,
-  Calendar,
-  Building2,
   Trash2,
   Edit2,
-  CheckCircle2,
   XCircle,
   TrendingUp,
   BarChart2,
   Users,
   Store,
-  Clock,
   Phone,
   MapPin,
 } from "lucide-react";
@@ -30,9 +24,10 @@ import { ReferralCodeTenantActivationList } from "./ReferralCodeTenantActivation
 
 interface ReferralCodesTabProps {
   currentUser?: User;
+  onNavigateToMarketing?: () => void;
 }
 
-export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser }) => {
+export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser, onNavigateToMarketing }) => {
   const {
     codes,
     loading,
@@ -48,6 +43,14 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
 
   const [search, setSearch] = useState("");
   const [filterActive, setFilterActive] = useState<string>("all"); // 'all' | 'active' | 'inactive'
+  const [filterMarketing, setFilterMarketing] = useState<string>("all"); // 'all' | profileId
+
+  // Build map: profileId -> profile for fast lookup
+  const profileMap = useMemo(() => {
+    const map: Record<string, typeof profiles[0]> = {};
+    for (const p of profiles) map[p.id] = p;
+    return map;
+  }, [profiles]);
 
   // Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -96,7 +99,7 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
 
   const isSuperadmin = currentUser?.role === "superadmin";
   const isMarketing = currentUser?.role === "marketing";
-  const canManage = isSuperadmin || isMarketing;
+  const canManage = isSuperadmin; // Hanya Superadmin yang berwenang membuat & mengedit kode kupon promo
 
   // Filtered Codes
   const filteredCodes = codes.filter((c) => {
@@ -104,11 +107,19 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
     const matchSearch =
       c.code.toLowerCase().includes(q) ||
       c.name.toLowerCase().includes(q) ||
-      (c.description && c.description.toLowerCase().includes(q));
+      (c.description && c.description.toLowerCase().includes(q)) ||
+      // also search owner name
+      (c.marketingProfileId &&
+        profileMap[c.marketingProfileId]?.userName?.toLowerCase().includes(q));
 
     const isActive = String(c.isActive) === "true";
     if (filterActive === "active" && !isActive) return false;
     if (filterActive === "inactive" && isActive) return false;
+
+    // Filter by marketing member
+    if (filterMarketing !== "all") {
+      if (c.marketingProfileId !== filterMarketing) return false;
+    }
 
     return matchSearch;
   });
@@ -163,18 +174,39 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Kode Referral &amp; Promosi</h2>
-          <p className="text-xs text-zinc-500">Kelola kupon diskon pendaftaran dan pantau komisi kemitraan affiliate.</p>
+          <p className="text-xs text-zinc-500">Kelola kupon diskon pendaftaran dan pantau performa tim marketing IndoTech.</p>
         </div>
-        {canManage && (
+        {/* Tombol diarahkan ke halaman Tim Marketing untuk buat anggota baru */}
+        {isSuperadmin && (
           <button
-            onClick={handleOpenCreate}
+            onClick={() => onNavigateToMarketing?.()}
             className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            Buat Kode Promo
+            Anggota Marketing Baru
           </button>
         )}
       </div>
+
+      {/* Info Banner: Auto-generated codes */}
+      {isSuperadmin && (
+        <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+          <div className="w-6 h-6 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+            <Tag className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-violet-800">
+              Kode referral otomatis dibuat saat membuat anggota tim marketing baru
+            </p>
+            <p className="text-[11px] text-violet-600 mt-0.5 leading-relaxed">
+              Setiap anggota marketing yang didaftarkan melalui menu{" "}
+              <span className="font-bold">Tim Marketing</span> akan otomatis mendapatkan satu kode referral
+              eksklusif (ditandai badge <span className="font-bold bg-violet-100 px-1 rounded">AUTO</span>).
+              Kode ini dapat Anda pantau performanya atau ubah nilainya kapan saja.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
@@ -225,29 +257,62 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
       </div>
 
       {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-xs">
-        <div className="relative w-full sm:w-80">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari kode promo atau nama program..."
+            placeholder="Cari kode, nama, atau pemilik..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs text-slate-500 font-medium">Status:</span>
-          <select
-            value={filterActive}
-            onChange={(e) => setFilterActive(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value="all">Semua Status</option>
-            <option value="active">Aktif Saja</option>
-            <option value="inactive">Nonaktif Saja</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Status */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Status:</span>
+            <select
+              value={filterActive}
+              onChange={(e) => setFilterActive(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="all">Semua</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Nonaktif</option>
+            </select>
+          </div>
+
+          {/* Filter Marketing Member */}
+          {isSuperadmin && profiles.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Pemilik:</span>
+              <select
+                value={filterMarketing}
+                onChange={(e) => setFilterMarketing(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[180px]"
+              >
+                <option value="all">Semua Anggota</option>
+                <option value="">Tanpa Pemilik</option>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.userName || p.userEmail || p.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Reset filter */}
+          {(filterMarketing !== "all" || filterActive !== "all" || search) && (
+            <button
+              onClick={() => { setFilterMarketing("all"); setFilterActive("all"); setSearch(""); }}
+              className="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-2 cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
@@ -258,12 +323,10 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10.5px]">
                 <th className="py-3.5 px-4">Kode & Nama Kupon</th>
-                <th className="py-3.5 px-4">Diskon Pelanggan</th>
-                <th className="py-3.5 px-4">Komisi Affiliate</th>
-                <th className="py-3.5 px-4 text-center">Outlet Terdaftar</th>
-                <th className="py-3.5 px-4">Kuota / Pemakaian</th>
-                <th className="py-3.5 px-4">Masa Berlaku</th>
-                <th className="py-3.5 px-4">Cakupan Outlet</th>
+                <th className="py-3.5 px-4">Pemilik</th>
+                <th className="py-3.5 px-4">Diskon</th>
+                <th className="py-3.5 px-4">Insentif</th>
+                <th className="py-3.5 px-4 text-center">Outlet</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-right">Aksi</th>
               </tr>
@@ -271,35 +334,56 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     Memuat daftar kode referral...
                   </td>
                 </tr>
               ) : filteredCodes.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     Belum ada kode referral yang ditemukan
                   </td>
                 </tr>
               ) : (
                 filteredCodes.map((code) => {
                   const isActive = String(code.isActive) === "true";
-                  const appliesAll = String(code.appliesToAllTenants) === "true";
 
                   return (
                     <tr key={code.id} className="hover:bg-slate-50/50 transition">
                       {/* Kode & Nama */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-black text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-lg text-xs tracking-wider">
                             {code.code}
                           </span>
+                          {/* Badge Auto-generated */}
+                          {code.marketingProfileId && (
+                            <span className="text-[9px] font-bold bg-violet-50 text-violet-600 border border-violet-100 px-1.5 py-0.5 rounded-full">
+                              AUTO
+                            </span>
+                          )}
                         </div>
                         <div className="font-semibold text-slate-800 mt-1">{code.name}</div>
                         {code.description && (
                           <div className="text-[11px] text-slate-400 line-clamp-1">
                             {code.description}
                           </div>
+                        )}
+                      </td>
+
+                      {/* Pemilik */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {code.marketingProfileId && profileMap[code.marketingProfileId] ? (
+                          <div>
+                            <div className="font-semibold text-slate-800 text-xs">
+                              {profileMap[code.marketingProfileId].userName || "—"}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {profileMap[code.marketingProfileId].userEmail}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-[11px] italic">Umum / Manual</span>
                         )}
                       </td>
 
@@ -337,52 +421,6 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
                         >
                           <span>{trackMap[code.id]?.totalTenants ?? code.currentUsage ?? 0} Outlet</span>
                         </button>
-                      </td>
-
-                      {/* Kuota */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800">
-                          {code.currentUsage} / {code.maxUsage ? code.maxUsage : "âˆž"}
-                        </div>
-                        {code.maxUsage && (
-                          <div className="w-20 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div
-                              className="bg-blue-600 h-full rounded-full"
-                              style={{
-                                width: `${Math.min(100, (code.currentUsage / code.maxUsage) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Masa Berlaku */}
-                      <td className="py-3.5 px-4 text-[11px] text-slate-500 whitespace-nowrap">
-                        {code.validFrom || code.validUntil ? (
-                          <>
-                            <div>Mulai: {code.validFrom || "Sekarang"}</div>
-                            <div>Sampai: {code.validUntil || "Seterusnya"}</div>
-                          </>
-                        ) : (
-                          <span className="text-slate-400">Tidak ada batas</span>
-                        )}
-                      </td>
-
-                      {/* Cakupan Outlet */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {appliesAll ? (
-                          <span className="inline-flex items-center text-[11px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                            Semua Cabang
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => handleOpenTenants(code)}
-                            className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full transition cursor-pointer whitespace-nowrap shrink-0"
-                          >
-                            <Building2 className="w-3 h-3" />
-                            Outlet Pilihan...
-                          </button>
-                        )}
                       </td>
 
                       {/* Status */}
@@ -603,10 +641,10 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser 
 
                     <div className="text-right shrink-0">
                       <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 block">
-                        Hemat: Rp 55.000/bln
+                        Diskon: Rp 5.000/bln
                       </span>
                       <span className="text-[9.5px] text-slate-400 mt-1 block">
-                        Aktif s/d: {t.subscriptionUntil ? new Date(t.subscriptionUntil).toLocaleDateString("id-ID") : "â€”"}
+                        Aktif s/d: {t.subscriptionUntil ? new Date(t.subscriptionUntil).toLocaleDateString("id-ID") : "-"}
                       </span>
                     </div>
                   </div>

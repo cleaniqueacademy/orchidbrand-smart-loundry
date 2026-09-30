@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Search,
@@ -49,7 +49,7 @@ const roleBadgeConfig: Record<Role, { label: string; className: string }> = {
     className: "bg-zinc-100 text-zinc-700 border-zinc-200",
   },
   marketing: {
-    label: "Affiliate Marketing",
+    label: "Tim Marketing",
     className: "bg-indigo-50 text-indigo-800 border-indigo-200",
   },
 };
@@ -230,7 +230,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
               <option value="superadmin">Super Admin</option>
               <option value="tenant_owner">Tenant Owner</option>
               <option value="staff">Kasir / Staff</option>
-              <option value="marketing">Affiliate Marketing</option>
+              <option value="marketing">Tim Marketing</option>
             </select>
             <select
               value={statusFilter}
@@ -294,6 +294,8 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                             className={`w-8 h-8 rounded-lg text-[11px] font-bold flex items-center justify-center shrink-0 border ${
                               isSuperAdmin
                                 ? "bg-blue-900 text-white border-blue-900"
+                                : u.role === "marketing"
+                                ? "bg-amber-100 text-amber-800 border-amber-200"
                                 : u.role === "tenant_owner"
                                 ? "bg-sky-100 text-sky-800 border-sky-200"
                                 : "bg-zinc-100 text-zinc-700 border-zinc-200"
@@ -326,6 +328,8 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                         <span className="text-zinc-600 truncate block max-w-[140px]">
                           {isSuperAdmin
                             ? "Pusat"
+                            : u.role === "marketing"
+                            ? "IndoTech Internal"
                             : u.tenantName ?? "—"}
                         </span>
                       </td>
@@ -366,6 +370,8 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                       <td className="px-3 py-3">
                         {isSuperAdmin ? (
                           <span className="text-zinc-400">Permanen</span>
+                        ) : u.role === "marketing" ? (
+                          <span className="text-amber-700 font-medium">Tim Internal</span>
                         ) : u.subscriptionUntil ? (
                           <span
                             className={`font-mono ${

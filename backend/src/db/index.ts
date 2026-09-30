@@ -301,7 +301,7 @@ export async function initPostgresTables() {
           'plan-premium', 'premium', 'Paket Premium',
           'Solusi enterprise: koneksi thermal printer POS, multi-cabang (10 gerai), dan manajemen multi-karyawan kasir.',
           1, 100000,
-          '["Koneksi Thermal Printer POS (Bluetooth/USB)","Multi-Cabang (Hingga 10 Gerai)","Manajemen Multi-Karyawan & Hak Akses Kasir","Semua Fitur Paket Pro","Prioritas Dukungan Teknis"]',
+          '["Koneksi Thermal Printer POS (Bluetooth/USB)","Multi-Cabang (Hingga 5 Gerai)","Manajemen Multi-Karyawan & Hak Akses Kasir","Semua Fitur Paket Pro","Prioritas Dukungan Teknis"]',
           2, 25, 100, 'false', 'true', 2, 10, CURRENT_DATE::text
         )
       ON CONFLICT (code) DO UPDATE SET 

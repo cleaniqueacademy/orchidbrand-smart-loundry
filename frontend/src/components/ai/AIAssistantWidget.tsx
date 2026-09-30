@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Bot,
   X,
@@ -7,6 +7,7 @@ import {
   ArrowRight,
   User,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { TabType } from "../../types";
@@ -37,152 +38,641 @@ export interface AIAssistantWidgetProps {
   onOpenTutorialModal?: () => void;
 }
 
-type PromptCategory = "all" | "menus" | "settings" | "pos" | "shift" | "tips";
+export type PromptCategory =
+  | "all"
+  | "menus"
+  | "settings"
+  | "pos"
+  | "shift"
+  | "tips"
+  | "platform"
+  | "outlets"
+  | "users"
+  | "finance_admin"
+  | "referral"
+  | "commission"
+  | "tenants_marketing"
+  | "customers"
+  | "biz";
 
-interface QuickPrompt {
+export interface QuickPrompt {
   id: string;
   category: PromptCategory;
   label: string;
   text: string;
+  roles: string[];
 }
 
-const QUICK_PROMPTS: QuickPrompt[] = [
-  // Menus
+export interface PromptCategoryDef {
+  id: PromptCategory;
+  label: string;
+}
+
+export const ROLE_QUICK_PROMPTS: QuickPrompt[] = [
+  // ==========================================
+  // 1. SUPER ADMIN (HQ PLATFORM) PROMPTS
+  // ==========================================
   {
-    id: "menu-all",
-    category: "menus",
-    label: "Jelaskan Seluruh Menu",
-    text: "Jelaskan fungsi semua menu yang ada di dashboard ini dan alurnya",
+    id: "sa-overview",
+    category: "platform",
+    label: "Ringkasan Platform",
+    text: "Tampilkan ringkasan status operasional seluruh cabang dan omset platform pusat",
+    roles: ["superadmin"],
   },
   {
-    id: "menu-cashflow",
-    category: "menus",
-    label: "Cara Pakai Buku Kas",
-    text: "Apa fungsi menu Buku Kas dan bagaimana cara mencatat pengeluaran toko?",
+    id: "sa-tenants",
+    category: "outlets",
+    label: "Kelola Cabang Outlet",
+    text: "Bagaimana cara menambah cabang baru atau memperpanjang masa aktif lisensi outlet?",
+    roles: ["superadmin"],
   },
   {
-    id: "menu-reports",
-    category: "menus",
-    label: "Ekspor Excel & PDF",
-    text: "Bagaimana cara mencetak laporan keuangan ke file PDF atau ekspor ke Excel?",
+    id: "sa-users",
+    category: "users",
+    label: "Kelola Pengguna & Role",
+    text: "Bagaimana cara mengatur hak akses pengguna, reset password, atau menonaktifkan akun?",
+    roles: ["superadmin"],
   },
   {
-    id: "biz-health",
-    category: "menus",
-    label: "Kesehatan Bisnis",
-    text: "Bagaimana analisa kesehatan bisnis dan efisiensi pengeluaran laundry saya bulan ini?",
+    id: "sa-invoices",
+    category: "finance_admin",
+    label: "Arus Kas Langganan",
+    text: "Bagaimana cara memeriksa pembayaran invoice langganan dan verifikasi bukti transfer outlet?",
+    roles: ["superadmin"],
   },
   {
-    id: "biz-detergent",
-    category: "menus",
-    label: "Audit Takaran Deterjen",
-    text: "Berapa estimasi pemakaian deterjen dan parfum saya dari total cucian yang masuk?",
+    id: "sa-marketing",
+    category: "finance_admin",
+    label: "Tim Marketing & Insentif",
+    text: "Bagaimana cara mendaftarkan tim marketing baru dan memantau komisi referral mereka?",
+    roles: ["superadmin"],
   },
   {
-    id: "biz-rent",
-    category: "menus",
-    label: "Status Sewa Ruko",
-    text: "Berapa sisa masa sewa ruko saya dan berapa beban sewanya per bulan?",
+    id: "sa-referral",
+    category: "finance_admin",
+    label: "Kelola Kode Referral",
+    text: "Bagaimana cara membuat kode referral baru dan mengatur persentase diskonnya?",
+    roles: ["superadmin"],
+  },
+  {
+    id: "sa-settings",
+    category: "settings",
+    label: "Setting Platform Pusat",
+    text: "Bagaimana cara mengatur rekening bank penampung pusat dan WhatsApp Gateway HQ?",
+    roles: ["superadmin"],
+  },
+  {
+    id: "sa-logs",
+    category: "settings",
+    label: "Audit Data Log Sistem",
+    text: "Bagaimana cara memeriksa log aktivitas sistem dan riwayat pengiriman notifikasi?",
+    roles: ["superadmin"],
   },
 
-  // Settings & WhatsApp
+  // ==========================================
+  // 2. TIM MARKETING INDOTECH PROMPTS
+  // ==========================================
   {
-    id: "set-hours",
-    category: "settings",
-    label: "Atur Jam Buka Toko",
-    text: "Bagaimana cara mengubah jam operasional outlet saya agar muncul di nota digital?",
+    id: "mkt-share",
+    category: "referral",
+    label: "Cara Bagikan Kode",
+    text: "Bagaimana cara membagikan link pendaftaran dengan kode referral saya ke calon pemilik laundry?",
+    roles: ["marketing"],
   },
   {
-    id: "set-bank",
-    category: "settings",
-    label: "Atur Rekening & QRIS",
-    text: "Bagaimana cara mengatur rekening bank dan info QRIS pembayaran laundry?",
+    id: "mkt-stats",
+    category: "referral",
+    label: "Performa Kode Referral",
+    text: "Bagaimana cara membaca statistik klik, pendaftar, dan konversi kode referral saya?",
+    roles: ["marketing"],
   },
   {
-    id: "set-wa",
-    category: "settings",
-    label: "WhatsApp Otomatis",
-    text: "Bagaimana cara menghubungkan WhatsApp agar nota terkirim otomatis ke pelanggan?",
+    id: "mkt-calc",
+    category: "commission",
+    label: "Penghitungan Komisi",
+    text: "Berapa persen komisi yang saya dapatkan dari setiap outlet yang berlangganan?",
+    roles: ["marketing"],
   },
   {
-    id: "set-staff",
-    category: "settings",
-    label: "Tambah Akun Kasir",
-    text: "Bagaimana cara menambah akun kasir baru dan mengatur hak aksesnya?",
+    id: "mkt-bank",
+    category: "commission",
+    label: "Rekening Pencairan",
+    text: "Bagaimana cara memastikan rekening bank saya sudah benar untuk pencairan komisi?",
+    roles: ["marketing"],
+  },
+  {
+    id: "mkt-tenants",
+    category: "tenants_marketing",
+    label: "Laundry Terdaftar",
+    text: "Bagaimana cara melihat daftar laundry yang sudah mendaftar lewat kode referral saya?",
+    roles: ["marketing"],
+  },
+  {
+    id: "mkt-script",
+    category: "referral",
+    label: "Skrip Promosi CS AI",
+    text: "Berikan contoh kalimat penawaran ke calon pemilik laundry yang ragu mencoba aplikasi",
+    roles: ["marketing"],
   },
 
-  // Kasir POS
+  // ==========================================
+  // 3. STAF KASIR (POS & SHIFT) PROMPTS
+  // ==========================================
   {
-    id: "pos-order",
+    id: "staff-order",
     category: "pos",
     label: "Cara Buat Order Kasir",
     text: "Bagaimana alur input pesanan kiloan dan satuan di meja kasir POS?",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "pos-status",
+    id: "staff-status",
     category: "pos",
     label: "6 Status Cucian",
     text: "Jelaskan 6 tahap status cucian laundry dari diterima sampai diambil pelanggan",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "pos-receipt",
+    id: "staff-receipt",
     category: "pos",
     label: "Cetak Struk Kasir",
     text: "Bagaimana cara mencetak nota struk kasir 58mm atau 80mm?",
+    roles: ["staff", "kasir"],
   },
-
-  // Shift Kasir
   {
-    id: "shift-open",
+    id: "staff-open-shift",
     category: "shift",
     label: "Cara Buka Shift",
     text: "Bagaimana cara membuka shift kasir dan mengisi modal awal di laci?",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "shift-close",
+    id: "staff-close-shift",
     category: "shift",
     label: "Cara Tutup Shift",
     text: "Bagaimana cara menutup shift kasir dan rekonsiliasi uang fisik kasir?",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "shift-diff",
+    id: "staff-diff",
     category: "shift",
     label: "Jika Kas Selisih",
     text: "Apa yang harus dilakukan jika uang kas fisik di laci tidak seimbang dengan sistem?",
-  },
-
-  // Tips Noda & Promo
-  {
-    id: "tip-summary",
-    category: "tips",
-    label: "Omset Toko Hari Ini",
-    text: "Berikan ringkasan operasional dan omset toko hari ini",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "tip-ink",
+    id: "staff-customer",
+    category: "customers",
+    label: "Cari Data Pelanggan",
+    text: "Bagaimana cara mencari kontak pelanggan dan memeriksa riwayat nota cuciannya?",
+    roles: ["staff", "kasir"],
+  },
+  {
+    id: "staff-ink",
     category: "tips",
     label: "Noda Tinta Pulpen",
     text: "Bagaimana cara membersihkan noda tinta pulpen di baju pelanggan?",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "tip-oil",
+    id: "staff-oil",
     category: "tips",
     label: "Noda Minyak Makanan",
     text: "Bagaimana cara mencuci pakaian yang terkena noda minyak makanan membandel?",
+    roles: ["staff", "kasir"],
   },
   {
-    id: "tip-blood",
+    id: "staff-blood",
     category: "tips",
     label: "Noda Darah",
     text: "Bagaimana cara menghilangkan noda darah yang aman pada pakaian?",
+    roles: ["staff", "kasir"],
+  },
+
+  // ==========================================
+  // 4. PEMILIK OUTLET (OWNER / TENANT_OWNER) PROMPTS
+  // ==========================================
+  {
+    id: "owner-summary",
+    category: "menus",
+    label: "Omset Toko Hari Ini",
+    text: "Berikan ringkasan operasional dan omset toko hari ini",
+    roles: ["owner", "tenant_owner"],
   },
   {
-    id: "tip-promo",
-    category: "tips",
-    label: "Draf Promo WhatsApp",
-    text: "Buatkan draf kata-kata promo diskon 10% untuk broadcast WhatsApp ke pelanggan",
+    id: "owner-cashflow",
+    category: "menus",
+    label: "Cara Pakai Buku Kas",
+    text: "Apa fungsi menu Buku Kas dan bagaimana cara mencatat pengeluaran toko?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-reports",
+    category: "menus",
+    label: "Ekspor Excel & PDF",
+    text: "Bagaimana cara mencetak laporan keuangan ke file PDF atau ekspor ke Excel?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-sub",
+    category: "menus",
+    label: "Perpanjang Langganan",
+    text: "Bagaimana cara perpanjang paket langganan cabang saya dan gunakan kode diskon?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-hours",
+    category: "settings",
+    label: "Atur Jam Buka Toko",
+    text: "Bagaimana cara mengubah jam operasional outlet saya agar muncul di nota digital?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-bank",
+    category: "settings",
+    label: "Atur Rekening & QRIS",
+    text: "Bagaimana cara mengatur rekening bank dan info QRIS pembayaran laundry?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-wa",
+    category: "settings",
+    label: "WhatsApp Otomatis",
+    text: "Bagaimana cara menghubungkan WhatsApp agar nota terkirim otomatis ke pelanggan?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-staff",
+    category: "settings",
+    label: "Tambah Akun Kasir",
+    text: "Bagaimana cara menambah akun kasir baru dan mengatur hak aksesnya?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-services",
+    category: "pos",
+    label: "Atur Tarif Layanan",
+    text: "Bagaimana cara menambah paket cuci kiloan baru atau mengubah harga satuan?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-health",
+    category: "biz",
+    label: "Kesehatan Bisnis",
+    text: "Bagaimana analisa kesehatan bisnis dan efisiensi pengeluaran laundry saya bulan ini?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-detergent",
+    category: "biz",
+    label: "Audit Takaran Deterjen",
+    text: "Berapa estimasi pemakaian deterjen dan parfum saya dari total cucian yang masuk?",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-rent",
+    category: "biz",
+    label: "Status Sewa Ruko",
+    text: "Berapa sisa masa sewa ruko saya dan berapa beban sewanya per bulan?",
+    roles: ["owner", "tenant_owner"],
   },
 ];
+
+export function getRoleQuickPrompts(role: string): {
+  categories: PromptCategoryDef[];
+  prompts: QuickPrompt[];
+} {
+  const normRole = (role || "staff").toLowerCase();
+  const isSuperAdmin = normRole === "superadmin";
+  const isMarketing = normRole === "marketing";
+  const isStaff = normRole === "staff" || normRole === "kasir" || normRole === "cashier";
+
+  if (isSuperAdmin) {
+    return {
+      categories: [
+        { id: "all", label: "Semua" },
+        { id: "platform", label: "Platform HQ" },
+        { id: "outlets", label: "Kelola Cabang" },
+        { id: "users", label: "Pengguna" },
+        { id: "finance_admin", label: "Arus Kas Lisensi" },
+        { id: "settings", label: "Setting & Log" },
+      ],
+      prompts: ROLE_QUICK_PROMPTS.filter((p) => p.roles.includes("superadmin")),
+    };
+  }
+
+  if (isMarketing) {
+    return {
+      categories: [
+        { id: "all", label: "Semua" },
+        { id: "referral", label: "Kode & Link" },
+        { id: "commission", label: "Komisi" },
+        { id: "tenants_marketing", label: "Laundry Terdaftar" },
+      ],
+      prompts: ROLE_QUICK_PROMPTS.filter((p) => p.roles.includes("marketing")),
+    };
+  }
+
+  if (isStaff) {
+    return {
+      categories: [
+        { id: "all", label: "Semua" },
+        { id: "pos", label: "Kasir POS" },
+        { id: "shift", label: "Shift Kasir" },
+        { id: "customers", label: "Pelanggan" },
+        { id: "tips", label: "Tips Noda" },
+      ],
+      prompts: ROLE_QUICK_PROMPTS.filter((p) => p.roles.includes("staff") || p.roles.includes("kasir")),
+    };
+  }
+
+  // Owner / Tenant Owner
+  return {
+    categories: [
+      { id: "all", label: "Semua" },
+      { id: "menus", label: "Menu & Omset" },
+      { id: "settings", label: "Setting & WA" },
+      { id: "pos", label: "Kasir & Tarif" },
+      { id: "biz", label: "Kesehatan Bisnis" },
+    ],
+    prompts: ROLE_QUICK_PROMPTS.filter((p) => p.roles.includes("owner") || p.roles.includes("tenant_owner")),
+  };
+}
+
+export interface RoleAccessResult {
+  allowed: boolean;
+  reason?: string;
+  mappedTarget?: TabType;
+  noticeText?: string;
+}
+
+export function getActionNoticeText(target: string, role: string): string {
+  const normRole = (role || "staff").toLowerCase();
+  const isSuperAdmin = normRole === "superadmin";
+
+  switch (target) {
+    case "settings_platform":
+      return "Membuka Setting Platform Pusat...";
+    case "settings":
+      return isSuperAdmin ? "Membuka Setting Platform Pusat..." : "Membuka Pengaturan Outlet...";
+    case "orders":
+      return "Membuka Meja Kasir (POS)...";
+    case "finance":
+    case "cashflow":
+      return isSuperAdmin ? "Membuka Arus Kas & Rekap Langganan..." : "Membuka Keuangan & Laporan...";
+    case "invoices":
+      return "Membuka Arus Kas & Rekap Langganan...";
+    case "tenants":
+      return "Membuka Kelola Outlet...";
+    case "users":
+      return "Membuka Kelola Pengguna...";
+    case "marketing":
+      return "Membuka Dashboard Tim Marketing...";
+    case "referral_codes":
+      return "Membuka Kode Referral...";
+    case "registered_tenants":
+      return "Membuka Laundry Terdaftar...";
+    case "services":
+      return "Membuka Kelola Tarif Layanan...";
+    case "customers":
+      return "Membuka Data Pelanggan...";
+    case "subscription":
+      return isSuperAdmin ? "Membuka Arus Kas & Rekap Langganan..." : "Membuka Status Langganan...";
+    case "reports":
+      return isSuperAdmin ? "Membuka Arus Kas & Rekap Langganan..." : "Membuka Laporan Finansial...";
+    case "logs":
+      return "Membuka Data Log Sistem...";
+    case "overview":
+      return isSuperAdmin ? "Membuka Dashboard Platform..." : "Membuka Dashboard...";
+    default:
+      return `Membuka menu ${target}...`;
+  }
+}
+
+export function canRoleAccessAction(role: string, action: ActionItem): RoleAccessResult {
+  const normRole = (role || "staff").toLowerCase();
+  const isSuperAdmin = normRole === "superadmin";
+  const isMarketing = normRole === "marketing";
+  const isStaff = normRole === "staff" || normRole === "kasir" || normRole === "cashier";
+  const isOwner = normRole === "tenant_owner" || normRole === "owner";
+
+  if (action.type === "NAVIGATE") {
+    const target = action.target as string;
+
+    if (isSuperAdmin) {
+      if (target === "settings") {
+        return {
+          allowed: true,
+          mappedTarget: "settings_platform",
+          noticeText: "Membuka Setting Platform Pusat...",
+        };
+      }
+      if (target === "cashflow" || target === "finance" || target === "reports" || target === "subscription") {
+        return {
+          allowed: true,
+          mappedTarget: "invoices",
+          noticeText: "Membuka Arus Kas & Rekap Langganan Platform...",
+        };
+      }
+      const allowedAdminTabs: TabType[] = [
+        "overview",
+        "tenants",
+        "users",
+        "invoices",
+        "marketing",
+        "referral_codes",
+        "settings_platform",
+        "logs",
+        "plans",
+        "signups",
+        "orders",
+        "customers",
+      ];
+      if (allowedAdminTabs.includes(target as TabType)) {
+        return {
+          allowed: true,
+          mappedTarget: target as TabType,
+          noticeText: getActionNoticeText(target, normRole),
+        };
+      }
+      return {
+        allowed: false,
+        reason: `Menu '${target}' tidak tersedia untuk Super Admin.`,
+      };
+    }
+
+    if (isMarketing) {
+      if (target === "marketing" || target === "overview") {
+        return {
+          allowed: true,
+          mappedTarget: "marketing",
+          noticeText: "Membuka Dashboard Marketing...",
+        };
+      }
+      if (target === "registered_tenants") {
+        return {
+          allowed: true,
+          mappedTarget: "registered_tenants",
+          noticeText: "Membuka Laundry Terdaftar...",
+        };
+      }
+      return {
+        allowed: false,
+        reason: "Akses ditolak: Menu ini di luar ranah tugas Tim Marketing.",
+      };
+    }
+
+    if (isStaff) {
+      const allowedStaffTabs: TabType[] = ["overview", "orders", "customers", "create-order", "edit-order"];
+      if (allowedStaffTabs.includes(target as TabType)) {
+        return {
+          allowed: true,
+          mappedTarget: target as TabType,
+          noticeText: getActionNoticeText(target, normRole),
+        };
+      }
+      return {
+        allowed: false,
+        reason: "Akses ditolak: Menu ini memerlukan hak akses Pemilik Outlet atau Super Admin.",
+      };
+    }
+
+    if (isOwner) {
+      if (target === "cashflow" || target === "reports") {
+        return {
+          allowed: true,
+          mappedTarget: "finance",
+          noticeText: "Membuka Keuangan & Laporan...",
+        };
+      }
+      const allowedOwnerTabs: TabType[] = [
+        "overview",
+        "orders",
+        "customers",
+        "finance",
+        "settings",
+        "services",
+        "subscription",
+        "create-order",
+        "edit-order",
+      ];
+      if (allowedOwnerTabs.includes(target as TabType)) {
+        return {
+          allowed: true,
+          mappedTarget: target as TabType,
+          noticeText: getActionNoticeText(target, normRole),
+        };
+      }
+      return {
+        allowed: false,
+        reason: "Akses ditolak: Menu ini merupakan wewenang khusus Super Admin Cleanique Pusat.",
+      };
+    }
+
+    return { allowed: false, reason: "Peran pengguna tidak dikenali." };
+  }
+
+  if (action.type === "OPEN_MODAL") {
+    const target = action.target;
+
+    if (isSuperAdmin) {
+      if (target === "tutorial") return { allowed: true, noticeText: "Membuka Panduan & Tutorial Platform..." };
+      if (target === "whatsapp") return { allowed: true, noticeText: "Membuka Pengaturan WhatsApp Gateway..." };
+      if (target === "open_shift" || target === "close_shift") {
+        return { allowed: false, reason: "Fitur Shift Kasir dikhususkan untuk operasional kasir cabang." };
+      }
+      return { allowed: false, reason: "Aksi modal tidak tersedia untuk Super Admin." };
+    }
+
+    if (isMarketing) {
+      if (target === "tutorial") return { allowed: true, noticeText: "Membuka Panduan & Tutorial Marketing..." };
+      return { allowed: false, reason: "Akses ditolak: Fitur ini tidak tersedia untuk Tim Marketing." };
+    }
+
+    if (isStaff) {
+      if (target === "open_shift") return { allowed: true, noticeText: "Membuka jendela Buka Shift Kasir..." };
+      if (target === "close_shift") return { allowed: true, noticeText: "Membuka jendela Tutup Shift Kasir..." };
+      if (target === "tutorial") return { allowed: true, noticeText: "Membuka Panduan Kasir..." };
+      return { allowed: false, reason: "Akses ditolak: Fitur ini hanya untuk Pemilik Outlet." };
+    }
+
+    if (isOwner) {
+      if (target === "whatsapp") return { allowed: true, noticeText: "Membuka pengaturan WhatsApp Gateway..." };
+      if (target === "open_shift") return { allowed: true, noticeText: "Membuka jendela Buka Shift Kasir..." };
+      if (target === "close_shift") return { allowed: true, noticeText: "Membuka jendela Tutup Shift Kasir..." };
+      if (target === "expense") return { allowed: true, noticeText: "Membuka form Pengeluaran Toko..." };
+      if (target === "tutorial") return { allowed: true, noticeText: "Membuka Panduan Tutorial Sistem..." };
+      return { allowed: false, reason: `Modal '${target}' tidak dikenali.` };
+    }
+  }
+
+  return { allowed: false, reason: "Tipe aksi tidak didukung." };
+}
+
+export function getActionLabel(action: ActionItem, role?: string): string {
+  const normRole = (role || "staff").toLowerCase();
+  const isSuperAdmin = normRole === "superadmin";
+  const isMarketing = normRole === "marketing";
+
+  if (action.type === "NAVIGATE") {
+    switch (action.target) {
+      case "settings":
+        return isSuperAdmin ? "Buka Setting Platform" : "Buka Menu Pengaturan";
+      case "settings_platform":
+        return "Buka Setting Platform";
+      case "orders":
+        return "Buka Meja Kasir (POS)";
+      case "cashflow":
+      case "finance":
+        return isSuperAdmin ? "Buka Arus Kas Langganan" : "Buka Keuangan & Laporan";
+      case "invoices":
+        return "Buka Arus Kas Langganan";
+      case "services":
+        return "Kelola Tarif Layanan";
+      case "customers":
+        return "Buka Data Pelanggan";
+      case "subscription":
+        return isSuperAdmin ? "Buka Rekap Langganan" : "Buka Menu Langganan";
+      case "reports":
+        return isSuperAdmin ? "Buka Laporan Platform" : "Buka Laporan Finansial";
+      case "tenants":
+        return "Buka Kelola Outlet";
+      case "users":
+        return "Buka Kelola Pengguna";
+      case "marketing":
+        return isMarketing ? "Buka Dashboard Marketing" : "Buka Tim Marketing";
+      case "referral_codes":
+        return "Buka Kode Referral";
+      case "registered_tenants":
+        return "Buka Laundry Terdaftar";
+      case "logs":
+        return "Buka Data Log Sistem";
+      case "overview":
+        return isSuperAdmin
+          ? "Buka Dashboard Platform"
+          : isMarketing
+          ? "Buka Dashboard Marketing"
+          : "Buka Dashboard Utama";
+      default:
+        return `Ke Halaman ${action.target}`;
+    }
+  } else {
+    switch (action.target) {
+      case "whatsapp":
+        return "Hubungkan WhatsApp Gateway";
+      case "open_shift":
+        return "Buka Shift Kasir Sekarang";
+      case "close_shift":
+        return "Tutup & Rekonsiliasi Shift";
+      case "expense":
+        return "Catat Pengeluaran Toko";
+      case "tutorial":
+        return "Buka Panduan Tutorial";
+      default:
+        return `Buka ${action.target}`;
+    }
+  }
+}
 
 // Helper to parse action tags from text
 function parseActionTags(rawContent: string): { cleanContent: string; actions: ActionItem[] } {
@@ -227,38 +717,68 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [activeModel, setActiveModel] = useState<string>("Gemini 3.8 Flash");
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory>("all");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const isStaff = currentUserRole === "staff";
+  const isStaff = currentUserRole === "staff" || currentUserRole === "kasir" || currentUserRole === "cashier";
   const isMarketing = currentUserRole === "marketing";
   const isSuperAdmin = currentUserRole === "superadmin";
 
-  const initialWelcomeText = isStaff
-    ? "Halo! Saya **Cleanique Asisten AI** untuk Staf Kasir.\n\n" +
-      "Saya siap memandu Anda menguasai meja kasir POS, alur pesanan cucian, shift kasir, dan tips penanganan noda pakaian.\n\n" +
+  const initialWelcomeText = useMemo(() => {
+    if (isSuperAdmin) {
+      return (
+        "Halo! Saya **Cleanique Asisten AI** untuk Super Admin Cleanique Pusat.\n\n" +
+        "Saya siap membantu Anda memantau seluruh cabang outlet laundry, manajemen lisensi & rekap langganan, verifikasi pengguna, serta pengaturan platform.\n\n" +
+        "Pilih topik bantuan di atas atau tanyakan apapun mengenai operasional platform."
+      );
+    }
+    if (isMarketing) {
+      return (
+        "Halo! Saya **Cleanique Asisten AI** untuk Tim Marketing Cleanique.\n\n" +
+        "Saya siap membantu Anda memantau kode referral, konversi pendaftaran laundry baru, dan penghitungan komisi marketing.\n\n" +
+        "Silakan tanyakan seputar program referral dan komisi."
+      );
+    }
+    if (isStaff) {
+      return (
+        "Halo! Saya **Cleanique Asisten AI** untuk Staf Kasir.\n\n" +
+        "Saya siap memandu Anda menguasai meja kasir POS, alur pesanan cucian, shift kasir, dan tips penanganan noda pakaian.\n\n" +
+        "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan."
+      );
+    }
+    return (
+      "Halo! Saya **Cleanique Asisten AI** untuk Pemilik Outlet.\n\n" +
+      "Saya siap memandu Anda memantau omset toko, keuangan buku kas, pengaturan outlet & WhatsApp, tarif layanan, dan efisiensi operasional cabang Anda.\n\n" +
       "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan."
-    : isMarketing
-    ? "Halo! Saya **Cleanique Asisten AI** untuk Mitra Marketing.\n\n" +
-      "Saya siap membantu Anda memahami kode referral, pelacakan performa promosi, dan penghitungan komisi affiliate.\n\n" +
-      "Silakan tanyakan seputar program referral."
-    : "Halo! Saya **Cleanique Asisten AI**.\n\n" +
-      "Saya siap memandu Anda menguasai seluruh menu, pengaturan outlet, alur kasir POS, dan shift kerja di dashboard ini.\n\n" +
-      "Pilih pertanyaan cepat di atas atau ketik apa yang ingin Anda tanyakan.";
+    );
+  }, [isSuperAdmin, isMarketing, isStaff]);
 
-  const initialParsed = parseActionTags(initialWelcomeText);
+  const initialParsed = useMemo(() => parseActionTags(initialWelcomeText), [initialWelcomeText]);
 
-  const initialActions: ActionItem[] = isStaff
-    ? [{ type: "NAVIGATE", target: "orders" }]
-    : isMarketing
-    ? [{ type: "NAVIGATE", target: "marketing" }]
-    : isSuperAdmin
-    ? [{ type: "NAVIGATE", target: "tenants" }]
-    : [
-        { type: "NAVIGATE", target: "overview" },
-        { type: "NAVIGATE", target: "settings" },
+  const initialActions: ActionItem[] = useMemo(() => {
+    if (isSuperAdmin) {
+      return [
+        { type: "NAVIGATE", target: "tenants" },
+        { type: "NAVIGATE", target: "invoices" },
       ];
+    }
+    if (isMarketing) {
+      return [
+        { type: "NAVIGATE", target: "marketing" },
+        { type: "NAVIGATE", target: "registered_tenants" },
+      ];
+    }
+    if (isStaff) {
+      return [
+        { type: "NAVIGATE", target: "orders" },
+        { type: "OPEN_MODAL", target: "open_shift" },
+      ];
+    }
+    return [
+      { type: "NAVIGATE", target: "overview" },
+      { type: "NAVIGATE", target: "settings" },
+    ];
+  }, [isSuperAdmin, isMarketing, isStaff]);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -270,6 +790,20 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+
+  // Update initial message if role changes
+  useEffect(() => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        role: "assistant",
+        content: initialWelcomeText,
+        cleanContent: initialParsed.cleanContent,
+        actions: initialActions,
+        time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  }, [currentUserRole, initialWelcomeText, initialParsed, initialActions]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -286,79 +820,34 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   }, [isOpen, messages]);
 
   const handleExecuteAction = (action: ActionItem) => {
-    // Guard aksi berdasarkan peran
-    if (isStaff && (action.target === "settings" || action.target === "whatsapp" || action.target === "expense")) {
-      setActionNotice("Akses ditolak: Menu ini hanya untuk Pemilik Outlet.");
-      setTimeout(() => setActionNotice(null), 2500);
+    const access = canRoleAccessAction(currentUserRole, action);
+    if (!access.allowed) {
+      setActionNotice(access.reason || "Akses ditolak: Menu ini tidak tersedia untuk peran Anda.");
+      setTimeout(() => setActionNotice(null), 3500);
       return;
     }
+
     if (action.type === "NAVIGATE") {
+      const destination = access.mappedTarget || (action.target as TabType);
       if (setActiveTab) {
-        setActiveTab(action.target as TabType);
-        setActionNotice(`Membuka menu ${action.target}...`);
+        setActiveTab(destination);
+        setActionNotice(access.noticeText || `Membuka menu ${destination}...`);
         setTimeout(() => setActionNotice(null), 2500);
       }
     } else if (action.type === "OPEN_MODAL") {
       if (action.target === "whatsapp") {
         onOpenWhatsAppModal?.();
-        setActionNotice("Membuka pengaturan WhatsApp Gateway...");
       } else if (action.target === "open_shift") {
         onOpenOpenShiftModal?.();
-        setActionNotice("Membuka jendela Buka Shift Kasir...");
       } else if (action.target === "close_shift") {
         onOpenCloseShiftModal?.();
-        setActionNotice("Membuka jendela Tutup Shift Kasir...");
       } else if (action.target === "expense") {
         onOpenExpenseModal?.("expense");
-        setActionNotice("Membuka form Pengeluaran Toko...");
       } else if (action.target === "tutorial") {
         onOpenTutorialModal?.();
-        setActionNotice("Membuka panduan tutorial sistem...");
       }
+      setActionNotice(access.noticeText || `Membuka ${action.target}...`);
       setTimeout(() => setActionNotice(null), 2500);
-    }
-  };
-
-  const getActionLabel = (action: ActionItem): string => {
-    if (action.type === "NAVIGATE") {
-      switch (action.target) {
-        case "settings":
-          return "Buka Menu Pengaturan";
-        case "orders":
-          return "Buka Meja Kasir (POS)";
-        case "cashflow":
-          return "Buka Buku Kas";
-        case "services":
-          return "Kelola Tarif Layanan";
-        case "customers":
-          return "Buka Data Pelanggan";
-        case "subscription":
-          return "Buka Menu Langganan";
-        case "reports":
-          return "Buka Laporan Finansial";
-        case "tenants":
-          return "Buka Manajemen Cabang";
-        case "users":
-          return "Buka Manajemen Pengguna";
-        case "overview":
-        default:
-          return `Ke Halaman ${action.target}`;
-      }
-    } else {
-      switch (action.target) {
-        case "whatsapp":
-          return "Hubungkan WhatsApp Gateway";
-        case "open_shift":
-          return "Buka Shift Kasir Sekarang";
-        case "close_shift":
-          return "Tutup & Rekonsiliasi Shift";
-        case "expense":
-          return "Catat Pengeluaran Toko";
-        case "tutorial":
-          return "Buka Panduan Tutorial";
-        default:
-          return `Buka ${action.target}`;
-      }
     }
   };
 
@@ -397,19 +886,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       });
 
       if (res.success && res.data) {
-        if (res.data.model) {
-          if (res.data.model.includes("gemini-3.8-flash")) {
-            setActiveModel("Gemini 3.8 Flash");
-          } else if (res.data.model.includes("gemini-3-flash")) {
-            setActiveModel("Gemini 3 Flash");
-          } else if (res.data.model.includes("aivene")) {
-            setActiveModel("Aivene Gateway");
-          } else if (res.data.model.includes("Local")) {
-            setActiveModel("Offline Engine");
-          } else {
-            setActiveModel(res.data.model.replace("google/", ""));
-          }
-        }
         const parsed = parseActionTags(res.data.reply);
         const aiMsg: Message = {
           id: `msg-${Date.now() + 1}`,
@@ -536,88 +1012,124 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     });
   };
 
-  // Filter kategori berdasarkan peran pengguna
-  const availableCategories: { id: PromptCategory; label: string }[] = isStaff
-    ? [
-        { id: "all", label: "Semua" },
-        { id: "pos", label: "Kasir POS" },
-        { id: "shift", label: "Shift Kasir" },
-        { id: "tips", label: "Tips Noda" },
-      ]
-    : isMarketing
-    ? [
-        { id: "all", label: "Semua" },
-      ]
-    : [
-        { id: "all", label: "Semua" },
-        { id: "menus", label: "Menu" },
-        { id: "settings", label: "Setting & WA" },
-        { id: "pos", label: "Kasir POS" },
-        { id: "shift", label: "Shift Kasir" },
-        { id: "tips", label: "Tips Noda" },
-      ];
+  // Ambil daftar kategori dan prompt spesifik untuk role pengguna
+  const { categories: availableCategories, prompts: allRolePrompts } = useMemo(() => {
+    return getRoleQuickPrompts(currentUserRole);
+  }, [currentUserRole]);
 
-  const roleFilteredPrompts = QUICK_PROMPTS.filter((p) => {
-    if (isStaff) {
-      // Kasir TIDAK BOLEH melihat prompt setting, wa gateway, tambah staf, buku kas, laporan, omset
-      const forbiddenForStaff = [
-        "set-hours",
-        "set-bank",
-        "set-wa",
-        "set-staff",
-        "menu-all",
-        "menu-cashflow",
-        "menu-reports",
-        "biz-health",
-        "biz-detergent",
-        "biz-rent",
-        "tip-summary",
-        "tip-promo",
-      ];
-      return !forbiddenForStaff.includes(p.id);
+  // Reset selected category jika category saat ini tidak ada di role yang aktif
+  useEffect(() => {
+    if (!availableCategories.some((c) => c.id === selectedCategory)) {
+      setSelectedCategory("all");
     }
-    if (isMarketing) {
-      return false;
-    }
-    return true;
-  });
+  }, [availableCategories, selectedCategory]);
+
+  const roleFilteredPrompts = useMemo(() => {
+    if (selectedCategory === "all") return allRolePrompts;
+    return allRolePrompts.filter((p) => p.category === selectedCategory);
+  }, [allRolePrompts, selectedCategory]);
 
   // Active Tab contextual prompt label
   const getActiveTabContextTip = () => {
-    // Jangan berikan prompt kontekstual jika kasir sedang tidak berwenang pada tab tsb
-    if (isStaff && (activeTab === "settings" || activeTab === "cashflow" || activeTab === "reports" || activeTab === "subscription")) {
-      return null;
+    if (isSuperAdmin) {
+      switch (activeTab) {
+        case "settings_platform":
+          return {
+            label: "Setting Platform HQ",
+            query: "Panduan konfigurasi global platform Cleanique pusat dan integrasi gateway?",
+          };
+        case "tenants":
+          return {
+            label: "Kelola Cabang",
+            query: "Bagaimana cara audit status cabang laundry, aktivasi outlet, dan verifikasi langganan?",
+          };
+        case "users":
+          return {
+            label: "Kelola Pengguna",
+            query: "Bagaimana cara memverifikasi akun pengguna dan mengatur hak akses admin/owner?",
+          };
+        case "invoices":
+          return {
+            label: "Arus Kas Lisensi",
+            query: "Bagaimana cara memantau mutasi invoice langganan platform dari seluruh cabang?",
+          };
+        case "logs":
+          return {
+            label: "Data Log Sistem",
+            query: "Bagaimana cara membaca log aktivitas sistem, audit error, dan event penting platform?",
+          };
+        default:
+          return null;
+      }
     }
+
+    if (isMarketing) {
+      switch (activeTab) {
+        case "marketing":
+          return {
+            label: "Dashboard Marketing",
+            query: "Bagaimana cara memaksimalkan konversi kode referral dan memantau komisi saya?",
+          };
+        case "registered_tenants":
+          return {
+            label: "Laundry Terdaftar",
+            query: "Bagaimana cara melihat daftar laundry yang mendaftar melalui kode referral saya?",
+          };
+        default:
+          return null;
+      }
+    }
+
+    if (isStaff) {
+      switch (activeTab) {
+        case "orders":
+        case "create-order":
+          return {
+            label: "Meja Kasir POS",
+            query: "Panduan cepat input pesanan baru, cetak nota pesanan, dan update status cucian?",
+          };
+        case "customers":
+          return {
+            label: "Data Pelanggan",
+            query: "Bagaimana cara mencari kontak pelanggan dan memeriksa riwayat nota cuciannya?",
+          };
+        default:
+          return null;
+      }
+    }
+
+    // Owner / Tenant Owner
     switch (activeTab) {
       case "settings":
         return {
-          label: "Sedang di Pengaturan Toko",
+          label: "Pengaturan Toko",
           query: "Panduan lengkap apa saja yang bisa diatur di menu Pengaturan ini?",
         };
       case "orders":
       case "create-order":
         return {
-          label: "Sedang di Meja Kasir",
+          label: "Meja Kasir POS",
           query: "Panduan cepat input pesanan baru, cetak nota pesanan, dan update status cucian?",
         };
+      case "finance":
       case "cashflow":
         return {
-          label: "Sedang di Buku Kas",
-          query: "Bagaimana cara mencatat pengeluaran toko dan menghitung laba bersih?",
+          label: "Buku Kas & Keuangan",
+          query: "Bagaimana cara mencatat pengeluaran toko dan memantau laba bersih cabang?",
         };
       case "reports":
         return {
-          label: "Sedang di Laporan Finansial",
+          label: "Laporan Finansial",
           query: "Bagaimana cara cetak laporan PDF resmi dan ekspor data ke Excel?",
         };
       case "services":
         return {
-          label: "Sedang di Menu Layanan",
+          label: "Menu Layanan",
           query: "Bagaimana cara menambah tarif cucian baru dan mengatur durasi SLA?",
         };
       case "subscription":
         return {
-          label: "Sedang di Menu Langganan",
+          label: "Menu Langganan",
           query: "Bagaimana cara perpanjang masa aktif outlet dan konfirmasi pembayaran?",
         };
       default:
@@ -633,7 +1145,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       : currentUserRole === "owner" || currentUserRole === "tenant_owner"
       ? "Pemilik Outlet"
       : isMarketing
-      ? "Mitra Marketing"
+      ? "Tim Marketing"
       : "Kasir Staf";
 
   return (
@@ -710,15 +1222,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="text-xs font-bold tracking-wide">Cleanique AI</h3>
-                <span className={`px-2 py-0.2 text-[9px] font-semibold rounded-full border ${
-                  activeModel.includes("Gemini")
-                    ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/30"
-                    : activeModel.includes("Aivene")
-                    ? "bg-blue-500/30 text-blue-200 border-blue-400/30"
-                    : "bg-amber-500/30 text-amber-200 border-amber-400/30"
-                }`}>
-                  {activeModel}
-                </span>
               </div>
               <p className="text-[10px] text-white/80 mt-0.5">
                 Panduan {isStaff ? "Kasir & Shift" : "Menu & Settings"} • <span className="font-semibold text-blue-100">{roleDisplayName}</span>
@@ -799,8 +1302,18 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
         {/* Action Trigger Notice Banner */}
         {actionNotice && (
-          <div className="bg-emerald-500 text-white text-[11px] font-medium py-1 px-3 flex items-center gap-1.5 animate-fade-in shrink-0">
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+          <div
+            className={`${
+              actionNotice.toLowerCase().includes("ditolak") || actionNotice.toLowerCase().includes("tidak tersedia")
+                ? "bg-rose-600"
+                : "bg-emerald-600"
+            } text-white text-[11px] font-medium py-1 px-3 flex items-center gap-1.5 animate-fade-in shrink-0`}
+          >
+            {actionNotice.toLowerCase().includes("ditolak") || actionNotice.toLowerCase().includes("tidak tersedia") ? (
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            )}
             <span>{actionNotice}</span>
           </div>
         )}
@@ -846,7 +1359,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                   {msg.actions && msg.actions.length > 0 && (
                     <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-1.5">
                       {msg.actions.map((act, actIdx) => {
-                        const label = getActionLabel(act);
+                        const label = getActionLabel(act, currentUserRole);
                         return (
                           <button
                             key={actIdx}
@@ -863,7 +1376,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                   )}
                 </div>
                 <span className="text-[10px] text-slate-400 mt-1 px-1">
-                  {msg.time} {msg.model && `• ${msg.model.replace("gemini-", "")}`}
+                  {msg.time}
                 </span>
               </div>
             </div>

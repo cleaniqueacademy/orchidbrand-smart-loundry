@@ -56,9 +56,9 @@ const roleBadgeConfig: Record<Role, { label: string; className: string; desc: st
       desc: "Staf operasional kasir & cuci. Input pesanan, serah terima cucian, dan shift kasir.",
     },
     marketing: {
-      label: "Affiliate Marketing",
+      label: "Tim Marketing",
       className: "bg-indigo-50 text-indigo-800 border-indigo-200",
-      desc: "Mitra promosi affiliate. Mengelola kode kupon promosi dan komisi pendaftaran outlet baru.",
+      desc: "Divisi pemasaran internal IndoTech. Mengelola kode kupon promosi dan ekspansi outlet baru.",
     },
   };
 
@@ -205,8 +205,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 {isSuperAdmin
                   ? "Permanen Aktif"
                   : (user.status ?? "active") === "active"
-                  ? "Aktif — klik untuk nonaktifkan"
-                  : "Nonaktif — klik untuk aktifkan"}
+                  ? "Aktif Â· klik untuk nonaktifkan"
+                  : "Nonaktif Â· klik untuk aktifkan"}
               </button>
             </div>
 
@@ -224,7 +224,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 <span className="text-zinc-700 font-medium">
                   {isSuperAdmin
                     ? "Pusat (Seluruh Cabang)"
-                    : tenant?.outletName ?? user.tenantName ?? "—"}
+                    : tenant?.outletName ?? user.tenantName ?? "-"}
                 </span>
               </div>
             </div>

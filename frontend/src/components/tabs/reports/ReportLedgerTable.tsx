@@ -1,6 +1,7 @@
 import React from "react";
-import { Search, ChevronLeft, ChevronRight, Store } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Store, Receipt } from "lucide-react";
 import { Order, Tenant } from "../../../types";
+import { EmptyStateWalkthrough } from "../../common/EmptyStateWalkthrough";
 
 interface ReportLedgerTableProps {
   searchQuery: string;
@@ -73,11 +74,17 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
             <tbody className="divide-y divide-zinc-100">
               {paginatedOrders.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={isMultiTenant ? 8 : 7}
-                    className="py-10 text-center text-zinc-400 text-xs"
-                  >
-                    Tidak ada transaksi yang cocok dengan filter
+                  <td colSpan={isMultiTenant ? 8 : 7} className="py-6">
+                    <EmptyStateWalkthrough
+                      icon={<Receipt className="w-5 h-5 text-zinc-400" />}
+                      title="Tidak Ada Transaksi Pada Filter Ini"
+                      description="Belum ada transaksi cucian yang tercatat sesuai rentang tanggal atau kata kunci pencarian yang dipilih."
+                      tips={[
+                        "Coba ubah filter rentang tanggal (Hari Ini, 7 Hari, Bulan Ini, atau Semua) pada kontrol laporan.",
+                        "Pastikan kata kunci pencarian nomor nota atau nama pelanggan sudah sesuai.",
+                        "Gunakan tombol Ekspor Excel atau Cetak Dokumen Resmi untuk mengunduh rekapitulasi buku besar.",
+                      ]}
+                    />
                   </td>
                 </tr>
               ) : (

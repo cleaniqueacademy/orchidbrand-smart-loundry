@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   HelpCircle,
   AlertCircle,
+  Crown,
+  Clock,
 } from "lucide-react";
 import { User, AccountTier } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -224,34 +226,41 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
               </div>
             </div>
 
-            {/* Card Paket Premium (Rp 100.000) */}
+            {/* Card Paket Premium (Rp 100.000) - COMING SOON */}
             <div
-              onClick={() => setSelectedPlan("premium")}
-              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
-                selectedPlan === "premium"
-                  ? "border-blue-700 bg-blue-50/40 shadow-xs"
-                  : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50/50"
-              }`}
+              onClick={() => {
+                toast.info(
+                  "Paket Premium Segera Hadir! 👑",
+                  "Fitur Paket Premium (multi-cabang, manajemen staf, dll.) sedang dalam tahap finalisasi dan akan segera dirilis."
+                );
+              }}
+              className="p-4 rounded-2xl border-2 border-dashed border-amber-200 hover:border-amber-300 bg-amber-50/20 transition-all cursor-pointer relative flex flex-col justify-between group shadow-2xs"
+              title="Paket Premium sedang dalam pengembangan (Coming Soon)"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
                     Paket Premium
                   </span>
-                  <div
-                    className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                      selectedPlan === "premium"
-                        ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-zinc-300"
-                    }`}
-                  >
-                    {selectedPlan === "premium" && <Check className="w-3 h-3 stroke-[3]" />}
-                  </div>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                    <Crown className="w-3 h-3 text-amber-600" />
+                    Coming Soon
+                  </span>
                 </div>
 
                 <div className="mb-3">
-                  <div className="text-xl font-black text-zinc-900 tracking-tight">
-                    Rp 100.000 <span className="text-xs font-normal text-zinc-500">/ bulan</span>
+                  <div className="flex items-center gap-2">
+                    <div className="relative inline-flex items-center select-none py-0.5">
+                      <span className="text-xl font-black text-zinc-900 tracking-tight filter blur-[4px] select-none opacity-60">
+                        Rp 100.000
+                      </span>
+                      <span className="text-xs font-normal text-zinc-500 ml-1 filter blur-[3px] select-none opacity-60">
+                        / bulan
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shadow-2xs">
+                      Segera Diumumkan
+                    </span>
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-1">
                     Solusi enterprise multi-cabang, printer thermal POS, dan kelola banyak kasir.
@@ -269,7 +278,7 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
                   </li>
                   <li className="flex items-center gap-2">
                     <Store className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>Multi-Cabang (Hingga 10 Gerai)</span>
+                    <span>Multi-Cabang (Hingga 5 Gerai)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Users className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -282,8 +291,11 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
                 </ul>
               </div>
 
-              <div className="mt-4 pt-2 border-t border-zinc-200/60 text-[11px] text-indigo-700 font-medium text-center">
-                {selectedPlan === "premium" ? "✓ Paket Dipilih" : "Klik untuk Memilih"}
+              <div className="mt-4 pt-2.5 border-t border-amber-200/80">
+                <div className="text-[11px] text-amber-800 font-semibold text-center flex items-center justify-center gap-1.5 bg-amber-100/70 hover:bg-amber-100 py-1.5 px-2 rounded-xl border border-amber-300/80 transition-colors">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Segera Hadir di Pembaruan Mendatang</span>
+                </div>
               </div>
             </div>
           </div>

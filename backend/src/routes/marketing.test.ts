@@ -83,6 +83,8 @@ describe("marketing routes integration tests", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.profileId).toBeDefined();
+    expect(body.data.referralCode).toBeDefined();
+    expect(body.data.referralCode.length).toBe(6);
     createdProfileId = body.data.profileId;
   });
 

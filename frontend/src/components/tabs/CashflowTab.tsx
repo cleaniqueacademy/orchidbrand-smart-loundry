@@ -6,6 +6,7 @@ import {
   ColumnDef,
   filterByDatePreset,
 } from "../common/ShadcnDataTable";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 import { formatCurrency, formatSignedCurrency } from "../../utils/formatUtils";
 import { ShiftHistorySection } from "./ShiftHistorySection";
 
@@ -452,6 +453,18 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
             </div>
           }
           emptyMessage="Belum ada transaksi arus kas."
+          emptyContent={
+            <EmptyStateWalkthrough
+              icon={<DollarSign className="w-5 h-5 text-zinc-400" />}
+              title="Belum Ada Transaksi Arus Kas"
+              description="Catatan pemasukan dari pesanan laundry dan pengeluaran operasional toko Anda akan tercantum secara realtime di sini."
+              tips={[
+                "Pemasukan otomatis tercatat saat kasir menerima pembayaran pesanan pelanggan (Tunai, QRIS, Transfer).",
+                "Gunakan tombol Catat Pengeluaran untuk mencatat belanja deterjen, plastik, token listrik, atau operasional lain.",
+                "Seluruh data kas tersinkronisasi otomatis dengan rekapitulasi shift kasir dan pembukuan laba-rugi toko.",
+              ]}
+            />
+          }
           initialPageSize={10}
         />
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Clock, Calculator, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, User, Calendar, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { CashierShift } from "../../types";
 import { authHeaders } from "../../utils/api";
+import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 
 interface ShiftHistorySectionProps {
   tenantId: string;
@@ -76,8 +77,17 @@ export const ShiftHistorySection: React.FC<ShiftHistorySectionProps> = ({ tenant
       {loading ? (
         <div className="py-8 text-center text-xs text-zinc-400">Memuat riwayat shift...</div>
       ) : shifts.length === 0 ? (
-        <div className="py-8 text-center text-xs text-zinc-400">
-          Belum ada riwayat shift yang tercatat.
+        <div className="py-2">
+          <EmptyStateWalkthrough
+            icon={<Clock className="w-5 h-5 text-zinc-400" />}
+            title="Belum Ada Riwayat Shift Kasir"
+            description="Riwayat buka shift kasir, setoran modal awal kembalian, dan rekonsiliasi laci kas akan dicatat di sini."
+            tips={[
+              "Kasir menekan tombol Buka Shift saat mulai sesi kerja dan memasukkan nominal kas awal laci.",
+              "Saat pergantian shift atau tutup toko, lakukan Tutup Shift untuk rekonsiliasi uang fisik kasir dengan transaksi sistem.",
+              "Owner dapat memantau kedisiplinan kasir dan selisih uang kas secara transparan pada setiap sesi shift.",
+            ]}
+          />
         </div>
       ) : (
         <div className="space-y-3">

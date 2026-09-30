@@ -5,6 +5,7 @@ import { signToken } from "../middleware/auth";
 import { db } from "../db/index";
 import { users, tenants, signupRequests, services, waNumbers, subscriptionEvents, referralEvents } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("signup routes integration tests", () => {
   const app = new Hono();
@@ -70,7 +71,7 @@ describe("signup routes integration tests", () => {
         password: "password123",
         city: "Bandung",
         address: "Jl. Merdeka No. 12",
-        referralCode: "CLEANHEMAT",
+        referralCode: MARKETING_SEEDS[0].code,
       }),
     });
 

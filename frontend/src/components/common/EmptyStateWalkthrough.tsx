@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, ArrowRight, HelpCircle, Plus } from "lucide-react";
+import { Receipt, HelpCircle, Plus } from "lucide-react";
 
 export interface EmptyStateWalkthroughProps {
   icon?: React.ReactNode;
@@ -15,7 +15,7 @@ export interface EmptyStateWalkthroughProps {
 
 export const EmptyStateWalkthrough: React.FC<EmptyStateWalkthroughProps> = ({
   icon,
-  badge = "Panduan Memulai",
+  badge,
   title,
   description,
   actionLabel,
@@ -25,68 +25,69 @@ export const EmptyStateWalkthrough: React.FC<EmptyStateWalkthroughProps> = ({
   tips,
 }) => {
   return (
-    <div className="py-10 px-4 sm:px-8 max-w-lg mx-auto flex flex-col items-center text-center">
-      {/* Icon with glowing ambient badge */}
-      <div className="relative mb-3.5">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-indigo-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 shadow-md shadow-emerald-500/10">
-          {icon || <Sparkles className="w-6 h-6 text-emerald-500" />}
-        </div>
-        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 border border-white" />
+    <div className="py-8 px-4 max-w-lg mx-auto flex flex-col items-center text-center">
+      {/* Subtle clean neutral icon */}
+      <div className="w-11 h-11 rounded-xl bg-zinc-100 text-zinc-400 flex items-center justify-center border border-zinc-200/80 mb-3 shadow-2xs">
+        {icon || <Receipt className="w-5 h-5 text-zinc-400" />}
       </div>
 
-      {/* Badge */}
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold mb-2">
-        <Sparkles className="w-3 h-3 text-emerald-600" />
-        {badge}
-      </span>
+      {/* Optional Badge (only if explicitly provided) */}
+      {badge && (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 text-[10px] font-semibold mb-2">
+          {badge}
+        </span>
+      )}
 
       {/* Title & Description */}
-      <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-snug mb-1.5">
+      <h4 className="text-sm sm:text-base font-bold text-zinc-800 tracking-tight leading-snug mb-1">
         {title}
-      </h3>
-      <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mb-4">
+      </h4>
+      <p className="text-xs text-zinc-500 leading-relaxed max-w-md mx-auto mb-3.5">
         {description}
       </p>
 
-      {/* Optional Quick Tips */}
+      {/* Clean Quick Tips */}
       {tips && tips.length > 0 && (
-        <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 mb-4 text-left space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+        <div className="w-full max-w-md bg-zinc-50 border border-zinc-200/80 rounded-xl p-3 text-left space-y-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
             Tips Cepat:
           </span>
           {tips.map((tip, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-normal">
-              <span className="text-emerald-600 font-bold">•</span>
+            <div key={i} className="flex items-start gap-2 text-xs text-zinc-600 leading-normal">
+              <span className="text-zinc-400 font-bold">•</span>
               <span>{tip}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2.5 flex-wrap justify-center">
-        {actionLabel && onAction && (
-          <button
-            type="button"
-            onClick={onAction}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-900/15 hover:from-emerald-700 hover:to-teal-800 active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{actionLabel}</span>
-          </button>
-        )}
+      {/* Action Buttons (only if provided) */}
+      {(actionLabel || secondaryActionLabel) && (
+        <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
+          {actionLabel && onAction && (
+            <button
+              type="button"
+              onClick={onAction}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{actionLabel}</span>
+            </button>
+          )}
 
-        {secondaryActionLabel && onSecondaryAction && (
-          <button
-            type="button"
-            onClick={onSecondaryAction}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>{secondaryActionLabel}</span>
-          </button>
-        )}
-      </div>
+          {secondaryActionLabel && onSecondaryAction && (
+            <button
+              type="button"
+              onClick={onSecondaryAction}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium text-xs transition-colors cursor-pointer"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-zinc-400" />
+              <span>{secondaryActionLabel}</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
+

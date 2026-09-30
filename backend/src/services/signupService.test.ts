@@ -17,6 +17,7 @@ import {
 } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { daysRemaining } from "../utils/date";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("signupService integration tests", () => {
   const createdUserIds: string[] = [];
@@ -142,14 +143,15 @@ describe("signupService integration tests", () => {
     expect(subEvent.eventType).toBe("trial_started");
   });
 
-  it("registerNewTenant berhasil dengan kode referral valid (CLEANHEMAT)", async () => {
+  it("registerNewTenant berhasil dengan kode referral valid", async () => {
+    const validCode = MARKETING_SEEDS[0].code;
     const uniqueEmail = `andi_ref_${Date.now()}@test.com`;
     const uniquePhone = `0813${Date.now().toString().slice(-8)}`;
 
     const [seedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "CLEANHEMAT"));
+      .where(eq(referralCodes.code, validCode));
 
     const initialUsage = seedCode.currentUsage;
 
@@ -159,11 +161,11 @@ describe("signupService integration tests", () => {
       phone: uniquePhone,
       email: uniqueEmail,
       password: "password123",
-      referralCode: "CLEANHEMAT",
+      referralCode: validCode,
     });
 
     expect(res.success).toBe(true);
-    expect(res.data?.referralCode).toBe("CLEANHEMAT");
+    expect(res.data?.referralCode).toBe(validCode);
 
     const { userId, tenantId } = res.data!;
     createdUserIds.push(userId);
@@ -173,7 +175,7 @@ describe("signupService integration tests", () => {
     const [updatedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "CLEANHEMAT"));
+      .where(eq(referralCodes.code, validCode));
     expect(updatedCode.currentUsage).toBe(initialUsage + 1);
 
     // Verifikasi referralEvent dicatat

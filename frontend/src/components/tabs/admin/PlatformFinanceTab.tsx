@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   DollarSign,
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  X,
 } from "lucide-react";
 import { authHeaders } from "../../../utils/api";
 import { useToast } from "../../common/ToastContext";
@@ -365,7 +366,7 @@ export const PlatformFinanceTab: React.FC = () => {
                           {r.referralCode}
                         </span>
                       ) : (
-                        <span className="text-zinc-400 text-[11px]">â€”</span>
+                        <span className="text-zinc-400 text-[11px]">-</span>
                       )}
                     </td>
                     <td
@@ -403,9 +404,10 @@ export const PlatformFinanceTab: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 text-lg leading-none cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
+                title="Tutup"
               >
-                Ã—
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -420,7 +422,7 @@ export const PlatformFinanceTab: React.FC = () => {
                   className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="server">Server VPS & Cloud Hosting</option>
-                  <option value="marketing_commission">Komisi Affiliate / Marketing (Ilham, dll)</option>
+                  <option value="marketing_commission">Insentif Tim Marketing (Ilham, dll)</option>
                   <option value="wa_quota">Kuota API / WhatsApp Gateway</option>
                   <option value="domain">Domain & Sertifikat SSL</option>
                   <option value="other">Operasional Lainnya</option>

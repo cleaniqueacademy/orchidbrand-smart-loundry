@@ -17,6 +17,7 @@ import {
 import { eq } from "drizzle-orm";
 import { newId } from "../utils/id";
 import { addDays } from "../utils/date";
+import { MARKETING_SEEDS } from "../db/seedMarketingUsers";
 
 describe("referralService - computeDiscount", () => {
   it("menghitung diskon persentase", () => {
@@ -63,9 +64,10 @@ describe("referralService - validateCode", () => {
   });
 
   it("menerima kode valid dari database yang sudah di-seed (case insensitive)", async () => {
-    const res = await validateCode("cleanhemat");
+    const validCode = MARKETING_SEEDS[0].code;
+    const res = await validateCode(validCode.toLowerCase());
     expect(res.valid).toBe(true);
-    expect(res.code?.code).toBe("CLEANHEMAT");
+    expect(res.code?.code).toBe(validCode);
     expect(res.discountType).toBe("fixed");
     expect(res.discountValue).toBe(5000); // Diskon Rp 5.000/bulan
   });
@@ -280,11 +282,11 @@ describe("referralService - recordClick & recordSignup", () => {
 
 describe("referralService - recordCommission", () => {
   it("menghitung dan mencatat komisi jika kode memiliki marketingProfileId", async () => {
-    // Gunakan kode CLEANHEMAT yang sudah di-seed dengan marketingProfileId
+    // Gunakan kode marketing dari seed dengan marketingProfileId
     const [seedCode] = await db
       .select()
       .from(referralCodes)
-      .where(eq(referralCodes.code, "CLEANHEMAT"));
+      .where(eq(referralCodes.code, MARKETING_SEEDS[0].code));
 
     expect(seedCode).toBeDefined();
     expect(seedCode.marketingProfileId).toBeDefined();
