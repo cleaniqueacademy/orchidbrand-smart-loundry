@@ -8,6 +8,7 @@ import {
   marketingCommissions,
 } from "./schema";
 import { eq, ne } from "drizzle-orm";
+import { generateRandomPassword } from "../utils/password";
 
 export const MARKETING_SEEDS = [
   {
@@ -182,10 +183,18 @@ export const MARKETING_SEEDS = [
   },
 ];
 
-export async function seedMarketingUsers() {
-  console.log("Memulai pembaruan 17 akun Tim Marketing IndoTech Cleanique...");
+export interface SeededMarketingUser {
+  userId: string;
+  name: string;
+  email: string;
+  code: string;
+  password: string;
+}
+
+export async function seedMarketingUsers(): Promise<SeededMarketingUser[]> {
+  console.log("Memulai pembaruan 17 akun Tim Marketing IndoTech Cleanique (Randomized Passwords)...");
   const today = new Date().toISOString();
-  const passwordHash = await Bun.password.hash("marketing123", { algorithm: "bcrypt", cost: 10 });
+  const seededResults: SeededMarketingUser[] = [];
 
   // 1. DROP SEMUA USER MARKETING DAN KODE REFERRAL SEBELUMNYA (TERMASUK CLEANHEMAT)
   try {
@@ -228,11 +237,14 @@ export async function seedMarketingUsers() {
     console.warn("Notice saat membersihkan marketing users:", err.message);
   }
 
-  // 2. INSERT 17 MITRA MARKETING BARU
+  // 2. INSERT 17 MITRA MARKETING BARU (DENGAN RANDOM PASSWORD INDIVIDUAL)
   for (const item of MARKETING_SEEDS) {
     const userId = item.userId;
     const profileId = `mkt-prof-${item.slug}`;
     const codeId = `ref-code-${item.slug}`;
+
+    const rawPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
+    const passwordHash = await Bun.password.hash(rawPassword, { algorithm: "bcrypt", cost: 10 });
 
     // Insert User
     await db.insert(users).values({
@@ -279,10 +291,19 @@ export async function seedMarketingUsers() {
       createdAt: today,
     });
 
-    console.log(`+ [Kode: ${item.code}] ${item.name} (${item.email})`);
+    seededResults.push({
+      userId,
+      name: item.name,
+      email: item.email,
+      code: item.code,
+      password: rawPassword,
+    });
+
+    console.log(`+ [Kode: ${item.code}] ${item.name} (${item.email} / ${rawPassword})`);
   }
 
-  console.log("✅ Berhasil men-generate 17 akun mitra marketing & kode referral 6 karakter.");
+  console.log("✅ Berhasil men-generate 17 akun mitra marketing dengan random password & kode referral 6 karakter.");
+  return seededResults;
 }
 
 if (import.meta.main) {

@@ -42,6 +42,7 @@ export interface SignupResult {
     trialDays: number;
     subscriptionUntil: string;
     referralCode?: string | null;
+    referralNotice?: string | null;
   };
 }
 

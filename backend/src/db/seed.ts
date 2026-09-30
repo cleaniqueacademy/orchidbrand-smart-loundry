@@ -1,5 +1,6 @@
 import { db, initPostgresTables } from "./index";
 import { seedMarketingUsers, MARKETING_SEEDS } from "./seedMarketingUsers";
+import { generateRandomPassword } from "../utils/password";
 import {
   users,
   tenants,
@@ -124,10 +125,15 @@ export async function seedInitialData(force = true) {
     ]);
 
     // ----------------------------------------------------
-    // 3. User Hashes
+    // 3. User Hashes (Randomized Passwords)
     // ----------------------------------------------------
-    const adminPasswordHash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
-    const ownerPasswordHash = await Bun.password.hash("owner123", { algorithm: "bcrypt", cost: 10 });
+    const admin1Password = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
+    const admin2Password = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
+    const ownerPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
+
+    const admin1PasswordHash = await Bun.password.hash(admin1Password, { algorithm: "bcrypt", cost: 10 });
+    const admin2PasswordHash = await Bun.password.hash(admin2Password, { algorithm: "bcrypt", cost: 10 });
+    const ownerPasswordHash = await Bun.password.hash(ownerPassword, { algorithm: "bcrypt", cost: 10 });
 
     const admin1Id = "user-admin-01";
     const admin2Id = "user-admin-02";
@@ -142,7 +148,7 @@ export async function seedInitialData(force = true) {
         id: admin1Id,
         name: "Super Admin Cleanique 1",
         email: "admin@cleaniquelaundry.com",
-        passwordHash: adminPasswordHash,
+        passwordHash: admin1PasswordHash,
         role: "superadmin",
         status: "active",
         subscriptionUntil: "2027-12-31",
@@ -152,7 +158,7 @@ export async function seedInitialData(force = true) {
         id: admin2Id,
         name: "Super Admin Cleanique 2",
         email: "admin2@cleaniquelaundry.com",
-        passwordHash: adminPasswordHash,
+        passwordHash: admin2PasswordHash,
         role: "superadmin",
         status: "active",
         subscriptionUntil: "2027-12-31",
@@ -270,7 +276,7 @@ export async function seedInitialData(force = true) {
     // ----------------------------------------------------
     // 8. 17 Akun Tim Marketing IndoTech & Kode Referral (6-Char)
     // ----------------------------------------------------
-    await seedMarketingUsers();
+    const seededMarketing = await seedMarketingUsers();
 
     // CATATAN PRODUKSI:
     // Tabel orders, customers, expenses, shifts, waLogs TIDAK di-seed dummy.
@@ -280,21 +286,49 @@ export async function seedInitialData(force = true) {
     console.log("✅ SEEDING PRODUKSI BERHASIL 100% (CLEAN STATE)!");
     console.log("=================================================");
     console.log("👑 SUPER ADMIN (2 Akun):");
-    console.log("  1. admin@cleaniquelaundry.com  / admin123");
-    console.log("  2. admin2@cleaniquelaundry.com / admin123");
+    console.log(`  1. admin@cleaniquelaundry.com  / ${admin1Password}`);
+    console.log(`  2. admin2@cleaniquelaundry.com / ${admin2Password}`);
     console.log("-------------------------------------------------");
     console.log("🏪 TENANT OWNER (1 Outlet):");
     console.log("  - Outlet : Cleanique Jongke Tengah");
     console.log("  - Email  : owner.jongke@cleaniquelaundry.com");
-    console.log("  - Pass   : owner123");
+    console.log(`  - Pass   : ${ownerPassword}`);
     console.log("-------------------------------------------------");
     console.log("📢 17 ANGGOTA TIM MARKETING INDOTECH & KODE REFERRAL (6-CHAR):");
-    MARKETING_SEEDS.forEach((mkt, idx) => {
-      console.log(`  ${idx + 1}. [Kode: ${mkt.code.padEnd(8)}] ${mkt.name} (${mkt.email} / marketing123)`);
+    seededMarketing.forEach((mkt, idx) => {
+      console.log(`  ${(idx + 1).toString().padStart(2, " ")}. [Kode: ${mkt.code.padEnd(8)}] ${mkt.name} (${mkt.email} / ${mkt.password})`);
     });
     console.log("-------------------------------------------------");
     console.log("📦 DATA OPERASIONAL: BERSIH (0 Orders, 0 Customers, 0 Expenses, 0 Staff)");
     console.log("=================================================");
+
+    const credentialsSummary = `
+=================================================
+CLEANIQUE LAUNDRY - SEEDED CREDENTIALS
+Dibuat pada: ${new Date().toLocaleString("id-ID")}
+CATATAN: File ini otomatis di-generate dan di-ignore oleh Git (*.local.txt / users.txt)
+=================================================
+
+👑 SUPER ADMIN (2 Akun):
+1. admin@cleaniquelaundry.com  / ${admin1Password}
+2. admin2@cleaniquelaundry.com / ${admin2Password}
+
+🏪 TENANT OWNER (1 Outlet):
+- Outlet : Cleanique Jongke Tengah
+- Email  : owner.jongke@cleaniquelaundry.com
+- Pass   : ${ownerPassword}
+
+📢 17 ANGGOTA TIM MARKETING INDOTECH & KODE REFERRAL (6-CHAR):
+${seededMarketing.map((m, i) => `${(i + 1).toString().padStart(2, " ")}. [Kode: ${m.code.padEnd(8)}] ${m.name} (${m.email} / ${m.password})`).join("\n")}
+=================================================
+`.trim();
+
+    try {
+      await Bun.write("users.local.txt", credentialsSummary);
+      console.log("📝 File kredensial lengkap tersimpan di: users.local.txt (diabaikan oleh git)");
+    } catch {
+      // ignore
+    }
   } catch (err: any) {
     console.error("❌ Seed error:", err);
     throw err;
