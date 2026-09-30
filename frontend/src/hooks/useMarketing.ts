@@ -137,6 +137,31 @@ export function useMarketing() {
     return res;
   };
 
+  const toggleProfileStatus = async (
+    id: string
+  ): Promise<{ success: boolean; message?: string; data?: { status: string } }> => {
+    const res = await fetchApi<{ userId: string; status: string }>(
+      `/api/marketing/profiles/${id}/status`,
+      { method: "PATCH" }
+    );
+    if (res.success) {
+      await fetchProfiles();
+    }
+    return res;
+  };
+
+  const deleteProfile = async (
+    id: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    const res = await fetchApi(`/api/marketing/profiles/${id}`, {
+      method: "DELETE",
+    });
+    if (res.success) {
+      await fetchProfiles();
+    }
+    return res;
+  };
+
   return {
     profiles,
     commissions,
@@ -149,5 +174,7 @@ export function useMarketing() {
     createProfile,
     updateProfile,
     updateCommissionStatus,
+    toggleProfileStatus,
+    deleteProfile,
   };
 }

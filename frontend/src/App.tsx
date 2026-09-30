@@ -257,6 +257,8 @@ export default function App() {
     handleExtendUserSubscription,
     handleCreateTenant,
     handleUpdateTenant,
+    handleDeleteTenant,
+    handleToggleTenantStatus,
     handleCreateUser,
     handleDeleteUser,
     handleUpdateUser,
@@ -783,6 +785,8 @@ export default function App() {
                   onResetPassword={handleResetPassword}
                   onOpenTenantModal={() => setShowTenantModal(true)}
                   onUpdateTenant={handleUpdateTenant}
+                  onDeleteTenant={handleDeleteTenant}
+                  onToggleTenantStatus={handleToggleTenantStatus}
                   onRefreshData={fetchData}
                 />
               )}

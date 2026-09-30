@@ -8,6 +8,8 @@ import {
   UserCheck,
   UserX,
   ShieldCheck,
+  Power,
+  Trash2,
 } from "lucide-react";
 import { User as UserType, Role, Tenant } from "../../types";
 import { checkUserActiveStatus } from "../../utils/subscriptionUtils";
@@ -395,13 +397,39 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
                       {/* Col: Aksi */}
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setDetailUser(u)}
-                          className="text-[11px] font-semibold text-blue-700 hover:text-blue-900 hover:underline transition cursor-pointer"
-                        >
-                          Lihat Detail
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setDetailUser(u)}
+                            className="px-2 py-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                          >
+                            Detail
+                          </button>
+                          {!isSuperAdmin && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => onToggleStatus(u.id, u.status ?? "active")}
+                                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                                  (u.status ?? "active") === "inactive"
+                                    ? "text-emerald-600 hover:bg-emerald-50"
+                                    : "text-amber-500 hover:bg-amber-50"
+                                }`}
+                                title={(u.status ?? "active") === "inactive" ? "Aktifkan akun" : "Nonaktifkan akun"}
+                              >
+                                <Power className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDeleteUser(u.id)}
+                                className="p-1.5 rounded-lg text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                title="Hapus akun pengguna"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

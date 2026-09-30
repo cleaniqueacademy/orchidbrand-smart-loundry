@@ -722,6 +722,81 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     }
   };
 
+  // Delete Tenant (Superadmin only)
+  const handleDeleteTenant = async (id: string, outletName: string): Promise<boolean> => {
+    const confirmed = await confirm({
+      title: "Hapus Cabang Permanen",
+      description: `Tindakan ini akan menghapus cabang "${outletName}" beserta seluruh data terkait secara permanen dan tidak dapat dibatalkan.`,
+      confirmText: "Hapus Permanen",
+      variant: "danger" as const,
+    });
+    if (!confirmed) return false;
+    try {
+      const res = await fetch(`${API_BASE}/tenants/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenants((prev) => prev.filter((t) => t.id !== id));
+        toast.success("Cabang Dihapus", `${outletName} berhasil dihapus dari sistem.`);
+        return true;
+      } else {
+        toast.error("Gagal Menghapus", data.message || "Terjadi kesalahan pada server");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      return false;
+    }
+  };
+
+  // Toggle Tenant Status (active <-> inactive, Superadmin only)
+  const handleToggleTenantStatus = async (
+    id: string,
+    currentStatus: string,
+    outletName: string
+  ): Promise<boolean> => {
+    const isActivating = currentStatus !== "active";
+    const actionLabel = isActivating ? "Aktifkan" : "Nonaktifkan";
+    const confirmed = await confirm({
+      title: `${actionLabel} Cabang`,
+      description: `${actionLabel} cabang "${outletName}"? ${
+        isActivating
+          ? "Cabang dapat kembali login dan beroperasi."
+          : "Pemilik cabang tidak dapat login hingga diaktifkan kembali."
+      }`,
+      confirmText: actionLabel,
+      variant: isActivating ? ("info" as const) : ("warning" as const),
+    });
+    if (!confirmed) return false;
+    try {
+      const newStatus = isActivating ? "active" : "inactive";
+      const res = await fetch(`${API_BASE}/tenants/${id}/status`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenants((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+        );
+        toast.success(
+          `Cabang ${isActivating ? "Diaktifkan" : "Dinonaktifkan"}`,
+          `${outletName} berhasil ${isActivating ? "diaktifkan" : "dinonaktifkan"}.`
+        );
+        return true;
+      } else {
+        toast.error("Gagal Mengubah Status", data.message || "Terjadi kesalahan pada server");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      return false;
+    }
+  };
+
   // Create User
   const handleCreateUser = async (userData: {
     name: string;
@@ -888,6 +963,8 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
     handleExtendUserSubscription,
     handleCreateTenant,
     handleUpdateTenant,
+    handleDeleteTenant,
+    handleToggleTenantStatus,
     handleCreateUser,
     handleDeleteUser,
     handleUpdateUser,

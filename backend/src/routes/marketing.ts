@@ -471,4 +471,79 @@ marketingRoutes.put(
   }
 );
 
+/**
+ * 7. PATCH /api/marketing/profiles/:id/status
+ * Toggle aktif / nonaktif akun marketing (Superadmin only)
+ */
+marketingRoutes.patch("/profiles/:id/status", requireRole(["superadmin"]), async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!id) return c.json({ success: false, message: "ID profil diperlukan" }, 400);
+
+    const [profile] = await db
+      .select()
+      .from(marketingProfiles)
+      .where(eq(marketingProfiles.id, id));
+
+    if (!profile) {
+      return c.json({ success: false, message: "Profil marketing tidak ditemukan" }, 404);
+    }
+
+    const [currentUser] = await db
+      .select({ status: users.status })
+      .from(users)
+      .where(eq(users.id, profile.userId));
+
+    const newStatus: "active" | "inactive" =
+      currentUser?.status === "active" ? "inactive" : "active";
+
+    await db.update(users).set({ status: newStatus }).where(eq(users.id, profile.userId));
+
+    return c.json({
+      success: true,
+      message: `Akun marketing berhasil ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}`,
+      data: { userId: profile.userId, status: newStatus },
+    });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+/**
+ * 8. DELETE /api/marketing/profiles/:id
+ * Hapus permanen akun marketing (Superadmin only)
+ * Kode referral yang sudah dipakai tenant tetap disimpan (marketingProfileId di-null)
+ */
+marketingRoutes.delete("/profiles/:id", requireRole(["superadmin"]), async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!id) return c.json({ success: false, message: "ID profil diperlukan" }, 400);
+
+    const [profile] = await db
+      .select()
+      .from(marketingProfiles)
+      .where(eq(marketingProfiles.id, id));
+
+    if (!profile) {
+      return c.json({ success: false, message: "Profil marketing tidak ditemukan" }, 404);
+    }
+
+    // Lepas relasi referral codes → profil (agar tenant yang pakai tidak rusak)
+    await db
+      .update(referralCodes)
+      .set({ marketingProfileId: null as unknown as string })
+      .where(eq(referralCodes.marketingProfileId, id));
+
+    // Bersihkan histori komisi terkait profil ini agar tidak kena foreign key constraint
+    await db.delete(marketingCommissions).where(eq(marketingCommissions.marketingProfileId, id));
+
+    await db.delete(marketingProfiles).where(eq(marketingProfiles.id, id));
+    await db.delete(users).where(eq(users.id, profile.userId));
+
+    return c.json({ success: true, message: "Akun marketing berhasil dihapus dari sistem" });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
 export default marketingRoutes;

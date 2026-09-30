@@ -2,7 +2,22 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
-import { users, tenants, customers, orders, expenses, services, shifts, waLogs, marketingProfiles } from "./db/schema";
+import {
+  users,
+  tenants,
+  customers,
+  orders,
+  expenses,
+  services,
+  shifts,
+  waLogs,
+  marketingProfiles,
+  subscriptionEvents,
+  marketingCommissions,
+  subscriptionInvoices,
+  referralCodeTenants,
+  referralEvents,
+} from "./db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import referralRoutes from "./routes/referralCodes";
@@ -547,8 +562,23 @@ app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"])
 app.delete("/api/tenants/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
     const id = c.req.param("id");
+    // Hapus child records terlebih dahulu agar tidak terkena constraint foreign key
+    await db.delete(waLogs).where(eq(waLogs.tenantId, id));
+    await db.delete(subscriptionEvents).where(eq(subscriptionEvents.tenantId, id));
+    await db.delete(marketingCommissions).where(eq(marketingCommissions.tenantId, id));
+    await db.delete(subscriptionInvoices).where(eq(subscriptionInvoices.tenantId, id));
+    await db.delete(referralCodeTenants).where(eq(referralCodeTenants.tenantId, id));
+    await db.delete(referralEvents).where(eq(referralEvents.tenantId, id));
+    await db.delete(expenses).where(eq(expenses.tenantId, id));
+    await db.delete(orders).where(eq(orders.tenantId, id));
+    await db.delete(customers).where(eq(customers.tenantId, id));
+    await db.delete(services).where(eq(services.tenantId, id));
+    await db.delete(shifts).where(eq(shifts.tenantId, id));
+    await db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id));
+
     await db.delete(tenants).where(eq(tenants.id, id));
-    return c.json({ success: true, message: "Tenant berhasil dihapus" });
+    invalidateTenantAuthCache(id);
+    return c.json({ success: true, message: "Cabang dan seluruh data terkait berhasil dihapus" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }

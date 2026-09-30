@@ -24,12 +24,16 @@ import {
   ShieldCheck,
   Tag,
   MessageCircle,
+  Trash2,
+  Power,
 } from "lucide-react";
 import { User, MarketingProfile } from "../../../types";
 import { useMarketing, MarketingReferralCode } from "../../../hooks/useMarketing";
 import { MarketingFormModal } from "./MarketingFormModal";
 import { CommissionPayoutTable } from "./CommissionPayoutTable";
 import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
+import { useConfirm } from "../../common/ConfirmContext";
+import { useToast } from "../../common/ToastContext";
 
 interface MarketingTabProps {
   currentUser?: User;
@@ -49,7 +53,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
     createProfile,
     updateProfile,
     updateCommissionStatus,
+    toggleProfileStatus,
+    deleteProfile,
   } = useMarketing();
+
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const isSuperadmin = currentUser?.role === "superadmin";
   const isMarketing = currentUser?.role === "marketing";
@@ -95,6 +105,60 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   const handleOpenEdit = (profile: MarketingProfile) => {
     setSelectedProfileForEdit(profile);
     setIsFormModalOpen(true);
+  };
+
+  const handleToggleStatus = async (profileId: string, userName: string, currentStatus?: string) => {
+    const isActivating = currentStatus !== "active";
+    const confirmed = await confirm({
+      title: `${isActivating ? "Aktifkan" : "Nonaktifkan"} Akun Marketing`,
+      description: `${isActivating ? "Aktifkan" : "Nonaktifkan"} akun marketing "${userName}"? ${
+        isActivating
+          ? "Anggota dapat kembali login dan mengakses dashboard."
+          : "Anggota tidak dapat login hingga diaktifkan kembali."
+      }`,
+      confirmText: isActivating ? "Aktifkan" : "Nonaktifkan",
+      variant: isActivating ? ("info" as const) : ("warning" as const),
+    });
+    if (!confirmed) return;
+    setActionLoading(profileId);
+    try {
+      const res = await toggleProfileStatus(profileId);
+      if (res.success) {
+        toast.success(
+          `Akun ${isActivating ? "Diaktifkan" : "Dinonaktifkan"}`,
+          `Akun ${userName} berhasil ${isActivating ? "diaktifkan" : "dinonaktifkan"}.`
+        );
+      } else {
+        toast.error("Gagal Mengubah Status", res.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteProfile = async (profileId: string, userName: string) => {
+    const confirmed = await confirm({
+      title: "Hapus Akun Marketing Permanen",
+      description: `Hapus akun "${userName}" dari sistem? Tindakan ini bersifat permanen. Kode referral yang sudah dipakai outlet akan tetap tersimpan.`,
+      confirmText: "Hapus Permanen",
+      variant: "danger" as const,
+    });
+    if (!confirmed) return;
+    setActionLoading(profileId);
+    try {
+      const res = await deleteProfile(profileId);
+      if (res.success) {
+        toast.success("Akun Dihapus", `Akun marketing ${userName} berhasil dihapus dari sistem.`);
+      } else {
+        toast.error("Gagal Menghapus", res.message || "Terjadi kesalahan pada server");
+      }
+    } catch (err: any) {
+      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleFormSubmit = async (data: any) => {
@@ -305,19 +369,20 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                       <th className="py-3.5 px-4">Insentif per Perpanjangan</th>
                       <th className="py-3.5 px-4">Total Penghasilan</th>
                       <th className="py-3.5 px-4">Sudah Dicairkan</th>
+                      <th className="py-3.5 px-4">Status</th>
                       <th className="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
                           Memuat data tim marketing...
                         </td>
                       </tr>
                     ) : profiles.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
                           Belum ada anggota tim marketing yang didaftarkan
                         </td>
                       </tr>
@@ -368,15 +433,53 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                             Rp {(p.totalWithdrawn || 0).toLocaleString("id-ID")}
                           </td>
 
+                         {/* Status */}
+                          <td className="py-3.5 px-4">
+                            {p.userStatus === "inactive" ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Nonaktif
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Aktif
+                              </span>
+                            )}
+                          </td>
+
                           {/* Aksi */}
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => handleOpenEdit(p)}
-                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"
-                              title="Ubah Profil Anggota"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleOpenEdit(p)}
+                                className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"
+                                title="Ubah Profil Anggota"
+                                disabled={actionLoading === p.id}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleToggleStatus(p.id, p.userName || "Marketing", p.userStatus)}
+                                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                                  p.userStatus === "inactive"
+                                    ? "text-emerald-600 hover:bg-emerald-50"
+                                    : "text-amber-500 hover:bg-amber-50"
+                                }`}
+                                title={p.userStatus === "inactive" ? "Aktifkan akun" : "Nonaktifkan akun"}
+                                disabled={actionLoading === p.id}
+                              >
+                                <Power className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProfile(p.id, p.userName || "Marketing")}
+                                className="p-1.5 rounded-lg text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                title="Hapus akun marketing permanen"
+                                disabled={actionLoading === p.id}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

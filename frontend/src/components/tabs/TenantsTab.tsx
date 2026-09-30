@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Building2, Store, KeyRound, CreditCard, Pencil, Sparkles, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Building2, Store, KeyRound, CreditCard, Pencil, Sparkles, Clock, CheckCircle2, Trash2, Power } from "lucide-react";
 import { Tenant, User } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { ResetPasswordModal } from "../modals/ResetPasswordModal";
@@ -14,6 +14,8 @@ interface TenantsTabProps {
   currentTenantId?: string;
   onResetPassword?: (userId: string, newPassword: string) => Promise<boolean>;
   onUpdateTenant?: (tenantId: string, data: Record<string, unknown>) => Promise<boolean>;
+  onDeleteTenant?: (tenantId: string, outletName: string) => Promise<boolean>;
+  onToggleTenantStatus?: (tenantId: string, currentStatus: string, outletName: string) => Promise<boolean>;
   onRefreshData?: () => void;
 }
 
@@ -29,6 +31,8 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
   onOpenTenantModal,
   onResetPassword,
   onUpdateTenant,
+  onDeleteTenant,
+  onToggleTenantStatus,
   onRefreshData,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -232,32 +236,59 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
         );
       },
     },
-    // 6. Actions (Perpanjang & Edit)
+    // 6. Actions
     {
       id: "actions",
       header: "",
       align: "center",
-      className: "w-[75px]",
-      cell: (t) => (
-        <div className="flex items-center justify-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setTenantToExtend(t)}
-            className="p-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition cursor-pointer"
-            title="Perpanjang Masa Aktif & Catat Kas"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setTenantToEdit(t)}
-            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition cursor-pointer"
-            title="Edit cabang"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ),
+      className: "w-[110px]",
+      cell: (t) => {
+        const isActive = (t.status || "active") === "active";
+        return (
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => setTenantToExtend(t)}
+              className="p-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition cursor-pointer"
+              title="Perpanjang Masa Aktif & Catat Kas"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setTenantToEdit(t)}
+              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition cursor-pointer"
+              title="Edit cabang"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            {onToggleTenantStatus && (
+              <button
+                type="button"
+                onClick={() => onToggleTenantStatus(t.id, t.status || "active", t.outletName)}
+                className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                  isActive
+                    ? "border-amber-200 text-amber-500 hover:bg-amber-50 hover:border-amber-300"
+                    : "border-emerald-200 text-emerald-500 hover:bg-emerald-50 hover:border-emerald-300"
+                }`}
+                title={isActive ? "Nonaktifkan cabang" : "Aktifkan cabang"}
+              >
+                <Power className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {onDeleteTenant && (
+              <button
+                type="button"
+                onClick={() => onDeleteTenant(t.id, t.outletName)}
+                className="p-1.5 rounded-lg border border-zinc-200 text-zinc-300 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition cursor-pointer"
+                title="Hapus cabang permanen"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
