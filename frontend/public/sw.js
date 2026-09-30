@@ -1,5 +1,5 @@
 // Service Worker for Laundry Cleanique PWA
-const CACHE_NAME = "cleanique-cache-v2";
+const CACHE_NAME = "cleanique-cache-v3";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -46,6 +46,11 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
+  // Only handle standard HTTP/HTTPS requests (bypass chrome-extension://, moz-extension://, data:, blob:, etc.)
+  if (!url.protocol.startsWith("http")) {
+    return;
+  }
+
   // Bypass non-GET and API / dynamic tracking requests from caching
   if (event.request.method !== "GET" || url.pathname.startsWith("/api/")) {
     return;
@@ -69,7 +74,9 @@ self.addEventListener("fetch", (event) => {
         if (response && response.status === 200 && response.type === "basic") {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+            cache.put(event.request, responseToCache).catch(() => {
+              // Silently ignore cache put failures for edge-case requests
+            });
           });
         }
         return response;
