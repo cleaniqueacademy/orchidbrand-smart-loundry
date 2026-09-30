@@ -128,37 +128,24 @@ export async function seedInitialData(force = true) {
     // 3. User Hashes (Randomized Passwords)
     // ----------------------------------------------------
     const admin1Password = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
-    const admin2Password = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
     const ownerPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
 
     const admin1PasswordHash = await Bun.password.hash(admin1Password, { algorithm: "bcrypt", cost: 10 });
-    const admin2PasswordHash = await Bun.password.hash(admin2Password, { algorithm: "bcrypt", cost: 10 });
     const ownerPasswordHash = await Bun.password.hash(ownerPassword, { algorithm: "bcrypt", cost: 10 });
 
     const admin1Id = "user-admin-01";
-    const admin2Id = "user-admin-02";
     const ownerJongkeId = "user-owner-01";
     const tenantJongkeId = "tenant-01";
 
     // ----------------------------------------------------
-    // 4. Users: 2 Superadmins & 1 Owner
+    // 4. Users: 1 Superadmin & 1 Owner
     // ----------------------------------------------------
     await db.insert(users).values([
       {
         id: admin1Id,
-        name: "Super Admin Cleanique 1",
+        name: "Super Admin Cleanique",
         email: "admin@cleaniquelaundry.com",
         passwordHash: admin1PasswordHash,
-        role: "superadmin",
-        status: "active",
-        subscriptionUntil: "2027-12-31",
-        createdAt: today,
-      },
-      {
-        id: admin2Id,
-        name: "Super Admin Cleanique 2",
-        email: "admin2@cleaniquelaundry.com",
-        passwordHash: admin2PasswordHash,
         role: "superadmin",
         status: "active",
         subscriptionUntil: "2027-12-31",
@@ -285,9 +272,8 @@ export async function seedInitialData(force = true) {
     console.log("=================================================");
     console.log("✅ SEEDING PRODUKSI BERHASIL 100% (CLEAN STATE)!");
     console.log("=================================================");
-    console.log("👑 SUPER ADMIN (2 Akun):");
+    console.log("👑 SUPER ADMIN (1 Akun):");
     console.log(`  1. admin@cleaniquelaundry.com  / ${admin1Password}`);
-    console.log(`  2. admin2@cleaniquelaundry.com / ${admin2Password}`);
     console.log("-------------------------------------------------");
     console.log("🏪 TENANT OWNER (1 Outlet):");
     console.log("  - Outlet : Cleanique Jongke Tengah");
@@ -306,12 +292,10 @@ export async function seedInitialData(force = true) {
 =================================================
 CLEANIQUE LAUNDRY - SEEDED CREDENTIALS
 Dibuat pada: ${new Date().toLocaleString("id-ID")}
-CATATAN: File ini otomatis di-generate dan di-ignore oleh Git (*.local.txt / users.txt)
 =================================================
 
-👑 SUPER ADMIN (2 Akun):
+👑 SUPER ADMIN (1 Akun):
 1. admin@cleaniquelaundry.com  / ${admin1Password}
-2. admin2@cleaniquelaundry.com / ${admin2Password}
 
 🏪 TENANT OWNER (1 Outlet):
 - Outlet : Cleanique Jongke Tengah
