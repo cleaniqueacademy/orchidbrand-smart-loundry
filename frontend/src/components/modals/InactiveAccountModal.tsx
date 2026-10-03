@@ -18,6 +18,8 @@ import {
   Share2,
   FileCheck2,
   X,
+  Tag,
+  Loader2,
 } from "lucide-react";
 import { User } from "../../types";
 import {
@@ -48,6 +50,14 @@ interface PlatformPaymentInfo {
   supportPhone?: string;
 }
 
+interface TenantPricingInfo {
+  basePrice: number;
+  discountAmount: number;
+  finalPrice: number;
+  referralCodeId?: string | null;
+  plan?: { name: string };
+}
+
 export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   isOpen,
   user,
@@ -64,6 +74,8 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const [copiedRekening, setCopiedRekening] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkedNotice, setCheckedNotice] = useState<string | null>(null);
+  const [pricing, setPricing] = useState<TenantPricingInfo | null>(null);
+  const [loadingPricing, setLoadingPricing] = useState(false);
 
   const [paymentInfo, setPaymentInfo] = useState<PlatformPaymentInfo>({
     platformName: "Laundry Cleanique",
@@ -87,11 +99,27 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
             }));
           }
         })
-        .catch(() => {
-          // fallback default
-        });
+        .catch(() => {});
     }
   }, [isOpen]);
+
+  // Fetch pricing tenant (harga + cek referral)
+  useEffect(() => {
+    if (isOpen && user) {
+      const tenantId = (user as any).tenantId || (user as any).id;
+      if (!tenantId) return;
+      setLoadingPricing(true);
+      api
+        .get<{ success: boolean; data: TenantPricingInfo }>(
+          `/api/subscription/pricing?tenantId=${tenantId}`
+        )
+        .then((res) => {
+          if (res.success && res.data) setPricing(res.data);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingPricing(false));
+    }
+  }, [isOpen, user]);
 
   // Reset step saat modal dibuka kembali
   useEffect(() => {
@@ -266,6 +294,51 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Harga Langganan & Info Referral */}
+              <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                {loadingPricing ? (
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Memuat harga...</span>
+                  </div>
+                ) : pricing ? (
+                  <>
+                    {/* Badge referral jika tenant punya kode referral */}
+                    {pricing.referralCodeId && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Tag className="w-3 h-3 text-emerald-600" />
+                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          Kode Referral Aktif
+                        </span>
+                      </div>
+                    )}
+
+                    {pricing.discountAmount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 line-through">
+                          {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.basePrice)}
+                          /bln
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-semibold">
+                          Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <CreditCard className="w-3 h-3 text-blue-500" />
+                        Biaya Perpanjangan:
+                      </span>
+                      <span className="font-bold text-slate-900 font-mono">
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                        <span className="font-normal text-slate-400">/bln</span>
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
 
