@@ -27,7 +27,6 @@ import WhatsAppIcon from "../common/WhatsAppIcon";
 import { EditProfileModal } from "../modals/EditProfileModal";
 import { StaffManagementSection } from "./StaffManagementSection";
 import { ServicesTab } from "./ServicesTab";
-import { SubscriptionStatusCard } from "./SubscriptionStatusCard";
 import { ThermalPrinterSettingsSection } from "./ThermalPrinterSettingsSection";
 import { BranchManagementSection } from "./BranchManagementSection";
 import { PremiumFeatureLock } from "../common/PremiumFeatureLock";
@@ -95,7 +94,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   setActiveTab,
 }) => {
   const toast = useToast();
-  type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "cabang" | "langganan";
+  type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "cabang";
   const [settingsTab, setSettingsTab] = useState<SettingsSubTab>("profil");
 
   // Resolve active tenant safely for both Tenant Owner & Super Admin preview
@@ -241,10 +240,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {([
           { id: "profil", label: "Profil Outlet", icon: Store },
           { id: "layanan", label: "Master Layanan", icon: Tag },
-          { id: "staf", label: "Manajemen Staf", icon: UserIcon, badge: "Premium" },
-          { id: "printer", label: "Printer & Struk", icon: Printer, badge: "Premium" },
+          { id: "staf", label: "Manajemen Staf", icon: UserIcon },
+          { id: "printer", label: "Printer & Struk", icon: Printer },
           { id: "cabang", label: "Manajemen Cabang", icon: Building2, badge: "Premium" },
-          { id: "langganan", label: "Langganan", icon: CreditCard },
         ] as { id: SettingsSubTab; label: string; icon: React.ElementType; badge?: string }[]).map((tab) => {
           const Icon = tab.icon;
           const isActive = settingsTab === tab.id;
@@ -422,143 +420,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <p className="text-[11px] text-zinc-500 leading-relaxed">
               Hubungi Super Admin Laundry Cleanique jika ingin memperpanjang masa aktif langganan toko Anda.
             </p>
-          </div>
 
-          {/* Quick Cards: Profil Akun & WhatsApp */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Profil Akun */}
-            <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-3.5 space-y-2">
-              <div className="flex items-center justify-between text-zinc-900 pb-1.5 border-b border-zinc-100">
-                <div className="flex items-center gap-1.5">
-                  <UserIcon className="w-3.5 h-3.5 text-zinc-600" />
-                  <span className="font-bold text-xs">Akun Anda</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-800 hover:underline cursor-pointer"
-                  title="Ganti Nama atau Kata Sandi"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  <span>Ubah</span>
-                </button>
-              </div>
-              <div className="space-y-0.5">
-                <div className="font-semibold text-zinc-900 text-xs truncate">
-                  {ownerName || currentUser?.name || "Budi Santoso"}
-                </div>
-                <div className="text-[11px] text-zinc-500 truncate font-mono">
-                  {currentUser?.email || "budi@laundrymelati.com"}
-                </div>
-                <div className="inline-block mt-1 text-[9.5px] font-bold text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
-                  {currentUser?.role === "superadmin" ? "Super Admin" : "Tenant Owner"}
-                </div>
-              </div>
-            </div>
-
-            {/* WhatsApp Bisnis */}
-            <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-3.5 space-y-2 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between text-zinc-900 pb-1.5 border-b border-zinc-100">
-                  <div className="flex items-center gap-1.5">
-                    <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="font-bold text-xs">WhatsApp</span>
-                  </div>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      waStatus === "connected" ? "bg-emerald-500" : "bg-zinc-300"
-                    }`}
-                    title={waStatus === "connected" ? "Terhubung" : "Belum Terhubung"}
-                  />
-                </div>
-                <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
-                  {waStatus === "connected"
-                    ? "Pengiriman struk aktif."
-                    : "Sambungkan WhatsApp."}
-                </p>
-              </div>
-
-              {onOpenWhatsAppModal && (
-                <button
-                  type="button"
-                  onClick={onOpenWhatsAppModal}
-                  className="w-full py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-850 border border-emerald-200 text-xs font-semibold transition cursor-pointer text-center mt-1"
-                >
-                  Konfigurasi WA
-                </button>
-              )}
-            </div>
+            {setActiveTab && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("subscription")}
+                className="w-full py-2.5 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-blue-700" />
+                <span>Kelola & Perpanjang Langganan</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bagian 2: Fitur Operasional Kasir & Info Menu Layanan Terpusat */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-        {/* Card 1: Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
-        <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 flex flex-col justify-between space-y-4">
-          <div>
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs">
-                  <Calculator className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-zinc-900 text-sm">Fitur Shift Kerja Kasir</h3>
-                  <p className="text-[11px] text-zinc-500">Manajemen kas laci & pertanggungjawaban kasir</p>
-                </div>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  enableShift
-                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                    : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                }`}
-              >
-                {enableShift ? "Aktif" : "Nonaktif"}
-              </span>
-            </div>
-
-            <div className="mt-3.5 space-y-2">
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                {enableShift
-                  ? "Sistem shift saat ini AKTIF. Kasir wajib memasukkan modal kas awal saat mulai bertugas dan melakukan rekonsiliasi uang fisik laci saat tutup shift."
-                  : "Sistem shift saat ini NONAKTIF. Kasir dapat langsung melayani transaksi cucian tanpa tombol buka/tutup shift laci kasir."}
-              </p>
-
-              <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200/70 text-[11px] text-zinc-500 space-y-1">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-700">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    {enableShift
-                      ? "Cocok jika outlet memiliki staf bergantian jam kerja (shift pagi / sore)."
-                      : "Cocok jika kasir dijaga oleh pemilik sendiri atau staf tunggal seharian."}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-700">
-              Ubah Status Fitur:
-            </span>
-            <button
-              type="button"
-              onClick={handleToggleShift}
-              disabled={updatingShift}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs ${
-                enableShift
-                  ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
-              }`}
-            >
-              <span>{updatingShift ? "Menyimpan..." : enableShift ? "Nonaktifkan Shift" : "Aktifkan Shift"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Card 2: Preview Notifikasi Chat WhatsApp Otomatis (Menampilkan Identitas Tenant) */}
-        <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 flex flex-col justify-between space-y-4">
+      {/* Bagian 2: Preview Notifikasi Chat WhatsApp Otomatis */}
+      <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
           <div>
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2.5">
@@ -692,23 +570,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             )}
           </div>
         </div>
-      </div>
 
-      {/* Edit Profile Modal */}
-      <EditProfileModal
-        isOpen={isEditProfileOpen}
-        onClose={() => setIsEditProfileOpen(false)}
-        currentUser={currentUser ? { ...currentUser, name: ownerName } : null}
-        onUpdateProfile={async (data) => {
-          if (!currentUser || !onUpdateUser) return false;
-          const ok = await onUpdateUser(currentUser.id, data);
-          if (ok) {
-            setOwnerName(data.name);
-          }
-          return ok;
-        }}
-      />
-        </div>
+        {/* Edit Profile Modal */}
+        <EditProfileModal
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+          currentUser={currentUser ? { ...currentUser, name: ownerName } : null}
+          onUpdateProfile={async (data) => {
+            if (!currentUser || !onUpdateUser) return false;
+            const ok = await onUpdateUser(currentUser.id, data);
+            if (ok) {
+              setOwnerName(data.name);
+            }
+            return ok;
+          }}
+        />
+      </div>
       )} {/* end settingsTab === "profil" */}
 
       {/* === TAB: MASTER LAYANAN === */}
@@ -724,15 +601,65 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         )
       )}
 
-      {/* === TAB: MANAJEMEN STAF === */}
+      {/* === TAB: MANAJEMEN STAF & SHIFT KASIR === */}
       {settingsTab === "staf" && (
         effectiveTenantId ? (
-          <PremiumFeatureLock feature="employee_management" isLocked={true}>
+          <div className="space-y-5">
+            {/* Card Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
+            <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-100 pb-3.5 gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs shrink-0">
+                    <Calculator className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-zinc-900 text-sm">Fitur Shift Kerja Kasir</h3>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          enableShift
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                        }`}
+                      >
+                        {enableShift ? "Shift Aktif" : "Shift Nonaktif"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      Kontrol kewajiban buka/tutup kas laci, modal awal kembalian, dan rekonsiliasi pergantian tugas kasir.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleToggleShift}
+                  disabled={updatingShift}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs shrink-0 ${
+                    enableShift
+                      ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  <span>{updatingShift ? "Menyimpan..." : enableShift ? "Nonaktifkan Shift" : "Aktifkan Shift"}</span>
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200/70 text-xs text-zinc-600 space-y-1.5">
+                <p className="leading-relaxed">
+                  {enableShift
+                    ? "✅ Saat fitur shift AKTIF: Tombol Buka/Tutup Shift muncul di bilah navigasi atas dan dashboard kasir. Kasir wajib menginput modal awal kas laci sebelum melayani order, serta menghitung uang fisik saat menutup shift."
+                    : "ℹ️ Saat fitur shift NONAKTIF: Kasir dapat langsung menerima dan memproses transaksi cucian kapan saja tanpa harus membuka atau menutup kas laci."}
+                </p>
+              </div>
+            </div>
+
+            {/* Komponen Manajemen Akun Staf Cabang */}
             <StaffManagementSection
               tenantId={effectiveTenantId}
               tenantName={resolvedTenant?.outletName || "Outlet"}
             />
-          </PremiumFeatureLock>
+          </div>
         ) : (
           <SubTabSkeleton />
         )
@@ -740,13 +667,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       {/* === TAB: PRINTER & STRUK === */}
       {settingsTab === "printer" && (
-        <PremiumFeatureLock feature="thermal_printer" isLocked={true}>
-          <ThermalPrinterSettingsSection
-            outletName={displayOutletName}
-            phone={displayPhone}
-            address={displayAddress}
-          />
-        </PremiumFeatureLock>
+        <ThermalPrinterSettingsSection
+          outletName={displayOutletName}
+          phone={displayPhone}
+          address={displayAddress}
+        />
       )}
 
       {/* === TAB: MANAJEMEN CABANG === */}
@@ -757,22 +682,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         />
       )}
 
-      {/* === TAB: LANGGANAN === */}
-      {settingsTab === "langganan" && (
-        effectiveTenantId ? (
-          <div className="space-y-4">
-            <div className="pb-2 border-b border-zinc-200/80">
-              <h2 className="text-sm font-bold text-zinc-900">Status Langganan</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Perpanjang masa aktif outlet Anda dengan mudah. Tarif hemat: <strong>Rp 55.000/bulan</strong> (dengan kode referral) atau <strong>Rp 60.000/bulan</strong> (standar).
-              </p>
-            </div>
-            <SubscriptionStatusCard tenantId={effectiveTenantId} />
-          </div>
-        ) : (
-          <SubTabSkeleton />
-        )
-      )}
     </div>
   );
 };

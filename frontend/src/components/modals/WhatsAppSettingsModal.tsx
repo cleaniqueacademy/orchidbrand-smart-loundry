@@ -92,16 +92,16 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
       <div className="bg-white rounded-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200">
 
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-zinc-100 flex items-center justify-between bg-gradient-to-r from-emerald-950 via-zinc-900 to-zinc-900 text-white rounded-t-2xl">
+        <div className="p-4 sm:p-5 border-b border-zinc-100 flex items-center justify-between bg-white text-zinc-900 rounded-t-2xl">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
-              <WhatsAppIcon className="w-4 h-4 text-emerald-400" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+              <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-white">
+              <h2 className="font-bold text-sm text-zinc-900">
                 {isStaff ? "Status WhatsApp Toko" : "Pengaturan WhatsApp"}
               </h2>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-zinc-500 mt-0.5">
                 {isStaff
                   ? "Akun WhatsApp Resmi Cabang (Dikelola oleh Pemilik Toko / Owner)"
                   : "Pilih metode pengiriman: Otomatis atau Manual"}
@@ -110,7 +110,7 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

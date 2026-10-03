@@ -178,24 +178,24 @@ export const OnboardingTutorialModal: React.FC<OnboardingTutorialModalProps> = (
     <ModalWrapper isOpen={isOpen} onClose={handleSkipTour} maxWidth="max-w-md">
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden text-slate-900">
         {/* Top Header Accent Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-5 sm:p-6 text-white relative border-b border-white/10">
+        <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 w-full" />
+        <div className="p-5 sm:p-6 bg-white relative border-b border-slate-100 flex items-start justify-between">
+          <div className="space-y-1">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">
+              {roleConfig.badge}
+            </span>
+            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">
+              {roleConfig.modalTitle}
+            </h3>
+          </div>
           <button
             type="button"
             onClick={handleSkipTour}
-            className="absolute top-4 right-4 p-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer shrink-0 ml-2"
             title="Lewati Tour"
           >
             <X className="w-4 h-4" />
           </button>
-
-          <div className="space-y-1">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
-              {roleConfig.badge}
-            </span>
-            <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
-              {roleConfig.modalTitle}
-            </h3>
-          </div>
         </div>
 
         {/* Modal Body */}

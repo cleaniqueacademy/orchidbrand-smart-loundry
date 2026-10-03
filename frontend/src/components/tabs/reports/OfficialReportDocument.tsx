@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Tenant, Order } from "../../../types";
 import { ReportMetrics, ServiceBreakdownItem } from "./useReportData";
 
@@ -27,8 +27,12 @@ export const OfficialReportDocument: React.FC<OfficialReportDocumentProps> = ({
       <div className="border-b-4 border-double border-zinc-900 pb-4 mb-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-blue-900 text-white flex items-center justify-center font-black text-xl tracking-tighter shrink-0 print:border print:border-zinc-900">
-              OB
+            <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200/90 p-1 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden print:border print:border-zinc-300">
+              <img
+                src="/logo.png"
+                alt="Logo Cleanique"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">

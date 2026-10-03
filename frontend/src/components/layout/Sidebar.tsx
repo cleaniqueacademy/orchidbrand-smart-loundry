@@ -382,36 +382,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Grup Notifikasi / Integrasi (Tenant Owner & Staff) */}
-          {!isSuperAdmin && !isMarketing && onOpenWhatsAppModal && (
-            <div>
+          {/* Grup Langganan & Integrasi (Tenant Owner & Staff) */}
+          {!isSuperAdmin && !isMarketing && (
+            <div className="space-y-1">
               {isCollapsed ? (
                 <div className="h-px bg-zinc-100 my-2 mx-1" />
               ) : (
                 <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 mb-1.5">
-                  Integrasi
+                  Langganan & Integrasi
                 </div>
               )}
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                type="button"
-                id="sidebar-btn-whatsapp-settings"
-                onClick={() => {
-                  if (onOpenWhatsAppModal) {
-                    onOpenWhatsAppModal();
+
+              {/* Menu Status Langganan untuk Tenant Owner */}
+              {currentUserRole === "tenant_owner" && (
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  id="sidebar-nav-subscription"
+                  onClick={() => {
+                    setActiveTab("subscription");
                     onClose();
-                  }
-                }}
-                className={`w-full group flex items-center ${
-                  isCollapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2"
-                } rounded-xl text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-transparent hover:border-emerald-200 transition-colors shadow-2xs cursor-pointer`}
-                title="Pengaturan WhatsApp"
-              >
-                <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-                {!isCollapsed && <span className="truncate">Pengaturan WhatsApp</span>}
-              </motion.button>
+                  }}
+                  title="Status Langganan"
+                  className={`w-full group flex items-center ${
+                    isCollapsed ? "justify-center px-0 py-2.5" : "justify-between px-3 py-2"
+                  } rounded-xl text-left text-xs transition-colors cursor-pointer relative ${
+                    activeTab === "subscription"
+                      ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white font-semibold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium"
+                  }`}
+                >
+                  <div className="relative flex items-center justify-center">
+                    <CreditCard
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        activeTab === "subscription" ? "text-white" : "text-zinc-400 group-hover:text-zinc-700"
+                      }`}
+                    />
+                  </div>
+                  {!isCollapsed && <span className="truncate ml-2.5 flex-1">Status Langganan</span>}
+                </motion.button>
+              )}
+
+              {/* Menu Pengaturan WhatsApp */}
+              {onOpenWhatsAppModal && (
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  id="sidebar-btn-whatsapp-settings"
+                  onClick={() => {
+                    if (onOpenWhatsAppModal) {
+                      onOpenWhatsAppModal();
+                      onClose();
+                    }
+                  }}
+                  className={`w-full group flex items-center ${
+                    isCollapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2"
+                  } rounded-xl text-left text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:bg-emerald-50/70 border border-transparent hover:border-emerald-200 transition-colors shadow-2xs cursor-pointer`}
+                  title="Pengaturan WhatsApp"
+                >
+                  <div className="w-5 h-5 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  {!isCollapsed && <span className="truncate">Pengaturan WhatsApp</span>}
+                </motion.button>
+              )}
             </div>
           )}
 

@@ -214,7 +214,10 @@ export const RegisterPage: React.FC = () => {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setError("");
+    if (!form.city.trim()) {
+      setError("Kota wajib diisi.");
+      return;
+    }
 
     if (form.password.length < 8) {
       setError("Kata sandi minimal 8 karakter demi keamanan akun Anda.");
@@ -262,7 +265,7 @@ export const RegisterPage: React.FC = () => {
         {/* Top Header Logo */}
         <div className="relative z-10 flex items-center justify-between shrink-0 gsap-reg-hero">
           <img
-            src="/laundry-cleanique.png"
+            src="/laundry-cleanique-outline.png"
             alt="Laundry Cleanique"
             className="h-8 xl:h-9 w-auto object-contain drop-shadow-xs"
           />
@@ -360,7 +363,7 @@ export const RegisterPage: React.FC = () => {
           {/* Mobile Top Brand Header */}
           <div className="mb-4 flex flex-col items-center text-center lg:hidden gsap-reg-form">
             <img
-              src="/laundry-cleanique.png"
+              src="/laundry-cleanique-outline.png"
               alt="Laundry Cleanique"
               className="h-10 w-auto object-contain mb-1 drop-shadow-sm"
             />
@@ -476,10 +479,11 @@ export const RegisterPage: React.FC = () => {
                 {/* Kota */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Kota <span className="text-slate-400 font-normal text-[10px] lowercase">(opsional)</span>
+                    Kota <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     disabled={loading}
                     value={form.city}
                     onChange={(e) => update("city", e.target.value)}

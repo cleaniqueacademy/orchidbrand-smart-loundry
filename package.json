@@ -13,6 +13,7 @@
     "db:push": "bun --filter cleanique-backend db:push",
     "db:push:force": "bun --filter cleanique-backend db:push:force",
     "db:seed": "bun --filter cleanique-backend db:seed",
+    "db:push-users": "bun --filter cleanique-backend db:push-users",
     "docker:db": "docker compose up -d postgres",
     "docker:db:down": "docker compose stop postgres",
     "docker:up": "docker compose --profile full-stack up --build -d",

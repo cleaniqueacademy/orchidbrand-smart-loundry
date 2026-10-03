@@ -123,6 +123,41 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Info & Actions - Minimalist and Clean */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Shift Indicator & Quick Actions for Cashier / Owner */}
+          {enableCashierShift && currentUserRole !== "superadmin" && currentUserRole !== "marketing" && (
+            currentShift && currentShift.status === "open" ? (
+              <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-2.5 py-1 rounded-lg text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="hidden sm:inline text-[11px] text-emerald-600 font-normal">Shift:</span>
+                <span className="font-bold text-xs truncate max-w-[110px]">{currentShift.cashierName || "Kasir"}</span>
+                {onCloseShiftModal && (
+                  <button
+                    type="button"
+                    onClick={onCloseShiftModal}
+                    className="ml-1 px-2 py-0.5 bg-white text-emerald-900 border border-emerald-300 rounded hover:bg-emerald-100 text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                  >
+                    Tutup Shift
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-zinc-100 text-zinc-700 border border-zinc-200 px-2.5 py-1 rounded-lg text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
+                <span className="hidden sm:inline text-[11px] text-zinc-500">Shift Kasir:</span>
+                <span className="text-zinc-600 text-xs font-semibold">Tutup</span>
+                {onOpenShiftModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenShiftModal}
+                    className="ml-1 px-2 py-0.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                  >
+                    Buka Shift
+                  </button>
+                )}
+              </div>
+            )
+          )}
+
           {/* Refresh Button - Icon only */}
           <button
             onClick={onRefresh}

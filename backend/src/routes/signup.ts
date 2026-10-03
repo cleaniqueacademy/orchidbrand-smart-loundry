@@ -23,8 +23,13 @@ signupRoutes.post(
       const ipAddress = c.req.header("x-forwarded-for") || "unknown";
       const userAgent = c.req.header("user-agent") || "unknown";
 
+      if (!body.city || !String(body.city).trim()) {
+        return c.json({ success: false, message: "Kota wajib diisi." }, 400);
+      }
+
       const res = await registerNewTenant({
         ...body,
+        city: String(body.city).trim(),
         ipAddress,
         userAgent,
       });

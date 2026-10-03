@@ -92,10 +92,10 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
     userAgent,
   } = input;
 
-  if (!outletName || !ownerName || !phone || !email || !password) {
+  if (!outletName || !ownerName || !phone || !email || !password || !city.trim()) {
     return {
       success: false,
-      message: "Nama outlet, nama pemilik, nomor WhatsApp, email, dan password wajib diisi.",
+      message: "Nama outlet, nama pemilik, nomor WhatsApp, email, password, dan kota wajib diisi.",
     };
   }
 

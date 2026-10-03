@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ModalWrapperProps {
@@ -18,6 +19,12 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   className = "",
   zIndex = "z-[100]",
 }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -28,7 +35,11 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  return (
+  if (!mounted && typeof document === "undefined") {
+    return null;
+  }
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <div
@@ -61,6 +72,9 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : null;
 };
 
 export default ModalWrapper;
+

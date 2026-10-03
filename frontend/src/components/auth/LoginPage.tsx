@@ -189,7 +189,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div className="relative z-10 flex items-center justify-between shrink-0 gsap-login-hero">
           <div className="flex items-center gap-3">
             <img
-              src="/laundry-cleanique.png"
+              src="/laundry-cleanique-outline.png"
               alt="Laundry Cleanique"
               className="h-8 xl:h-9 w-auto object-contain drop-shadow-xs"
             />
@@ -270,7 +270,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {/* Mobile Top Brand Header */}
           <div className="mb-6 flex flex-col items-center text-center lg:hidden gsap-login-form-elem">
             <img
-              src="/laundry-cleanique.png"
+              src="/laundry-cleanique-outline.png"
               alt="Laundry Cleanique"
               className="h-10 w-auto object-contain mb-2 drop-shadow-sm"
             />

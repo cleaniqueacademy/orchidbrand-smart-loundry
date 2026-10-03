@@ -63,6 +63,10 @@ andry.txt
 **/andry.txt
 *.local.txt
 
+# --- Local-only Scripts ---
+pushUsersFromLocalTxt.ts
+**/pushUsersFromLocalTxt.ts
+
 # --- Database & Storage (SQLite) ---
 *.db
 *.db-*

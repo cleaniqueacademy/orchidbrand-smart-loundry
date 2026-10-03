@@ -8,6 +8,7 @@
     "db:push": "bunx drizzle-kit push",
     "db:push:force": "bunx drizzle-kit push --force",
     "db:seed": "bun src/db/seed.ts",
+    "db:push-users": "bun src/scripts/pushUsersFromLocalTxt.ts",
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
