@@ -117,6 +117,13 @@ export async function authMiddleware(c: Context, next: Next) {
     return c.json({ success: false, message: "Token tidak valid atau telah kedaluwarsa" }, 401);
   }
 
+  const path = c.req.path;
+  const isExemptRoute =
+    path.startsWith("/api/subscription") ||
+    path.startsWith("/api/plans") ||
+    path.startsWith("/api/platform-settings") ||
+    path.startsWith("/api/auth");
+
   // Verifikasi status akun pengguna (jika dinonaktifkan secara sepihak oleh admin)
   if (payload.role !== "superadmin") {
     try {
@@ -131,7 +138,7 @@ export async function authMiddleware(c: Context, next: Next) {
           userStatusCache.set(payload.userId, uCached);
         }
       }
-      if (uCached && uCached.status === "inactive") {
+      if (uCached && uCached.status === "inactive" && !isExemptRoute) {
         return c.json(
           {
             success: false,
@@ -166,7 +173,7 @@ export async function authMiddleware(c: Context, next: Next) {
       }
 
       if (tenantInfo) {
-        if (tenantInfo.status === "inactive") {
+        if (tenantInfo.status === "inactive" && !isExemptRoute) {
           return c.json(
             {
               success: false,
@@ -176,12 +183,6 @@ export async function authMiddleware(c: Context, next: Next) {
             403
           );
         }
-        const path = c.req.path;
-        const isExemptRoute =
-          path.startsWith("/api/subscription") ||
-          path.startsWith("/api/plans") ||
-          path.startsWith("/api/platform-settings") ||
-          path.startsWith("/api/auth");
 
         if (tenantInfo.subscriptionUntil && !isExemptRoute) {
           const expDate = new Date(`${tenantInfo.subscriptionUntil}T23:59:59`);

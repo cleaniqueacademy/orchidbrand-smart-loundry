@@ -9,7 +9,7 @@ import {
   referralCodes,
   expenses,
 } from "../db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { newId } from "../utils/id";
 import { addDays, daysRemaining, today, toDateOnly } from "../utils/date";
 import { applyDiscount } from "../utils/money";
@@ -93,7 +93,7 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
 /**
  * Hitung harga langganan yang berlaku untuk tenant, termasuk diskon referral jika ada
  */
-export async function getApplicablePrice(tenantId: string, planIdOrCode?: string, customCode?: string) {
+export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?: string, customCode?: string) {
   let plan = null;
 
   if (planIdOrCode) {
@@ -134,15 +134,28 @@ export async function getApplicablePrice(tenantId: string, planIdOrCode?: string
   let discountValue = 0;
 
   if (customCode && customCode.trim()) {
-    const valRes = await validateCode(customCode.trim(), tenantId);
+    const valRes = await validateCode(customCode.trim(), tenantId || "");
     if (valRes.valid && valRes.code) {
       referralCodeIdToApply = valRes.code.id;
       discountType = valRes.discountType || "percent";
       discountValue = valRes.discountValue || 0;
     }
-  } else {
-    // Cek referral bawaan tenant
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+  } else if (tenantId && tenantId.trim()) {
+    const tid = tenantId.trim();
+    // Cek referral bawaan tenant (cari by id, userId, atau suffix)
+    let [tenant] = await db.select().from(tenants).where(eq(tenants.id, tid));
+    if (!tenant) {
+      const [byUser] = await db.select().from(tenants).where(eq(tenants.userId, tid));
+      if (byUser) tenant = byUser;
+    }
+    if (!tenant && tid.length > 0) {
+      const [byLike] = await db
+        .select()
+        .from(tenants)
+        .where(sql`${tenants.id} ILIKE ${'%' + tid}`);
+      if (byLike) tenant = byLike;
+    }
+
     if (tenant && tenant.referralCodeId) {
       const [refCode] = await db
         .select()

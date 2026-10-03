@@ -10,7 +10,7 @@ import {
   platformCashflow,
 } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
-import { authMiddleware, getUser, invalidateTenantAuthCache } from "../middleware/auth";
+import { authMiddleware, getUser, verifyToken, invalidateTenantAuthCache } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
 import { newId } from "../utils/id";
 import { today, addDays } from "../utils/date";
@@ -27,10 +27,45 @@ import { runTrialReminderCheck } from "../jobs/trialReminder";
 
 const subscriptionRoutes = new Hono();
 
+/**
+ * 1. GET /api/subscription/pricing (Public / Optional Auth)
+ * Hitung kalkulasi harga paket & diskon referral
+ */
+subscriptionRoutes.get("/pricing", async (c) => {
+  try {
+    let tenantId = c.req.query("tenantId");
+
+    // Jika tenantId tidak ada di query, coba ambil dari Bearer token jika dikirimkan
+    if (!tenantId) {
+      const authHeader = c.req.header("Authorization");
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      if (token) {
+        try {
+          const payload = await verifyToken(token);
+          if (payload?.tenantId) {
+            tenantId = payload.tenantId;
+          }
+        } catch {}
+      }
+    }
+
+    const planId = c.req.query("planId");
+    const referralCode = c.req.query("referralCode");
+
+    const calculation = await getApplicablePrice(tenantId || undefined, planId, referralCode);
+    return c.json({ success: true, data: calculation });
+  } catch (err: any) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Rute Terproteksi Autentikasi
+// ---------------------------------------------------------------------------
 subscriptionRoutes.use("*", authMiddleware);
 
 /**
- * 1. GET /api/subscription/summary
+ * 2. GET /api/subscription/summary
  * Ringkasan masa aktif langganan & status trial outlet
  */
 subscriptionRoutes.get("/summary", async (c) => {
@@ -55,28 +90,6 @@ subscriptionRoutes.get("/summary", async (c) => {
     }
 
     return c.json({ success: true, data: summary });
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
-  }
-});
-
-/**
- * 2. GET /api/subscription/pricing
- * Hitung kalkulasi harga paket & diskon referral
- */
-subscriptionRoutes.get("/pricing", async (c) => {
-  try {
-    const user = getUser(c);
-    const tenantId = user.tenantId || c.req.query("tenantId");
-    if (!tenantId) {
-      return c.json({ success: false, message: "Tenant ID diperlukan" }, 400);
-    }
-
-    const planId = c.req.query("planId");
-    const referralCode = c.req.query("referralCode");
-
-    const calculation = await getApplicablePrice(tenantId, planId, referralCode);
-    return c.json({ success: true, data: calculation });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }

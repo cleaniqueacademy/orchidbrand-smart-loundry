@@ -58,6 +58,13 @@ interface TenantPricingInfo {
   plan?: { name: string };
 }
 
+const DEFAULT_PRICING: TenantPricingInfo = {
+  basePrice: 60000,
+  discountAmount: 0,
+  finalPrice: 60000,
+  plan: { name: "Paket Bulanan" },
+};
+
 export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   isOpen,
   user,
@@ -74,7 +81,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const [copiedRekening, setCopiedRekening] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkedNotice, setCheckedNotice] = useState<string | null>(null);
-  const [pricing, setPricing] = useState<TenantPricingInfo | null>(null);
+  const [pricing, setPricing] = useState<TenantPricingInfo>(DEFAULT_PRICING);
   const [loadingPricing, setLoadingPricing] = useState(false);
 
   const [paymentInfo, setPaymentInfo] = useState<PlatformPaymentInfo>({
@@ -106,15 +113,17 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   // Fetch pricing tenant (harga + cek referral)
   useEffect(() => {
     if (isOpen && user) {
-      const tenantId = (user as any).tenantId || (user as any).id;
-      if (!tenantId) return;
+      const tenantId = (user as any).tenantId || (user as any).id || "";
       setLoadingPricing(true);
+      const queryParam = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
       api
         .get<{ success: boolean; data: TenantPricingInfo }>(
-          `/api/subscription/pricing?tenantId=${tenantId}`
+          `/api/subscription/pricing${queryParam}`
         )
         .then((res) => {
-          if (res.success && res.data) setPricing(res.data);
+          if (res && res.success && res.data) {
+            setPricing(res.data);
+          }
         })
         .catch(() => {})
         .finally(() => setLoadingPricing(false));
@@ -174,11 +183,23 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
 
   // WhatsApp confirmation url with proof reminder
   const cleanPhone = adminPhone.replace(/[^0-9]/g, "");
+  const nominalFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(pricing?.finalPrice || 60000);
+
+  const referralNotice =
+    pricing?.discountAmount > 0
+      ? ` (Voucher Referral Aktif: Hemat ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)})`
+      : "";
+
   const waConfirmText = encodeURIComponent(
     `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan untuk outlet:\n\n` +
       `🏪 Outlet: *${user.tenantName || "Laundry Cleanique"}*\n` +
       `🆔 ID Outlet: ${user.tenantId || user.id || "—"}\n` +
       `👤 Pemilik/Akun: ${user.name || "Owner"} (${user.email || ""})\n` +
+      `💳 Nominal: ${nominalFormatted}/bln${referralNotice}\n` +
       `💳 Metode: ${paymentTab === "rekening" ? `Transfer Rekening ${paymentInfo.bankName || "Bank"}` : "QRIS Cleanique"}\n\n` +
       `Berikut saya sertakan tangkapan layar (screenshot) bukti pembayaran yang sah untuk diverifikasi. Terima kasih!`
   );
@@ -298,47 +319,41 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
 
               {/* Harga Langganan & Info Referral */}
               <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
-                {loadingPricing ? (
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span>Memuat harga...</span>
+                {/* Badge referral jika tenant punya kode referral */}
+                {pricing.referralCodeId && (
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Tag className="w-3 h-3 text-emerald-600" />
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Kode Referral Aktif
+                    </span>
                   </div>
-                ) : pricing ? (
-                  <>
-                    {/* Badge referral jika tenant punya kode referral */}
-                    {pricing.referralCodeId && (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Tag className="w-3 h-3 text-emerald-600" />
-                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          Kode Referral Aktif
-                        </span>
-                      </div>
-                    )}
+                )}
 
-                    {pricing.discountAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 line-through">
-                          {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.basePrice)}
-                          /bln
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-semibold">
-                          Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
-                        </span>
-                      </div>
-                    )}
+                {pricing.discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 line-through">
+                      {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.basePrice)}
+                      /bln
+                    </span>
+                    <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
+                    </span>
+                  </div>
+                )}
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500 flex items-center gap-1">
-                        <CreditCard className="w-3 h-3 text-blue-500" />
-                        Biaya Perpanjangan:
-                      </span>
-                      <span className="font-bold text-slate-900 font-mono">
-                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
-                        <span className="font-normal text-slate-400">/bln</span>
-                      </span>
-                    </div>
-                  </>
-                ) : null}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 flex items-center gap-1 text-xs">
+                    <CreditCard className="w-3 h-3 text-blue-500" />
+                    Biaya Perpanjangan:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {loadingPricing && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                    <span className="font-bold text-slate-900 font-mono text-sm">
+                      {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                      <span className="font-normal text-slate-400 text-xs">/bln</span>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -504,18 +519,23 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                   </span>
                 </div>
 
-                {pricing && (
-                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 bg-blue-50 -mx-3.5 -mb-3.5 px-3.5 py-2.5 rounded-b-xl">
+                <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 bg-blue-50 -mx-3.5 -mb-3.5 px-3.5 py-2.5 rounded-b-xl">
+                  <div className="flex flex-col text-left">
                     <span className="text-slate-600 font-medium flex items-center gap-1">
                       <CreditCard className="w-3.5 h-3.5 text-blue-500" />
                       Jumlah Transfer:
                     </span>
-                    <span className="font-bold text-blue-700 font-mono text-sm">
-                      {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
-                      <span className="text-[10px] font-normal text-slate-400">/bln</span>
-                    </span>
+                    {pricing.discountAmount > 0 && (
+                      <span className="text-[10px] text-emerald-600 font-medium ml-4.5">
+                        Diskon Referral: Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
+                      </span>
+                    )}
                   </div>
-                )}
+                  <span className="font-bold text-blue-700 font-mono text-sm">
+                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                    <span className="text-[10px] font-normal text-slate-400">/bln</span>
+                  </span>
+                </div>
               </div>
             )}
 
@@ -563,18 +583,23 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                       </button>
                     </div>
 
-                    {pricing && (
-                      <div className="flex items-center justify-between text-xs bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mt-1">
+                    <div className="flex items-center justify-between text-xs bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mt-1">
+                      <div className="flex flex-col text-left">
                         <span className="text-slate-600 font-medium flex items-center gap-1">
                           <CreditCard className="w-3.5 h-3.5 text-blue-500" />
                           Nominal Bayar:
                         </span>
-                        <span className="font-bold text-blue-700 font-mono text-sm">
-                          {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
-                          <span className="text-[10px] font-normal text-slate-400">/bln</span>
-                        </span>
+                        {pricing.discountAmount > 0 && (
+                          <span className="text-[10px] text-emerald-600 font-medium ml-4.5">
+                            Diskon Referral: Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
+                          </span>
+                        )}
                       </div>
-                    )}
+                      <span className="font-bold text-blue-700 font-mono text-sm">
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                        <span className="text-[10px] font-normal text-slate-400">/bln</span>
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className="py-6 space-y-1">
