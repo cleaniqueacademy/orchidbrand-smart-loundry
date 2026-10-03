@@ -503,6 +503,19 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                     {paymentInfo.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
                   </span>
                 </div>
+
+                {pricing && (
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 bg-blue-50 -mx-3.5 -mb-3.5 px-3.5 py-2.5 rounded-b-xl">
+                    <span className="text-slate-600 font-medium flex items-center gap-1">
+                      <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                      Jumlah Transfer:
+                    </span>
+                    <span className="font-bold text-blue-700 font-mono text-sm">
+                      {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                      <span className="text-[10px] font-normal text-slate-400">/bln</span>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -549,6 +562,19 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                         <span>Buka / Share</span>
                       </button>
                     </div>
+
+                    {pricing && (
+                      <div className="flex items-center justify-between text-xs bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mt-1">
+                        <span className="text-slate-600 font-medium flex items-center gap-1">
+                          <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                          Nominal Bayar:
+                        </span>
+                        <span className="font-bold text-blue-700 font-mono text-sm">
+                          {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
+                          <span className="text-[10px] font-normal text-slate-400">/bln</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-6 space-y-1">
