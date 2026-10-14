@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Check, Tag, ShieldCheck, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { X, Check, Tag, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { api } from "../../../utils/api";
 import { Plan } from "../../../types";
 
@@ -109,71 +109,75 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-100">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-base sm:text-lg font-bold text-zinc-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600" />
               <span>Perpanjang Masa Aktif Langganan</span>
             </h3>
-            <span className="text-xs text-slate-500 block mt-0.5">
+            <span className="text-xs text-zinc-500 block mt-0.5">
               Pilih paket dan durasi langganan untuk outlet Anda
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 sm:space-y-5">
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Pilih Paket */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-xs font-bold text-zinc-800 mb-2">
               Pilih Paket Langganan
             </label>
             {loading ? (
-              <div className="py-4 text-center text-xs text-slate-400">Memuat paket...</div>
+              <div className="py-6 text-center text-xs text-zinc-400">
+                <Loader2 className="w-4 h-4 animate-spin mx-auto mb-1 text-blue-600" />
+                <span>Memuat paket...</span>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {plansList.map((plan) => {
                   const isSelected = selectedPlanId === plan.id;
                   return (
                     <div
                       key={plan.id}
                       onClick={() => setSelectedPlanId(plan.id)}
-                      className={`cursor-pointer p-4 rounded-2xl border-2 transition-all ${
+                      className={`cursor-pointer p-3.5 sm:p-4 rounded-xl border-2 transition-all ${
                         isSelected
-                          ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 shadow-sm"
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300"
+                          ? "border-blue-600 bg-blue-50/70 shadow-xs"
+                          : "border-zinc-200 hover:border-zinc-300 bg-white"
                       }`}
                     >
                       <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">
+                        <span className="font-bold text-sm text-zinc-900">
                           {plan.name}
                         </span>
                         {isSelected && (
-                          <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">
+                          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
                             <Check className="w-2.5 h-2.5" />
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xs font-bold text-blue-700">
                         Rp {plan.pricePerMonth.toLocaleString("id-ID")}/bln
                       </span>
                       {plan.description && (
-                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                        <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2">
                           {plan.description}
                         </p>
                       )}
@@ -186,7 +190,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
 
           {/* Pilih Durasi */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-xs font-bold text-zinc-800 mb-2">
               Durasi Perpanjangan
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -200,10 +204,10 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
                   key={item.months}
                   type="button"
                   onClick={() => setDurationMonths(item.months)}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     durationMonths === item.months
                       ? "border-blue-600 bg-blue-600 text-white shadow-xs"
-                      : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                      : "border-zinc-200 hover:bg-zinc-50 bg-white text-zinc-700"
                   }`}
                 >
                   {item.label}
@@ -214,58 +218,60 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
 
           {/* Kode Promo / Referral */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-bold text-zinc-800 mb-1">
               Kode Referral / Kupon Diskon (Opsional)
             </label>
             <div className="relative">
-              <Tag className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Tag className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Masukkan kode promo"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold uppercase tracking-wider outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-9 pr-3.5 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-zinc-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
               />
             </div>
           </div>
 
           {/* Ringkasan Biaya Tagihan */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2 text-xs">
+            <div className="flex justify-between text-zinc-600">
               <span>Subtotal ({durationMonths} Bulan)</span>
-              <span>Rp {originalTotal.toLocaleString("id-ID")}</span>
+              <span className="font-semibold text-zinc-900">
+                Rp {originalTotal.toLocaleString("id-ID")}
+              </span>
             </div>
 
             {discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+              <div className="flex justify-between text-emerald-700 font-semibold">
                 <span>Diskon Promo</span>
                 <span>- Rp {discountTotal.toLocaleString("id-ID")}</span>
               </div>
             )}
 
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-baseline font-extrabold text-sm text-slate-900 dark:text-white">
+            <div className="pt-2 border-t border-zinc-200 flex justify-between items-baseline font-bold text-sm text-zinc-900">
               <span>Total Tagihan</span>
-              <span className="text-indigo-600 dark:text-indigo-400 text-base">
+              <span className="text-blue-700 text-base font-extrabold font-mono">
                 Rp {finalTotal.toLocaleString("id-ID")}
               </span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="pt-2 flex justify-end gap-3">
+          <div className="pt-1 flex justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Buat Tagihan Pembayaran</span>
             </button>
           </div>
