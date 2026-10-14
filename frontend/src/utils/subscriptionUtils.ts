@@ -64,11 +64,33 @@ export function checkUserActiveStatus(user: User | null | undefined): UserActive
         label: isInactive ? "Nonaktif" : "Aktif",
         className: isInactive
           ? "bg-rose-50 text-rose-800 border-rose-200"
-          : "bg-amber-50 text-amber-800 border-amber-200",
-        dotColor: isInactive ? "bg-rose-500" : "bg-amber-500",
+          : "bg-indigo-50 text-indigo-800 border-indigo-200",
+        dotColor: isInactive ? "bg-rose-500" : "bg-indigo-500",
         description: isInactive
           ? "Akun tim marketing dinonaktifkan"
           : "Akun Tim Marketing IndoTech aktif",
+      },
+    };
+  }
+
+  // Pegawai / Staff Kasir Outlet (tidak memerlukan langganan personal, mengikuti status akun & outlet)
+  if (user.role === "staff") {
+    const isInactive = user.status === "inactive";
+    return {
+      isActive: !isInactive,
+      isExpired: false,
+      isInactiveStatus: isInactive,
+      daysRemaining: 99999,
+      formattedExpiry: "Pegawai Outlet",
+      statusBadge: {
+        label: isInactive ? "Nonaktif" : "Aktif",
+        className: isInactive
+          ? "bg-rose-50 text-rose-800 border-rose-200"
+          : "bg-emerald-50 text-emerald-800 border-emerald-200",
+        dotColor: isInactive ? "bg-rose-500" : "bg-emerald-500",
+        description: isInactive
+          ? "Akun kasir/staf dinonaktifkan oleh owner"
+          : "Akun operasional staf kasir aktif",
       },
     };
   }

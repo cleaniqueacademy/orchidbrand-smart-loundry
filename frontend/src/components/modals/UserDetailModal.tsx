@@ -115,6 +115,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   const statusInfo = checkUserActiveStatus(user);
   const roleConf = roleBadgeConfig[user.role];
   const isSuperAdmin = user.role === "superadmin";
+  const isMarketing = user.role === "marketing";
+  const isStaff = user.role === "staff";
+  const isTenantOwner = user.role === "tenant_owner" || (!user.role && !!user.tenantId);
 
   return (
     <>
@@ -229,12 +232,12 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Masa Aktif Langganan */}
-            {!isSuperAdmin && (
+            {/* Masa Aktif Langganan (HANYA untuk Owner Outlet) atau Info Pegawai/Internal */}
+            {isTenantOwner ? (
               <div className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    Masa Aktif Langganan
+                    Masa Aktif Langganan Toko
                   </p>
                   <span
                     className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusInfo.statusBadge.className}`}
@@ -274,7 +277,37 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                   Perpanjang Masa Aktif
                 </button>
               </div>
-            )}
+            ) : isMarketing ? (
+              <div className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                    Status Kepegawaian Internal
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-200 bg-white text-indigo-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                    Tim Internal Cleanique
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Akun operasional staf divisi pemasaran internal IndoTech / Cleanique Laundry. Akses akun bersifat permanen untuk mengelola kupon promosi dan tidak memerlukan langganan berbayar.
+                </p>
+              </div>
+            ) : isStaff ? (
+              <div className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                    Status Karyawan Outlet
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-zinc-200 bg-white text-zinc-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Staf Kasir Outlet
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Akun operasional kasir cabang <strong>{tenant?.outletName ?? user.tenantName ?? "Outlet"}</strong>. Hak akses operasional dikelola langsung oleh Owner Outlet tanpa langganan individual.
+                </p>
+              </div>
+            ) : null}
 
             {/* Audit info */}
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-zinc-100 text-xs text-zinc-500">

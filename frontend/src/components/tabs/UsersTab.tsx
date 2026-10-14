@@ -373,7 +373,13 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                         {isSuperAdmin ? (
                           <span className="text-zinc-400">Permanen</span>
                         ) : u.role === "marketing" ? (
-                          <span className="text-amber-700 font-medium">Tim Internal</span>
+                          <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Tim Internal
+                          </span>
+                        ) : u.role === "staff" ? (
+                          <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+                            Pegawai Outlet
+                          </span>
                         ) : u.subscriptionUntil ? (
                           <span
                             className={`font-mono ${
