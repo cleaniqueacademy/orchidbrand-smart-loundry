@@ -21,11 +21,13 @@ import { authHeaders } from "../../utils/api";
 interface BranchManagementSectionProps {
   readonly currentTenant?: Tenant | null;
   readonly isLocked?: boolean;
+  readonly onLearnMore?: () => void;
 }
 
 export const BranchManagementSection: React.FC<BranchManagementSectionProps> = ({
   currentTenant,
   isLocked = true,
+  onLearnMore,
 }) => {
   const [branches, setBranches] = useState<Tenant[]>(
     currentTenant ? [currentTenant] : []
@@ -62,6 +64,7 @@ export const BranchManagementSection: React.FC<BranchManagementSectionProps> = (
       isLocked={isLocked}
       customTitle="Manajemen Multi-Cabang Outlet"
       customSubtitle="Kelola operasional banyak cabang laundry dalam satu akun Owner terpusat."
+      onLearnMore={onLearnMore}
     >
       <div className="space-y-6">
         {/* Header & Action Button */}
@@ -152,7 +155,7 @@ export const BranchManagementSection: React.FC<BranchManagementSectionProps> = (
                   </h4>
                   <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-1">
                     <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                    <span>{activeOutlet?.address || "Jl. Kaliurang Km 5, Sleman"}</span>
+                    <span>{activeOutlet?.address || "-"}</span>
                     {activeOutlet?.city && <span>• {activeOutlet.city}</span>}
                   </div>
                 </div>
@@ -161,7 +164,7 @@ export const BranchManagementSection: React.FC<BranchManagementSectionProps> = (
               <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500">
                 <div className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>{activeOutlet?.phone || "081234567890"}</span>
+                  <span>{activeOutlet?.phone || "-"}</span>
                 </div>
                 <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" />

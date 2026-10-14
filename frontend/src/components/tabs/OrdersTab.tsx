@@ -189,7 +189,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md whitespace-nowrap">
                   <Store className="w-3 h-3 text-blue-700 shrink-0" />
                   <span>
-                    {outlet?.outletName || "Cabang Melati"}
+                    {outlet?.outletName || order.tenantId || "Outlet"}
                   </span>
                 </span>
               );

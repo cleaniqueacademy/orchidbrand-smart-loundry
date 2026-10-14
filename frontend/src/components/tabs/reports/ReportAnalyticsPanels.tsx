@@ -1,5 +1,5 @@
 import React from "react";
-import { Layers, CreditCard } from "lucide-react";
+import { Layers, CreditCard, PieChart } from "lucide-react";
 import {
   ServiceBreakdownItem,
   ExpenseBreakdownItem,
@@ -22,17 +22,22 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
   paidCount,
 }) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
       {/* Panel Layanan Terlaris (7 cols) */}
-      <div className="lg:col-span-7 bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+      <div className="lg:col-span-7 bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-800 border border-zinc-200">
-              <Layers className="w-3.5 h-3.5" />
+            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+              <Layers className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-zinc-900 text-sm">Kontribusi Penjualan per Layanan</h3>
+            <div>
+              <h3 className="font-bold text-zinc-900 text-sm">Kontribusi Penjualan per Layanan</h3>
+              <p className="text-[11px] text-zinc-400">Distribusi omset dari setiap kategori cucian</p>
+            </div>
           </div>
-          <span className="text-xs text-zinc-400">{serviceBreakdown.length} varian layanan</span>
+          <span className="text-xs font-semibold text-zinc-500 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-lg">
+            {serviceBreakdown.length} varian
+          </span>
         </div>
 
         <div className="space-y-3">
@@ -42,17 +47,17 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
             </div>
           ) : (
             serviceBreakdown.map((s) => (
-              <div key={s.name} className="space-y-1">
+              <div key={s.name} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-zinc-800">{s.name}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-zinc-500">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-zinc-500 text-[11px]">
                       {s.count} order ({s.qty} {s.unit})
                     </span>
-                    <span className="font-bold text-zinc-900 whitespace-nowrap">
+                    <span className="font-bold text-zinc-900 whitespace-nowrap font-mono">
                       Rp {s.total.toLocaleString("id-ID")}
                     </span>
-                    <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.2 rounded">
+                    <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded-full border border-zinc-200/80">
                       {s.pct}%
                     </span>
                   </div>
@@ -60,7 +65,7 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
                 {/* Progress Bar */}
                 <div className="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-blue-900 to-blue-600 h-2 rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-blue-700 to-indigo-600 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(4, s.pct))}%` }}
                   />
                 </div>
@@ -71,12 +76,17 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
       </div>
 
       {/* Panel Beban Pengeluaran & Metode Pembayaran (5 cols) */}
-      <div className="lg:col-span-5 space-y-5">
+      <div className="lg:col-span-5 space-y-4 sm:space-y-5">
         {/* Breakdown Pengeluaran */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-            <h3 className="font-bold text-zinc-900 text-sm">Beban Pengeluaran</h3>
-            <span className="text-xs font-bold text-rose-700 whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0">
+                <PieChart className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="font-bold text-zinc-900 text-sm">Beban Pengeluaran</h3>
+            </div>
+            <span className="text-xs font-bold text-rose-700 whitespace-nowrap font-mono">
               Rp {totalExpense.toLocaleString("id-ID")}
             </span>
           </div>
@@ -91,13 +101,13 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
                 <div key={e.category} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                    <span className="text-zinc-700">{e.category}</span>
+                    <span className="text-zinc-700 font-medium">{e.category}</span>
                   </div>
                   <div className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="font-semibold text-zinc-900">
+                    <span className="font-semibold text-zinc-900 font-mono">
                       Rp {e.amount.toLocaleString("id-ID")}
                     </span>
-                    <span className="text-[10px] text-zinc-400 font-sans">({e.pct}%)</span>
+                    <span className="text-[10px] text-zinc-400 font-mono">({e.pct}%)</span>
                   </div>
                 </div>
               ))
@@ -106,20 +116,24 @@ export const ReportAnalyticsPanels: React.FC<ReportAnalyticsPanelsProps> = ({
         </div>
 
         {/* Metode Pembayaran */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-            <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-              <CreditCard className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Metode Pembayaran</span>
-            </h3>
-            <span className="text-xs text-zinc-400">{paidCount} order</span>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                <CreditCard className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="font-bold text-zinc-900 text-sm">Metode Pembayaran</h3>
+            </div>
+            <span className="text-xs font-semibold text-zinc-500 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-lg">
+              {paidCount} order
+            </span>
           </div>
 
           <div className="space-y-2">
             {paymentMethodBreakdown.map((m) => (
               <div
                 key={m.method}
-                className="flex items-center justify-between text-xs p-2 rounded-lg bg-zinc-50/70 border border-zinc-100"
+                className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-zinc-50/70 border border-zinc-200/80"
               >
                 <span className="font-semibold text-zinc-800">{m.method}</span>
                 <div className="text-right">

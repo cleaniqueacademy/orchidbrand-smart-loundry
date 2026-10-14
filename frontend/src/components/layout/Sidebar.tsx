@@ -140,9 +140,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   const currentTenant = tenants.find((t) => t.id === tenantId) || tenants[0] || {
-    id: "tenant-01",
-    outletName: "Laundry Cleanique - Cabang Melati",
-    address: "Jakarta",
+    id: tenantId || "tenant-active",
+    outletName: currentUser?.tenantName || "Outlet Laundry",
+    address: "-",
   };
 
   const isSuperAdmin = currentUserRole === "superadmin";

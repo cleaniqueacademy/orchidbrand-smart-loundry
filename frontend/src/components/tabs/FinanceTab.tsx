@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, BarChart2 } from "lucide-react";
 import { CashflowTab } from "./CashflowTab";
@@ -18,6 +18,8 @@ interface FinanceTabProps {
   onDeleteExpense: (id: string) => void;
   customers: Customer[];
   users?: User[];
+  onUpdateTenant?: (id: string, data: { [key: string]: unknown }) => Promise<boolean>;
+  onRefresh?: () => void;
 }
 
 type FinanceSubTab = "cashflow" | "reports";
@@ -35,6 +37,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   onDeleteExpense,
   customers,
   users,
+  onUpdateTenant,
+  onRefresh,
 }) => {
   const [subTab, setSubTab] = useState<FinanceSubTab>("cashflow");
 
@@ -95,6 +99,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               customers={customers}
               currentUserRole={currentUserRole}
               users={users}
+              onUpdateTenant={onUpdateTenant}
+              onRefresh={onRefresh}
             />
           )}
         </motion.div>

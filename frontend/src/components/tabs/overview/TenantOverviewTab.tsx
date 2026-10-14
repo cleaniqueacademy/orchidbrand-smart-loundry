@@ -68,10 +68,10 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
   const activeTenant =
     tenants.find((t) => t.id === tenantId) ||
     tenants[0] || {
-      id: "tenant-01",
-      outletName: "Laundry Cleanique - Cabang Melati",
-      phone: "081234567890",
-      address: "Jl. Melati Raya No. 45, Jakarta",
+      id: tenantId || "tenant-active",
+      outletName: currentUser?.tenantName || "Outlet Laundry",
+      phone: "-",
+      address: "-",
       status: "active" as const,
       totalOrders: 0,
       totalOmset: 0,

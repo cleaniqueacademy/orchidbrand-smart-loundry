@@ -1,5 +1,5 @@
 // Service Worker for Laundry Cleanique PWA
-const CACHE_NAME = "cleanique-cache-v3";
+const CACHE_NAME = "cleanique-cache-v4";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -46,27 +46,36 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle standard HTTP/HTTPS requests (bypass chrome-extension://, moz-extension://, data:, blob:, etc.)
-  if (!url.protocol.startsWith("http")) {
+  // 1. Only intercept same-origin HTTP/HTTPS requests
+  // Bypasses browser extensions (chrome-extension://), third-party tracking (Cloudflare beacon), CDNs, etc.
+  if (url.origin !== self.location.origin || !url.protocol.startsWith("http")) {
     return;
   }
 
-  // Bypass non-GET and API / dynamic tracking requests from caching
+  // 2. Bypass non-GET and API / dynamic tracking requests from caching
   if (event.request.method !== "GET" || url.pathname.startsWith("/api/")) {
     return;
   }
 
-  // Handle navigation requests (SPA index.html fallback)
+  // 3. Handle navigation requests (SPA index.html fallback)
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match("/");
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match("/");
+        if (cached) {
+          return cached;
+        }
+        return new Response("Aplikasi sedang offline", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
       })
     );
     return;
   }
 
-  // For static assets: try network first, then cache
+  // 4. For same-origin static assets: try network first, then cache, with safe fallback Response
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -75,14 +84,23 @@ self.addEventListener("fetch", (event) => {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache).catch(() => {
-              // Silently ignore cache put failures for edge-case requests
+              // Silently ignore cache put failures
             });
           });
         }
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request);
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) {
+          return cached;
+        }
+        // Always return a valid Response instance so event.respondWith never receives undefined
+        return new Response("Resource unavailable offline", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
       })
   );
 });

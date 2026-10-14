@@ -21,7 +21,7 @@ import {
   Building2,
   Crown,
 } from "lucide-react";
-import { Tenant, User } from "../../types";
+import { Tenant, User, AccountTier, isFeatureAccessible } from "../../types";
 import { useToast } from "../common/ToastContext";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { EditProfileModal } from "../modals/EditProfileModal";
@@ -108,6 +108,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ? tenantId
       : resolvedTenant?.id || (tenants && tenants[0]?.id) || currentUser?.tenantId || "tenant-01";
 
+  // Tier-based feature access
+  const effectiveTier = (resolvedTenant?.tier || tenant?.tier || "pro") as AccountTier;
+  const isStaffLocked = !isFeatureAccessible(effectiveTier, "employee_management");
+  const isPrinterLocked = !isFeatureAccessible(effectiveTier, "thermal_printer");
+  const isBranchLocked = !isFeatureAccessible(effectiveTier, "branch_management");
+
   const [ownerName, setOwnerName] = useState(currentUser?.name || "");
   const [outletName, setOutletName] = useState(tenant?.outletName || resolvedTenant?.outletName || "");
   const [phone, setPhone] = useState(tenant?.phone || resolvedTenant?.phone || "");
@@ -126,9 +132,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [previewMessageType, setPreviewMessageType] = useState<"nota_masuk" | "siap_ambil">("nota_masuk");
   const [copiedPreview, setCopiedPreview] = useState(false);
 
-  const displayOutletName = outletName.trim() || tenant?.outletName || "Laundry Cleanique - Cabang Melati";
-  const displayAddress = address.trim() || tenant?.address || "Jl. Melati Raya No. 45, Jakarta Selatan";
-  const displayPhone = phone.trim() || tenant?.phone || "081234567890";
+  const displayOutletName = outletName.trim() || tenant?.outletName || currentUser?.tenantName || "Outlet Laundry";
+  const displayAddress = address.trim() || tenant?.address || "-";
+  const displayPhone = phone.trim() || tenant?.phone || "-";
 
   const handleCopyPreviewText = () => {
     const textToCopy =
@@ -240,8 +246,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {([
           { id: "profil", label: "Profil Outlet", icon: Store },
           { id: "layanan", label: "Master Layanan", icon: Tag },
-          { id: "staf", label: "Manajemen Staf", icon: UserIcon },
-          { id: "printer", label: "Printer & Struk", icon: Printer },
+          { id: "staf", label: "Manajemen Staf", icon: UserIcon, badge: "Premium" },
+          { id: "printer", label: "Printer & Struk", icon: Printer, badge: "Premium" },
           { id: "cabang", label: "Manajemen Cabang", icon: Building2, badge: "Premium" },
         ] as { id: SettingsSubTab; label: string; icon: React.ElementType; badge?: string }[]).map((tab) => {
           const Icon = tab.icon;
@@ -604,62 +610,68 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       {/* === TAB: MANAJEMEN STAF & SHIFT KASIR === */}
       {settingsTab === "staf" && (
         effectiveTenantId ? (
-          <div className="space-y-5">
-            {/* Card Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
-            <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-100 pb-3.5 gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs shrink-0">
-                    <Calculator className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-zinc-900 text-sm">Fitur Shift Kerja Kasir</h3>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          enableShift
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                        }`}
-                      >
-                        {enableShift ? "Shift Aktif" : "Shift Nonaktif"}
-                      </span>
+          <PremiumFeatureLock
+            feature="employee_management"
+            isLocked={isStaffLocked}
+            onLearnMore={() => setActiveTab && setActiveTab("subscription")}
+          >
+            <div className="space-y-5">
+              {/* Card Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
+              <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-100 pb-3.5 gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs shrink-0">
+                      <Calculator className="w-4 h-4" />
                     </div>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">
-                      Kontrol kewajiban buka/tutup kas laci, modal awal kembalian, dan rekonsiliasi pergantian tugas kasir.
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-zinc-900 text-sm">Fitur Shift Kerja Kasir</h3>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            enableShift
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                          }`}
+                        >
+                          {enableShift ? "Shift Aktif" : "Shift Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Kontrol kewajiban buka/tutup kas laci, modal awal kembalian, dan rekonsiliasi pergantian tugas kasir.
+                      </p>
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleShift}
+                    disabled={updatingShift}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs shrink-0 ${
+                      enableShift
+                        ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    }`}
+                  >
+                    <span>{updatingShift ? "Menyimpan..." : enableShift ? "Nonaktifkan Shift" : "Aktifkan Shift"}</span>
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleToggleShift}
-                  disabled={updatingShift}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs shrink-0 ${
-                    enableShift
-                      ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
-                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  }`}
-                >
-                  <span>{updatingShift ? "Menyimpan..." : enableShift ? "Nonaktifkan Shift" : "Aktifkan Shift"}</span>
-                </button>
+                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200/70 text-xs text-zinc-600 space-y-1.5">
+                  <p className="leading-relaxed">
+                    {enableShift
+                      ? "✅ Saat fitur shift AKTIF: Tombol Buka/Tutup Shift muncul di bilah navigasi atas dan dashboard kasir. Kasir wajib menginput modal awal kas laci sebelum melayani order, serta menghitung uang fisik saat menutup shift."
+                      : "ℹ️ Saat fitur shift NONAKTIF: Kasir dapat langsung menerima dan memproses transaksi cucian kapan saja tanpa harus membuka atau menutup kas laci."}
+                  </p>
+                </div>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200/70 text-xs text-zinc-600 space-y-1.5">
-                <p className="leading-relaxed">
-                  {enableShift
-                    ? "✅ Saat fitur shift AKTIF: Tombol Buka/Tutup Shift muncul di bilah navigasi atas dan dashboard kasir. Kasir wajib menginput modal awal kas laci sebelum melayani order, serta menghitung uang fisik saat menutup shift."
-                    : "ℹ️ Saat fitur shift NONAKTIF: Kasir dapat langsung menerima dan memproses transaksi cucian kapan saja tanpa harus membuka atau menutup kas laci."}
-                </p>
-              </div>
+              {/* Komponen Manajemen Akun Staf Cabang */}
+              <StaffManagementSection
+                tenantId={effectiveTenantId}
+                tenantName={resolvedTenant?.outletName || "Outlet"}
+              />
             </div>
-
-            {/* Komponen Manajemen Akun Staf Cabang */}
-            <StaffManagementSection
-              tenantId={effectiveTenantId}
-              tenantName={resolvedTenant?.outletName || "Outlet"}
-            />
-          </div>
+          </PremiumFeatureLock>
         ) : (
           <SubTabSkeleton />
         )
@@ -667,18 +679,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       {/* === TAB: PRINTER & STRUK === */}
       {settingsTab === "printer" && (
-        <ThermalPrinterSettingsSection
-          outletName={displayOutletName}
-          phone={displayPhone}
-          address={displayAddress}
-        />
+        <PremiumFeatureLock
+          feature="thermal_printer"
+          isLocked={isPrinterLocked}
+          onLearnMore={() => setActiveTab && setActiveTab("subscription")}
+        >
+          <ThermalPrinterSettingsSection
+            outletName={displayOutletName}
+            phone={displayPhone}
+            address={displayAddress}
+          />
+        </PremiumFeatureLock>
       )}
 
       {/* === TAB: MANAJEMEN CABANG === */}
       {settingsTab === "cabang" && (
         <BranchManagementSection
           currentTenant={resolvedTenant || tenant}
-          isLocked={true}
+          isLocked={isBranchLocked}
+          onLearnMore={() => setActiveTab && setActiveTab("subscription")}
         />
       )}
 

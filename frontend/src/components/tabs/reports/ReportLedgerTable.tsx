@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, ChevronLeft, ChevronRight, Store, Receipt } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Store, Receipt } from "lucide-react";
 import { Order, Tenant } from "../../../types";
 import { EmptyStateWalkthrough } from "../../common/EmptyStateWalkthrough";
 
@@ -17,6 +17,16 @@ interface ReportLedgerTableProps {
   tenants?: Tenant[];
 }
 
+const statusBadgeStyles: Record<string, string> = {
+  process: "bg-blue-50 text-blue-700 border-blue-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  washing: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  drying_ironing: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  ready: "bg-teal-50 text-teal-700 border-teal-200",
+  completed: "bg-emerald-50 text-emerald-800 border-emerald-300",
+  cancelled: "bg-rose-50 text-rose-700 border-rose-200",
+};
+
 export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
   searchQuery,
   onSearchChange,
@@ -31,24 +41,24 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
   tenants = [],
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+    <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="font-bold text-zinc-900 text-sm">Buku Besar Transaksi</h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-zinc-500 mt-0.5">
             Daftar transaksi pesanan masuk selama periode terpilih
           </p>
         </div>
 
         {/* Search Box */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Cari nota, pelanggan, layanan..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:bg-white focus:border-zinc-900 transition"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:bg-white focus:border-zinc-900 font-medium placeholder:text-zinc-400 transition"
           />
         </div>
       </div>
@@ -80,7 +90,7 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
                       title="Tidak Ada Transaksi Pada Filter Ini"
                       description="Belum ada transaksi cucian yang tercatat sesuai rentang tanggal atau kata kunci pencarian yang dipilih."
                       tips={[
-                        "Coba ubah filter rentang tanggal (Hari Ini, 7 Hari, Bulan Ini, atau Semua) pada kontrol laporan.",
+                        "Coba ubah filter rentang tanggal (Hari Ini, Bulan Ini, atau Semua) pada kontrol laporan.",
                         "Pastikan kata kunci pencarian nomor nota atau nama pelanggan sudah sesuai.",
                         "Gunakan tombol Ekspor Excel atau Cetak Dokumen Resmi untuk mengunduh rekapitulasi buku besar.",
                       ]}
@@ -102,7 +112,7 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
                   const isPaid = ord.paymentStatus === "paid";
 
                   return (
-                    <tr key={ord.id} className="hover:bg-zinc-50/70 transition-colors">
+                    <tr key={ord.id} className="hover:bg-zinc-50/80 transition-colors">
                       <td className="py-2.5 px-3.5 font-mono font-semibold text-zinc-900 whitespace-nowrap">
                         {ord.invoiceNo}
                       </td>
@@ -114,7 +124,7 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
                       </td>
                       {isMultiTenant && (
                         <td className="py-2.5 px-3.5 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-900 border border-blue-200/80 px-2 py-0.5 rounded-md">
                             <Store className="w-2.5 h-2.5 text-blue-700" />
                             {tenantName}
                           </span>
@@ -130,13 +140,17 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
                         </span>
                       </td>
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
-                        <span className="text-[10px] font-semibold bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-full border border-zinc-200 whitespace-nowrap shrink-0 select-none inline-block">
+                        <span
+                          className={`inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 rounded-lg border whitespace-nowrap shrink-0 ${
+                            statusBadgeStyles[ord.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                          }`}
+                        >
                           {statusLabel}
                         </span>
                       </td>
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 select-none inline-block ${
+                          className={`inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${
                             isPaid
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-amber-50 text-amber-700 border-amber-200"
@@ -158,29 +172,29 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
           </table>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls Matching ShadcnDataTable */}
         {totalOrdersCount > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-3.5 py-2.5 border-t border-zinc-200 bg-zinc-50/60 text-xs text-zinc-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-200 bg-zinc-50/70 text-xs text-zinc-500 rounded-b-xl">
             <div className="text-[11px]">
               Menampilkan{" "}
-              <span className="font-semibold text-zinc-800">
+              <span className="font-semibold text-zinc-900">
                 {Math.min((page - 1) * pageSize + 1, totalOrdersCount)}
               </span>{" "}
               -{" "}
-              <span className="font-semibold text-zinc-800">
+              <span className="font-semibold text-zinc-900">
                 {Math.min(page * pageSize, totalOrdersCount)}
               </span>{" "}
-              dari <span className="font-semibold text-zinc-800">{totalOrdersCount}</span> data
+              dari <span className="font-semibold text-zinc-900">{totalOrdersCount}</span> baris
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Page size select */}
+            <div className="flex items-center gap-3">
+              {/* Rows per page selector */}
               <div className="flex items-center gap-1.5 text-[11px]">
-                <span>Tampilkan:</span>
+                <span className="hidden sm:inline text-zinc-400">Baris:</span>
                 <select
                   value={pageSize}
                   onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                  className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs outline-none cursor-pointer"
+                  className="bg-white border border-zinc-200 rounded-lg px-2 py-1 text-xs font-semibold outline-none cursor-pointer hover:border-zinc-300"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -189,26 +203,46 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
                 </select>
               </div>
 
-              {/* Prev/Next buttons */}
+              {/* Prev / Page / Next */}
               <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onPageChange(1)}
+                  disabled={page === 1}
+                  className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Halaman pertama"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => onPageChange(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Sebelumnya"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-2 text-[11px] font-semibold text-zinc-700">
+                <span className="px-2 text-[11px] font-semibold text-zinc-800">
                   {page} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
-                  className="p-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Berikutnya"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(totalPages)}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Halaman terakhir"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -218,3 +252,4 @@ export const ReportLedgerTable: React.FC<ReportLedgerTableProps> = ({
     </div>
   );
 };
+

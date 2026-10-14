@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   FileSpreadsheet,
   Printer,
@@ -7,7 +7,6 @@ import {
   Store,
   MapPin,
   Phone,
-  User,
   CheckCircle2,
   FileText,
 } from "lucide-react";
@@ -48,262 +47,262 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   onSelectTenant,
   isSuperAdmin = false,
 }) => {
+  // Preset detection for active styling
+  const isToday = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return startDate === todayStr && endDate === todayStr;
+  }, [startDate, endDate]);
+
+  const isThisMonth = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    return startDate === start && endDate === end;
+  }, [startDate, endDate]);
+
+  const isLastMonth = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+    return startDate === start && endDate === end;
+  }, [startDate, endDate]);
+
+  const isThisYear = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const end = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+    return startDate === start && endDate === end;
+  }, [startDate, endDate]);
+
+  const isAllTime = !startDate && !endDate;
+
   return (
-    <div className="space-y-4">
-      {/* Top Header & Export Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-3.5">
+      {/* 1. Page Header & Responsive Export Action Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 tracking-tight">
+          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">
             Laporan Keuangan & Operasional
           </h2>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Audit rekapitulasi laba rugi, omset penjualan, dan beban operasional outlet
+            Audit rekapitulasi omset, laba rugi, dan efisiensi operasional outlet.
           </p>
         </div>
 
-        {/* Action Buttons: Cetak PDF, Download Excel (.xlsx), CSV, Pratinjau */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Action Buttons: 2x2 grid on mobile, inline on desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <button
-            onClick={onOpenPrintPreview}
-            className="px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-            title="Pratinjau lembar cetak dokumen resmi sebelum dicetak"
+            type="button"
+            onClick={onPrintPDF}
+            className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+            title="Cetak langsung atau simpan dokumen ke file PDF"
           >
-            <Eye className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Pratinjau Cetak</span>
+            <Printer className="w-3.5 h-3.5" />
+            <span>Cetak PDF</span>
           </button>
 
           <button
-            onClick={onDownloadCSV}
-            className="px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-            title="Download data mentah dalam format CSV"
-          >
-            <FileText className="w-3.5 h-3.5 text-zinc-500" />
-            <span>CSV</span>
-          </button>
-
-          <button
+            type="button"
             onClick={onDownloadExcel}
-            className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-            title="Download laporan lengkap 3 lembar kerja dalam format Microsoft Excel (.xlsx)"
+            className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+            title="Download laporan lengkap dalam format Excel (.xlsx)"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Download Excel</span>
           </button>
 
           <button
-            onClick={onPrintPDF}
-            className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-            title="Cetak langsung atau simpan dokumen ke file PDF"
+            type="button"
+            onClick={onDownloadCSV}
+            className="h-9 px-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
+            title="Download data mentah dalam format CSV"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Cetak PDF</span>
+            <FileText className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Ekspor CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenPrintPreview}
+            className="h-9 px-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
+            title="Pratinjau lembar cetak dokumen resmi sebelum dicetak"
+          >
+            <Eye className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Pratinjau</span>
           </button>
         </div>
       </div>
 
-      {/* Profil Outlet Terpilih Banner */}
-      <div className="bg-gradient-to-r from-blue-50/80 via-sky-50/50 to-white rounded-xl border border-blue-200/90 p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* 2. Outlet Context / Action Card (Compact & Modern) */}
+      <div className="bg-white rounded-2xl border border-zinc-200 p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Store className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+            <Store className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-zinc-900 text-sm tracking-tight">
+              <span className="font-bold text-zinc-900 text-sm tracking-tight">
                 {activeTenant.outletName}
-              </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 whitespace-nowrap shrink-0 select-none">
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
                 {activeTenant.id === "all" ? "Konsolidasi Multi-Cabang" : `ID: ${activeTenant.id}`}
               </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap shrink-0 select-none">
-                <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                <span>Aktif</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Aktif
               </span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-zinc-500 mt-1 flex-wrap">
-              {activeTenant.owner?.name && (
-                <div className="flex items-center gap-1 text-zinc-700">
-                  <User className="w-3 h-3 text-zinc-400" />
-                  <span>
-                    Pemilik: <strong>{activeTenant.owner.name}</strong>
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-zinc-400" />
-                <span>{activeTenant.address}</span>
+            {activeTenant.address && activeTenant.address !== "-" && (
+              <div className="flex items-center gap-1 text-[11px] text-zinc-500 mt-0.5">
+                <MapPin className="w-3 h-3 text-zinc-400 shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-md">{activeTenant.address}</span>
               </div>
-              <div className="flex items-center gap-1 font-mono">
-                <Phone className="w-3 h-3 text-zinc-400" />
-                <span>{activeTenant.phone}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Indikator Super Admin jika sedang audit */}
-        {isSuperAdmin && (
-          <div className="bg-white/80 border border-blue-200 rounded-lg px-3 py-1.5 text-right self-start md:self-auto shrink-0">
-            <span className="text-[10px] text-zinc-400 block uppercase font-mono tracking-wider">
-              Mode Pemeriksaan
-            </span>
-            <span className="text-xs font-bold text-blue-950">
-              Audit Super Admin Pusat
-            </span>
+        {/* Branch Selector for Super Admin or Multi-Branch */}
+        {isSuperAdmin && tenants && tenants.length > 0 && (
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <span className="text-xs font-semibold text-zinc-500">Cabang:</span>
+            <select
+              value={selectedTenantId}
+              onChange={(e) => onSelectTenant && onSelectTenant(e.target.value)}
+              className="py-1.5 px-3 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-xl text-zinc-800 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition"
+            >
+              <option value="all">Semua Cabang (Konsolidasi)</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.outletName}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
 
-      {/* Filter & Control Bar: Rentang Waktu & Cabang */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-3.5 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Rentang Waktu Controls */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 mr-0.5">
-              <Calendar className="w-4 h-4 text-zinc-500" />
-              <span>Rentang Waktu:</span>
-            </div>
+      {/* 3. Filter Toolbar: Rentang Waktu Presets & Status Pembayaran */}
+      <div className="bg-white rounded-2xl border border-zinc-200 p-3 sm:p-3.5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Quick Date Range Preset Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              const todayStr = now.toISOString().slice(0, 10);
+              setStartDate(todayStr);
+              setEndDate(todayStr);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 ${
+              isToday
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+            }`}
+          >
+            Hari Ini
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+              const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+              setStartDate(startMonth);
+              setEndDate(endMonth);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 ${
+              isThisMonth
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+            }`}
+          >
+            Bulan Ini
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              const startLast = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+              const endLast = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+              setStartDate(startLast);
+              setEndDate(endLast);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 ${
+              isLastMonth
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+            }`}
+          >
+            Bulan Lalu
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              const startYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+              const endYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+              setStartDate(startYear);
+              setEndDate(endYear);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 ${
+              isThisYear
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+            }`}
+          >
+            Tahun Ini
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 ${
+              isAllTime
+                ? "bg-zinc-900 text-white shadow-xs"
+                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+            }`}
+          >
+            Semua
+          </button>
+        </div>
 
-            {/* Date Input Range Box */}
-            <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:border-zinc-300 transition-colors">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="text-xs bg-transparent border-0 font-medium text-zinc-800 outline-none cursor-pointer"
-                title="Pilih tanggal mulai"
-              />
-              <span className="text-zinc-400 font-semibold text-[11px] px-1">s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="text-xs bg-transparent border-0 font-medium text-zinc-800 outline-none cursor-pointer"
-                title="Pilih tanggal akhir"
-              />
-            </div>
-
-            {/* Quick Presets for Date Range */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const todayStr = now.toISOString().slice(0, 10);
-                  setStartDate(todayStr);
-                  setEndDate(todayStr);
-                }}
-                className="text-[11px] font-medium px-2 py-1 rounded-md text-zinc-600 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer"
-              >
-                Hari Ini
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-                    .toISOString()
-                    .slice(0, 10);
-                  const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-                    .toISOString()
-                    .slice(0, 10);
-                  setStartDate(startMonth);
-                  setEndDate(endMonth);
-                }}
-                className="text-[11px] font-medium px-2 py-1 rounded-md text-zinc-600 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer"
-              >
-                Bulan Ini
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const startLast = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-                    .toISOString()
-                    .slice(0, 10);
-                  const endLast = new Date(now.getFullYear(), now.getMonth(), 0)
-                    .toISOString()
-                    .slice(0, 10);
-                  setStartDate(startLast);
-                  setEndDate(endLast);
-                }}
-                className="text-[11px] font-medium px-2 py-1 rounded-md text-zinc-600 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer"
-              >
-                Bulan Lalu
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const startYear = new Date(now.getFullYear(), 0, 1)
-                    .toISOString()
-                    .slice(0, 10);
-                  const endYear = new Date(now.getFullYear(), 11, 31)
-                    .toISOString()
-                    .slice(0, 10);
-                  setStartDate(startYear);
-                  setEndDate(endYear);
-                }}
-                className="text-[11px] font-medium px-2 py-1 rounded-md text-zinc-600 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer"
-              >
-                Tahun Ini
-              </button>
-              {(startDate || endDate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  className="text-[11px] font-medium px-2 py-1 rounded-md text-zinc-500 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer"
-                  title="Tampilkan seluruh periode waktu"
-                >
-                  Semua
-                </button>
-              )}
-            </div>
+        {/* Right: Date Range Inputs & Payment Filter */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Custom Date Range Picker */}
+          <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-700 w-full sm:w-auto">
+            <Calendar className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent font-medium text-xs text-zinc-800 outline-none cursor-pointer w-[110px]"
+              title="Tanggal mulai"
+            />
+            <span className="text-zinc-400 font-bold text-[11px]">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent font-medium text-xs text-zinc-800 outline-none cursor-pointer w-[110px]"
+              title="Tanggal akhir"
+            />
           </div>
 
-          {/* Branch & Payment Status Filters */}
-          <div className="flex items-center gap-3 self-start lg:self-auto flex-wrap">
-            {/* Tenant Selector for Super Admin */}
-            {isSuperAdmin && tenants && tenants.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-700 flex items-center gap-1">
-                  <Store className="w-3.5 h-3.5 text-blue-700" />
-                  Cabang:
-                </span>
-                <select
-                  value={selectedTenantId}
-                  onChange={(e) => onSelectTenant && onSelectTenant(e.target.value)}
-                  className="text-xs bg-blue-50/70 border border-blue-200 text-blue-950 font-bold rounded-lg px-2.5 py-1.5 outline-none cursor-pointer hover:bg-blue-50 focus:border-blue-700 transition"
-                >
-                  <option value="all">Semua Cabang (Konsolidasi)</option>
-                  {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.outletName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Payment Status Filter */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-zinc-500">Status:</span>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
-                className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 font-medium outline-none cursor-pointer focus:border-zinc-900"
-              >
-                <option value="all">Semua Pembayaran</option>
-                <option value="paid">Hanya Lunas</option>
-                <option value="unpaid">Belum Lunas (Piutang)</option>
-              </select>
-            </div>
-          </div>
+          {/* Payment Status Dropdown */}
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value as any)}
+            className="py-1.5 px-3 text-xs font-semibold bg-zinc-50 border border-zinc-200 rounded-xl text-zinc-700 outline-none cursor-pointer hover:bg-zinc-100/70 focus:border-zinc-900 transition w-full sm:w-auto"
+          >
+            <option value="all">Semua Pembayaran</option>
+            <option value="paid">Hanya Lunas</option>
+            <option value="unpaid">Belum Lunas (Piutang)</option>
+          </select>
         </div>
       </div>
     </div>
   );
 };
+

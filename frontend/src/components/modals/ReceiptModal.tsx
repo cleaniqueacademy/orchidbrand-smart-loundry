@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Printer, Copy, Check, QrCode as QrIcon, FileText, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Crown } from "lucide-react";
+import { X, Printer, Copy, Check, QrCode as QrIcon, FileText, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Crown, Download } from "lucide-react";
 import QRCode from "qrcode";
+import { jsPDF } from "jspdf";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, Tenant } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -17,6 +18,196 @@ interface ReceiptModalProps {
   onSendBaileys?: (phone: string, text: string) => Promise<{ success: boolean; error?: string }>;
   onNavigateToSettings?: () => void;
 }
+
+export const generateReceiptPdf = (
+  order: Order,
+  activeTenant: { outletName?: string; address?: string; phone?: string },
+  paperWidth: "58mm" | "80mm",
+  qrDataUrl?: string
+): jsPDF => {
+  const is58 = paperWidth === "58mm";
+  const widthMm = is58 ? 58 : 80;
+  const margin = is58 ? 3.5 : 5;
+  const contentWidth = widthMm - margin * 2;
+  const centerX = widthMm / 2;
+  const rightX = widthMm - margin;
+
+  const items =
+    order.items && order.items.length > 0
+      ? order.items
+      : [
+          {
+            serviceType: order.serviceType,
+            weightOrQty: order.weightOrQty,
+            unit: order.unit,
+            pricePerUnit: order.pricePerUnit,
+            subtotal: order.totalAmount,
+            notes: order.notes,
+          },
+        ];
+
+  // Dynamic height calculation
+  let calculatedHeight = 28; // Header
+  calculatedHeight += 22; // Metadata
+  calculatedHeight += items.length * (is58 ? 9 : 11); // Items
+  if (order.notes) calculatedHeight += 8;
+  calculatedHeight += 22; // Totals & status
+  if (qrDataUrl) calculatedHeight += is58 ? 28 : 34; // QR
+  calculatedHeight += 38; // Footer & terms
+  calculatedHeight = Math.max(calculatedHeight, is58 ? 130 : 150);
+
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [widthMm, calculatedHeight],
+  });
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(is58 ? 9.5 : 12);
+  let y = 7;
+
+  // Header
+  const title = (activeTenant.outletName || "CLEANIQUE LAUNDRY").toUpperCase();
+  doc.text(title, centerX, y, { align: "center", maxWidth: contentWidth });
+  y += 4.5;
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(is58 ? 6.5 : 8);
+  if (activeTenant.address && activeTenant.address !== "-") {
+    const addressLines = doc.splitTextToSize(activeTenant.address, contentWidth);
+    doc.text(addressLines, centerX, y, { align: "center" });
+    y += addressLines.length * 3.2;
+  }
+  if (activeTenant.phone && activeTenant.phone !== "-") {
+    doc.text(`Telp/WA: ${activeTenant.phone}`, centerX, y, { align: "center" });
+    y += 3.2;
+  }
+
+  // Divider
+  doc.setFontSize(is58 ? 7 : 8.5);
+  doc.text("-".repeat(is58 ? 32 : 44), centerX, y, { align: "center" });
+  y += 3.8;
+
+  // Info Nota
+  doc.setFontSize(is58 ? 7 : 8.5);
+  doc.text(`No. Nota : ${order.invoiceNo}`, margin, y);
+  y += 3.4;
+
+  const orderDate = new Date(order.createdAt);
+  const formattedDate = orderDate.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const formattedTime = orderDate.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  doc.text(`Tanggal  : ${formattedDate} ${formattedTime}`, margin, y);
+  y += 3.4;
+
+  const custName = order.customer?.name || "Pelanggan Umum";
+  doc.text(`Pelanggan: ${custName}`, margin, y);
+  y += 3.4;
+
+  if (order.customer?.phone) {
+    doc.text(`No. WA   : ${order.customer.phone}`, margin, y);
+    y += 3.4;
+  }
+
+  // Divider
+  doc.text("-".repeat(is58 ? 32 : 44), centerX, y, { align: "center" });
+  y += 3.8;
+
+  // Items List
+  items.forEach((it) => {
+    doc.setFont("courier", "bold");
+    doc.text(it.serviceType, margin, y);
+    y += 3.3;
+
+    doc.setFont("courier", "normal");
+    const qtyText = `${it.weightOrQty} ${it.unit} x Rp ${it.pricePerUnit.toLocaleString("id-ID")}`;
+    const subtotalText = `Rp ${it.subtotal.toLocaleString("id-ID")}`;
+    doc.text(qtyText, margin, y);
+    doc.text(subtotalText, rightX, y, { align: "right" });
+    y += 3.8;
+
+    if (it.notes) {
+      doc.setFontSize(is58 ? 6 : 7);
+      doc.text(`Ket: ${it.notes}`, margin + 2, y);
+      doc.setFontSize(is58 ? 7 : 8.5);
+      y += 3.2;
+    }
+  });
+
+  if (order.notes) {
+    doc.setFontSize(is58 ? 6 : 7);
+    doc.text(`Catatan: ${order.notes}`, margin, y, { maxWidth: contentWidth });
+    doc.setFontSize(is58 ? 7 : 8.5);
+    y += 3.8;
+  }
+
+  // Divider
+  doc.text("-".repeat(is58 ? 32 : 44), centerX, y, { align: "center" });
+  y += 4;
+
+  // Total
+  doc.setFont("courier", "bold");
+  doc.setFontSize(is58 ? 8.5 : 10.5);
+  doc.text("TOTAL :", margin, y);
+  doc.text(`Rp ${order.totalAmount.toLocaleString("id-ID")}`, rightX, y, { align: "right" });
+  y += 4.5;
+
+  doc.setFontSize(is58 ? 7 : 8.5);
+  doc.text("STATUS:", margin, y);
+  const statusStr =
+    order.paymentStatus === "paid"
+      ? `LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
+      : "BELUM LUNAS";
+  doc.text(statusStr, rightX, y, { align: "right" });
+  y += 3.8;
+
+  // Divider
+  doc.setFont("courier", "normal");
+  doc.text("-".repeat(is58 ? 32 : 44), centerX, y, { align: "center" });
+  y += 4;
+
+  // QR Code
+  if (qrDataUrl) {
+    const qrSize = is58 ? 20 : 25;
+    const qrX = centerX - qrSize / 2;
+    try {
+      doc.addImage(qrDataUrl, "PNG", qrX, y, qrSize, qrSize);
+      y += qrSize + 2.5;
+
+      doc.setFont("courier", "bold");
+      doc.setFontSize(is58 ? 6.5 : 8);
+      doc.text(`No. Nota: #${order.invoiceNo}`, centerX, y, { align: "center" });
+      y += 3.8;
+    } catch (_) {}
+  }
+
+  // Footer & Syarat Ketentuan
+  doc.setFont("courier", "normal");
+  doc.setFontSize(is58 ? 5.5 : 6.8);
+  doc.text("1. Pengambilan cucian wajib membawa nota ini.", centerX, y, { align: "center" });
+  y += 2.8;
+  doc.text("2. Barang tdk diambil > 30 hari di luar tg jwb.", centerX, y, { align: "center" });
+  y += 3.2;
+
+  doc.text("Jam Buka: Senin-Jumat 08-16 | Sabtu 08-13", centerX, y, { align: "center" });
+  y += 3.2;
+
+  doc.setFont("courier", "bold");
+  doc.text("*** TERIMA KASIH ***", centerX, y, { align: "center" });
+  y += 2.8;
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(is58 ? 5 : 6);
+  doc.text("Powered by Laundry Cleanique", centerX, y, { align: "center" });
+
+  return doc;
+};
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
@@ -42,10 +233,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   }, [printerConfig.paperWidth]);
 
   const activeTenant = tenant || {
-    id: "tenant-01",
-    outletName: "Laundry Cleanique - Cabang Melati",
-    phone: "081234567890",
-    address: "Jl. Melati Raya No. 45, Jakarta",
+    id: "tenant-active",
+    outletName: "Outlet Laundry",
+    phone: "-",
+    address: "-",
   };
 
   useEffect(() => {
@@ -76,6 +267,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     minute: "2-digit",
   });
 
+  const handleDownloadPdf = () => {
+    try {
+      const doc = generateReceiptPdf(order, activeTenant, paperWidth, qrDataUrl);
+      doc.save(`Nota_${order.invoiceNo}.pdf`);
+      toast.success("PDF Diunduh", `Nota ${order.invoiceNo} (${paperWidth}) berhasil disimpan sebagai PDF.`);
+    } catch (err: any) {
+      toast.error("Gagal Unduh PDF", err.message || "Terjadi kesalahan");
+    }
+  };
+
   const handlePrint = () => {
     if (printerConfig.requireConnectedBeforePrint && !printerConfig.isConnected) {
       toast.warning(
@@ -85,7 +286,39 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       handleQuickConnect();
       return;
     }
-    window.print();
+
+    try {
+      const doc = generateReceiptPdf(order, activeTenant, paperWidth, qrDataUrl);
+      const blob = doc.output("blob");
+      const blobUrl = URL.createObjectURL(blob);
+
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (_) {
+          window.open(blobUrl, "_blank");
+        }
+        setTimeout(() => {
+          try {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(blobUrl);
+          } catch (_) {}
+        }, 60000);
+      };
+    } catch (_) {
+      window.print();
+    }
   };
 
   const handleQuickConnect = async () => {
@@ -562,18 +795,27 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
               )}
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="w-1/2 sm:w-auto px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition cursor-pointer"
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition cursor-pointer"
               >
                 Tutup
               </button>
               <button
                 type="button"
+                onClick={handleDownloadPdf}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                title="Unduh file PDF Struk Thermal"
+              >
+                <Download className="w-3.5 h-3.5 text-zinc-300" />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
                 onClick={handlePrint}
-                className={`w-1/2 sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer ${
                   printerConfig.requireConnectedBeforePrint && !printerConfig.isConnected
                     ? "bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40"
                     : "bg-blue-600 hover:bg-blue-500 text-white"

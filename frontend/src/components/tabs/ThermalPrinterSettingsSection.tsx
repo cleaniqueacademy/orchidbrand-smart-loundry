@@ -24,8 +24,8 @@ interface ThermalPrinterSettingsSectionProps {
 
 export const ThermalPrinterSettingsSection: React.FC<ThermalPrinterSettingsSectionProps> = ({
   outletName = "Cleanique Laundry",
-  phone = "081234567890",
-  address = "Jl. Melati Raya No. 45",
+  phone = "-",
+  address = "-",
 }) => {
   const toast = useToast();
   const {

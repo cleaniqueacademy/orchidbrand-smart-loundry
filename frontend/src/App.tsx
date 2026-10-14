@@ -762,6 +762,8 @@ export default function App() {
                   onDeleteExpense={handleDeleteExpense}
                   customers={customers}
                   users={users}
+                  onUpdateTenant={handleUpdateTenant}
+                  onRefresh={fetchData}
                 />
               )}
 

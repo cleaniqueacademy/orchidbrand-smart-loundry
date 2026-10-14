@@ -518,6 +518,18 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
         ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours))
         : null;
     }
+    if (body.customExpenseCategories !== undefined) {
+      updateData.customExpenseCategories =
+        typeof body.customExpenseCategories === "string"
+          ? body.customExpenseCategories
+          : JSON.stringify(body.customExpenseCategories);
+    }
+    if (body.customSopRatios !== undefined) {
+      updateData.customSopRatios =
+        typeof body.customSopRatios === "string"
+          ? body.customSopRatios
+          : JSON.stringify(body.customSopRatios);
+    }
 
     // Hanya Super Admin yang boleh mengubah status aktif dan masa langganan secara langsung
     if (user.role === "superadmin") {
@@ -2352,8 +2364,13 @@ app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["super
   try {
     const user = getUser(c);
     const id = c.req.param("id");
-    if (user.role !== "superadmin" && user.tenantId !== id) {
-      return c.json({ success: false, message: "Akses ditolak" }, 403);
+    const applyAll = c.req.query("applyAll") === "true" || id === "all";
+
+    if (id !== "all" && user.role !== "superadmin" && user.tenantId !== id) {
+      const [tRow] = await db.select().from(tenants).where(eq(tenants.id, id));
+      if (!tRow || tRow.userId !== user.userId) {
+        return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengelola data outlet Anda sendiri" }, 403);
+      }
     }
 
     const body = await c.req.json();
@@ -2371,7 +2388,18 @@ app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["super
           : JSON.stringify(body.customSopRatios);
     }
 
-    await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    if (applyAll && user.role === "tenant_owner") {
+      // Opsi B: Terapkan ke seluruh cabang milik akun Owner yang sedang login
+      await db.update(tenants).set(updateData).where(eq(tenants.userId, user.userId));
+      if (id !== "all") invalidateTenantAuthCache(id);
+    } else if (id !== "all") {
+      await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+      invalidateTenantAuthCache(id);
+    } else if (user.tenantId) {
+      await db.update(tenants).set(updateData).where(eq(tenants.id, user.tenantId));
+      invalidateTenantAuthCache(user.tenantId);
+    }
+
     return c.json({ success: true, message: "Pengaturan biaya berhasil diperbarui" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);

@@ -21,6 +21,8 @@ interface ReportsTabProps {
   customers: Customer[];
   currentUserRole?: Role;
   users?: User[];
+  onUpdateTenant?: (id: string, data: { [key: string]: unknown }) => Promise<boolean>;
+  onRefresh?: () => void;
 }
 
 const TenantStoreReport: React.FC<ReportsTabProps> = ({
@@ -29,6 +31,8 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
   tenants,
   currentTenantId,
   currentUserRole = "staff",
+  onUpdateTenant,
+  onRefresh,
 }) => {
   const isSuperAdmin = currentUserRole === "superadmin";
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -169,29 +173,31 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
         />
 
         {/* Sub-tab Navigation: Rekap Keuangan vs Kesehatan Bisnis */}
-        <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 w-fit">
           <button
+            type="button"
             onClick={() => setActiveSubTab("recap")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === "recap"
-                ? "bg-zinc-900 text-white shadow-xs"
-                : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                ? "bg-white text-zinc-900 shadow-2xs border border-zinc-200/60"
+                : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <FileText className="w-4 h-4" />
-            Rekap Finansial & Buku Besar
+            <FileText className="w-3.5 h-3.5" />
+            <span>Rekap Finansial & Buku Besar</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveSubTab("health")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === "health"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                ? "bg-white text-emerald-800 shadow-2xs border border-zinc-200/60 font-bold"
+                : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <Activity className="w-4 h-4" />
-            Kesehatan Bisnis & Efisiensi Bahan
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-700 text-white font-black">
+            <Activity className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Kesehatan Bisnis & SOP</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
               {businessHealth.healthScore}
             </span>
           </button>
@@ -201,6 +207,9 @@ const TenantStoreReport: React.FC<ReportsTabProps> = ({
           <BusinessHealthSection
             health={businessHealth}
             tenantId={selectedTenantId}
+            activeTenant={activeTenant}
+            onUpdateTenant={onUpdateTenant}
+            onRefresh={onRefresh}
           />
         ) : (
           <>

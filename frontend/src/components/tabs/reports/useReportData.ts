@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { Order, Expense, Tenant } from "../../../types";
 import { useToast } from "../../common/ToastContext";
@@ -81,23 +81,24 @@ export function useReportData({
       return {
         id: "all",
         outletName: "Konsolidasi Seluruh Cabang",
-        phone: "0812-3456-7890",
+        phone: tenants[0]?.phone || "-",
         address: "Jaringan Multi-Cabang Laundry Cleanique",
         status: "active",
         totalOrders: orders.length,
         totalOmset: orders
           .filter((o) => o.paymentStatus === "paid")
           .reduce((sum, o) => sum + o.totalAmount, 0),
+        customSopRatios: tenants[0]?.customSopRatios,
       };
     }
     return (
       tenants.find((t) => t.id === selectedTenantId) ||
       tenants.find((t) => t.id === currentTenantId) ||
       tenants[0] || {
-        id: "tenant-01",
-        outletName: "Laundry Cleanique - Cabang Melati",
-        phone: "081234567890",
-        address: "Jl. Melati Raya No. 45, Jakarta",
+        id: selectedTenantId || currentTenantId || "tenant-active",
+        outletName: "Outlet Laundry",
+        phone: "-",
+        address: "-",
         status: "active",
         totalOrders: 0,
         totalOmset: 0,
