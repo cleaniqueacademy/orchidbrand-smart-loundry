@@ -4,8 +4,9 @@
  * - types.ts : Tipe data dan antarmuka
  * - contextService.ts : Pengambilan data konteks operasional
  * - localKnowledgeEngine.ts : Mesin pengetahuan lokal offline
- * - googleProvider.ts : Integrasi Google Gemini resmi via @google/genai
- * - aiveneProvider.ts : Integrasi Fallback Aivene AI Gateway
+ * - aiveneProvider.ts : Integrasi Provider Utama Aivene AI Gateway (DeepSeek & GLM)
+ * - localKnowledgeEngine.ts : Mesin pengetahuan lokal offline
+ * - googleProvider.ts : Integrasi Google Gemini alternatif
  * - index.ts : Orchestrator & Controller utama
  */
 

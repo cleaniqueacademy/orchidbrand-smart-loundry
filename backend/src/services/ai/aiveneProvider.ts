@@ -1,10 +1,13 @@
 import { ChatMessage } from "./types";
 
 export const AIVENE_MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.8-flash-lite-tts",
-  "gemini-3.8-flash-tts",
+  "deepseek-v4.1-flash",
+  "hosted/deepseek-v4.1-flash",
+  "hosted/deepseek-v4-pro-0813",
+  "hosted/glm-5.3-flash",
+  "glm-5.3-flashx",
+  "glm-5.3-flash",
+  "hosted/glm-5.3",
 ];
 
 /**
