@@ -1,12 +1,14 @@
 import { ChatOptions, AIResponse } from "./types";
 import { getOperationalContext } from "./contextService";
 import { generateLocalFallbackReply } from "./localKnowledgeEngine";
+import { callGoogleGemini } from "./googleProvider";
 import { callAiveneWithFallback } from "./aiveneProvider";
 import { checkRoleAccessViolation, sanitizeResponseForRole } from "./rbacGuard";
 
 export * from "./types";
 export { getOperationalContext } from "./contextService";
 export { generateLocalFallbackReply } from "./localKnowledgeEngine";
+export { callGoogleGemini } from "./googleProvider";
 export { callAiveneAPI, callAiveneWithFallback } from "./aiveneProvider";
 export { checkRoleAccessViolation, sanitizeResponseForRole } from "./rbacGuard";
 
@@ -41,6 +43,7 @@ export async function askLaundryAssistant(options: ChatOptions): Promise<AIRespo
     };
   }
 
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   const aiveneApiKey = process.env.AIVENE_API_KEY?.trim();
 
   // Mode pengujian otomatis (unit & integration tests)
@@ -59,8 +62,8 @@ export async function askLaundryAssistant(options: ChatOptions): Promise<AIRespo
     };
   }
 
-  // Jika Aivene API Key belum disetel, gunakan mesin pengetahuan lokal
-  if (!aiveneApiKey) {
+  // Jika kedua API Key belum disetel, gunakan mesin pengetahuan lokal
+  if (!geminiApiKey && !aiveneApiKey) {
     const localReply = generateLocalFallbackReply(message, context, userRole);
     return {
       reply: localReply,
@@ -179,7 +182,34 @@ GAYA MENJAWAB & PRINSIP KEHEMATAN KATA (SANGAT PENTING):
 
   let lastError: Error | null = null;
 
-  // 1. Provider Utama: Aivene AI Gateway (DeepSeek & GLM models chain)
+  // 1. Provider Utama: Google Gemini Resmi (@google/genai Interactions API & generateContent)
+  if (geminiApiKey) {
+    try {
+      const { text, modelName } = await callGoogleGemini(
+        geminiApiKey,
+        systemPrompt,
+        message,
+        history
+      );
+      const sanitizedReply = sanitizeResponseForRole(text, userRole);
+      return {
+        reply: sanitizedReply,
+        model: modelName,
+        contextSummary: {
+          outletName: context.outletName,
+          ordersToday: context.ordersTodayCount,
+          revenueToday: context.revenueToday,
+          pendingOrders: context.processCount,
+          readyOrders: context.readyCount,
+        },
+      };
+    } catch (geminiErr: any) {
+      lastError = geminiErr;
+      console.warn(`[AI Assistant] Google Gemini gagal, mengalihkan ke fallback Aivene:`, geminiErr.message);
+    }
+  }
+
+  // 2. Fallback 1: Aivene AI Gateway (DeepSeek & GLM models chain)
   if (aiveneApiKey) {
     try {
       const { text, modelName } = await callAiveneWithFallback(
@@ -206,7 +236,7 @@ GAYA MENJAWAB & PRINSIP KEHEMATAN KATA (SANGAT PENTING):
     }
   }
 
-  // 2. Fallback cadangan: Mesin pengetahuan lokal offline
+  // 3. Fallback terakhir: Mesin pengetahuan lokal offline
   console.error("[AI Assistant] Seluruh provider AI cloud gagal:", lastError?.message);
   const localReply = generateLocalFallbackReply(message, context, userRole);
   return {

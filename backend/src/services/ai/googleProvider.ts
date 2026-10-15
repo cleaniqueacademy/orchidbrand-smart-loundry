@@ -18,39 +18,47 @@ export async function callGoogleGemini(
 
   let lastErr: Error | null = null;
 
-  // 1. Prioritaskan gemini-3.8-flash via generateContent (Cepat, stabil, tanpa 429 search quota)
-  try {
-    const contents = [
-      ...history.slice(-6).map((m) => ({
-        role: m.role === "assistant" || m.role === "model" ? "model" : "user",
-        parts: [{ text: m.content }],
-      })),
-      {
-        role: "user",
-        parts: [{ text: userMessage }],
-      },
-    ];
+  // 1. Prioritaskan gemini-3-flash-preview (cepat & stabil), lalu model alternatif jika overload
+  const candidateModels = [
+    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash-lite",
+  ];
 
-    const resp = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents,
-      config: {
-        systemInstruction: {
-          parts: [{ text: systemInstruction }],
+  const contents = [
+    ...history.slice(-6).map((m) => ({
+      role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    {
+      role: "user",
+      parts: [{ text: userMessage }],
+    },
+  ];
+
+  for (const model of candidateModels) {
+    try {
+      const resp = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          temperature: 0.7,
         },
-        temperature: 0.7,
-      },
-    });
+      });
 
-    if (resp.text && resp.text.trim()) {
-      return {
-        text: resp.text.trim(),
-        modelName: "google/gemini-3.8-flash",
-      };
+      if (resp.text && resp.text.trim()) {
+        return {
+          text: resp.text.trim(),
+          modelName: `google/${model}`,
+        };
+      }
+    } catch (genErr: any) {
+      lastErr = genErr;
+      console.warn(`[Google Provider] generateContent ${model} gagal:`, genErr.message);
     }
-  } catch (genErr: any) {
-    lastErr = genErr;
-    console.warn("[Google Provider] generateContent gemini-3.8-flash gagal:", genErr.message);
   }
 
   // 2. Fallback ke Interactions API dengan gemini-3-flash-preview (tanpa tool google_search agar tidak 429)
