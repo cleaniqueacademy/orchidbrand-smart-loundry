@@ -41,8 +41,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [inactiveAccountUser, setInactiveAccountUser] = useState<any | null>(null);
 
-  // GSAP Entrance Animations
+  // Set document title & GSAP Entrance Animations
   useEffect(() => {
+    document.title = "Masuk ke Akun - Laundry Cleanique";
     if (!pageRef.current) return;
     const ctx = gsap.context(() => {
       // 1. Left Hero section items stagger entrance
