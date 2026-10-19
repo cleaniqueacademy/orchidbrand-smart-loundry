@@ -14,6 +14,9 @@ import {
   Loader2,
   Check,
   Copy,
+  QrCode,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "../../../utils/api";
 import { SubscriptionSummary, SubscriptionInvoice } from "../../../types";
@@ -146,10 +149,6 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
     setIsUploadModalOpen(true);
   };
 
-  const handleCopyAccount = (accNo: string) => {
-    navigator.clipboard.writeText(accNo);
-    toast.success("Tersalin", "Nomor rekening berhasil disalin!");
-  };
 
   const getStatusBadge = (status: SubscriptionInvoice["status"]) => {
     switch (status) {
@@ -377,48 +376,86 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         </div>
       </div>
 
-      {/* 3. Informasi Rekening Pembayaran Platform (High Contrast & Modern) */}
-      {summary?.platformBank && summary.platformBank.bankName && (
-        <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-              <Building2 className="w-5 h-5" />
+      {/* 3. Metode Pembayaran Resmi: QRIS Statis Platform Cleanique */}
+      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+              <QrCode className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                  Rekening Pembayaran Resmi Platform
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  Metode Pembayaran Resmi Platform (QRIS Statis)
                 </span>
-                <span className="text-xs text-zinc-400">• Otomatis &amp; Terverifikasi</span>
+                <span className="text-xs text-zinc-400">• Bebas Biaya Admin &amp; Instan</span>
               </div>
-              <h3 className="font-bold text-zinc-900 text-sm mt-1">
-                Transfer ke {summary.platformBank.bankName}
+              <h3 className="font-bold text-zinc-900 text-sm mt-0.5">
+                Scan QRIS Laundry Cleanique
               </h3>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <div className="text-base sm:text-lg font-mono font-bold text-zinc-900 bg-zinc-100 border border-zinc-200/90 px-3 py-0.5 rounded-xl">
-                  {summary.platformBank.bankAccountNumber}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopyAccount(summary.platformBank?.bankAccountNumber || "")}
-                  className="text-[11px] font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                  title="Salin nomor rekening ke clipboard"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Salin No. Rekening</span>
-                </button>
-                <span className="text-xs text-zinc-500">
-                  a.n. <strong className="text-zinc-800">{summary.platformBank.bankAccountName}</strong>
-                </span>
-              </div>
             </div>
           </div>
+          <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-2xs">
+            GoPay Merchant / QRIS GPN
+          </span>
+        </div>
 
-          <div className="text-xs text-zinc-500 max-w-xs leading-relaxed border-t md:border-t-0 md:border-l border-zinc-100 pt-3 md:pt-0 md:pl-4">
-            Setelah transfer, unggah foto bukti transfer di tabel riwayat di bawah agar invoice langganan langsung diverifikasi otomatis oleh sistem.
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="relative group shrink-0">
+            <div className="p-3 bg-white rounded-2xl border border-emerald-200/90 shadow-md">
+              <img
+                src="/qris.png"
+                alt="QRIS Pembayaran Laundry Cleanique"
+                className="w-40 h-40 object-contain rounded-xl"
+              />
+            </div>
+            <a
+              href="/qris.png"
+              target="_blank"
+              rel="noreferrer"
+              className="absolute inset-0 bg-emerald-950/40 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5"
+            >
+              <ExternalLink className="w-4 h-4" /> Buka Layar Penuh
+            </a>
+          </div>
+
+          <div className="space-y-3 flex-1 min-w-0 text-center md:text-left">
+            <div>
+              <div className="text-[11px] text-emerald-800 font-semibold uppercase tracking-wider">Merchant Name</div>
+              <div className="text-base font-black text-zinc-900">LAUNDRY CLEANIQUE</div>
+              <div className="text-xs font-mono font-bold text-zinc-700 mt-0.5">
+                NMID: <span className="bg-emerald-50 text-emerald-900 px-2 py-0.5 rounded border border-emerald-200/60 font-mono">ID1026618371243</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 leading-relaxed max-w-xl">
+              Gunakan kamera ponsel, aplikasi e-wallet (<strong>GoPay, OVO, Dana, ShopeePay</strong>), atau seluruh aplikasi mobile banking (<strong>BCA, Mandiri, BRI, BNI, BSI, CIMB</strong>, dll) untuk memindai kode QRIS statis resmi di samping.
+            </p>
+
+            <div className="flex flex-wrap gap-2.5 justify-center md:justify-start pt-1">
+              <a
+                href="/qris.png"
+                download="QRIS-Laundry-Cleanique.png"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" /> Unduh Gambar QRIS
+              </a>
+              <a
+                href="/qris.png"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Lihat Layar Penuh
+              </a>
+            </div>
+
+            <div className="text-[11px] text-zinc-500 bg-zinc-50 p-2.5 rounded-xl border border-zinc-100">
+              💡 <strong>Langkah selanjutnya:</strong> Setelah berhasil bayar via QRIS, simpan struk/screenshot bukti bayar lalu klik tombol <strong>"Unggah Bukti"</strong> pada baris tagihan Anda di bawah agar invoice langganan langsung diverifikasi otomatis.
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* 4. Tabel Riwayat Invoice (Identik dengan Sistem ShadcnDataTable / ReportLedgerTable) */}
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-4">

@@ -26,7 +26,7 @@ platformSettingsRoutes.get("/public", async (c) => {
     }
 
     const defaultQris = "/qris.png";
-    const currentQris = settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png"
+    const currentQris = settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")
       ? settings.qrisInfo
       : defaultQris;
 

@@ -77,8 +77,6 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   // Step 1: Info Status Akun Nonaktif / Kedaluwarsa
   // Step 2: Pembayaran Langsung (Tabs Rekening / QRIS) & Konfirmasi WA
   const [step, setStep] = useState<1 | 2>(1);
-  const [paymentTab, setPaymentTab] = useState<"rekening" | "qris">("qris");
-  const [copiedRekening, setCopiedRekening] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkedNotice, setCheckedNotice] = useState<string | null>(null);
   const [pricing, setPricing] = useState<TenantPricingInfo>(DEFAULT_PRICING);
@@ -134,7 +132,6 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      setCopiedRekening(false);
       setCheckedNotice(null);
     }
   }, [isOpen]);
@@ -145,16 +142,6 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const adminPhone = paymentInfo.supportPhone || DEFAULT_ADMIN_PHONE;
   const waUrl = getAdminWhatsAppUrl(user, adminPhone);
 
-  const handleCopyRekening = () => {
-    const rekening = paymentInfo.bankAccountNumber || "";
-    if (!rekening) return;
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(rekening.replace(/\s+/g, ""));
-      setCopiedRekening(true);
-      toast.success("Berhasil Disalin", `Nomor rekening ${rekening} disalin ke papan klip.`);
-      setTimeout(() => setCopiedRekening(false), 2500);
-    }
-  };
 
   const handleCheckStatus = async () => {
     if (!onRefreshStatus) return;
@@ -200,13 +187,13 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
       `🆔 ID Outlet: ${user.tenantId || user.id || "—"}\n` +
       `👤 Pemilik/Akun: ${user.name || "Owner"} (${user.email || ""})\n` +
       `💳 Nominal: ${nominalFormatted}/bln${referralNotice}\n` +
-      `💳 Metode: ${paymentTab === "rekening" ? `Transfer Rekening ${paymentInfo.bankName || "Bank"}` : "QRIS Cleanique"}\n\n` +
+      `💳 Metode: QRIS Statis Cleanique\n\n` +
       `Berikut saya sertakan tangkapan layar (screenshot) bukti pembayaran yang sah untuk diverifikasi. Terima kasih!`
   );
   const waConfirmUrl = `https://wa.me/${cleanPhone}?text=${waConfirmText}`;
 
   const isInactiveStatus = statusInfo.isInactiveStatus;
-  const directQrisUrl = (paymentInfo.qrisInfo && paymentInfo.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png")
+  const directQrisUrl = (paymentInfo.qrisInfo && !paymentInfo.qrisInfo.includes("qris-official.png"))
     ? getDirectImageUrl(paymentInfo.qrisInfo)
     : "/qris.png";
 
@@ -445,176 +432,72 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               </span>
             </div>
 
-            {/* Tabs Rekening / QRIS */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setPaymentTab("qris")}
-                className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                  paymentTab === "qris"
-                    ? "bg-white text-emerald-700 shadow-xs border border-emerald-200/80"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Scan QRIS</span>
-                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full">
-                  Utama
-                </span>
-              </button>
+            {/* Tampilan Pembayaran QRIS Statis Resmi */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-3">
+              <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-200">
+                <span className="font-bold text-slate-800">LAUNDRY CLEANIQUE</span>
+                <span className="font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">NMID: ID1026618371243</span>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setPaymentTab("rekening")}
-                className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                  paymentTab === "rekening"
-                    ? "bg-white text-blue-700 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>No. Rekening</span>
-              </button>
-            </div>
+              <div className="space-y-2">
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 inline-block shadow-sm">
+                  <img
+                    src={directQrisUrl || "/qris.png"}
+                    alt="QRIS Cleanique"
+                    className="max-h-52 max-w-full mx-auto object-contain rounded-lg"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.src.endsWith("/qris.png")) {
+                        target.src = "/qris.png";
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-600 font-medium">
+                  Scan dari <strong>BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</strong> & seluruh mobile banking di Indonesia.
+                </p>
 
-            {/* Tab 1: Rekening Bank */}
-            {paymentTab === "rekening" && (
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-200">
-                  <span className="text-slate-500 font-medium">Bank Tujuan:</span>
-                  <span className="font-bold text-slate-900 font-mono">
-                    {paymentInfo.bankName || "BCA"}
-                  </span>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <a
+                    href={directQrisUrl || "/qris.png"}
+                    download="QRIS-Laundry-Cleanique.png"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh Gambar</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleShareQris}
+                    className="px-3.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Buka / Share</span>
+                  </button>
                 </div>
 
-                <div>
-                  <span className="text-[11px] text-slate-500 block mb-1">Nomor Rekening:</span>
-                  <div className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-200">
-                    <span className="text-sm sm:text-base font-mono font-bold text-slate-900 tracking-wider">
-                      {paymentInfo.bankAccountNumber || "8830-1928-3341"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopyRekening}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
-                        copiedRekening
-                          ? "bg-emerald-600 text-white"
-                          : "bg-blue-600 hover:bg-blue-700 text-white"
-                      }`}
-                    >
-                      {copiedRekening ? (
-                        <>
-                          <Check className="w-3 h-3" />
-                          <span>Tersalin</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Salin</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
-                  <span className="text-slate-500">Atas Nama:</span>
-                  <span className="font-semibold text-slate-900 text-right">
-                    {paymentInfo.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 bg-blue-50 -mx-3.5 -mb-3.5 px-3.5 py-2.5 rounded-b-xl">
+                <div className="flex items-center justify-between text-xs bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-3.5 py-2.5 mt-2">
                   <div className="flex flex-col text-left">
-                    <span className="text-slate-600 font-medium flex items-center gap-1">
-                      <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-                      Jumlah Transfer:
+                    <span className="text-slate-700 font-semibold flex items-center gap-1">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                      Nominal Bayar:
                     </span>
                     {pricing.discountAmount > 0 && (
-                      <span className="text-[10px] text-emerald-600 font-medium ml-4.5">
-                        Diskon Referral: Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
+                      <span className="text-[10px] text-emerald-700 font-medium ml-4.5">
+                        Diskon Referral Aktif: Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
                       </span>
                     )}
                   </div>
-                  <span className="font-bold text-blue-700 font-mono text-sm">
+                  <span className="font-extrabold text-emerald-700 font-mono text-base">
                     {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
                     <span className="text-[10px] font-normal text-slate-400">/bln</span>
                   </span>
                 </div>
               </div>
-            )}
-
-            {/* Tab 2: QRIS */}
-            {paymentTab === "qris" && (
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2.5">
-                {directQrisUrl ? (
-                  <div className="space-y-2">
-                    <div className="p-2 bg-white rounded-lg border border-slate-200 inline-block shadow-xs">
-                      <img
-                        src={directQrisUrl}
-                        alt="QRIS Cleanique"
-                        className="max-h-48 max-w-full mx-auto object-contain rounded"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (!target.src.includes("drive.google.com/thumbnail")) {
-                            target.src = `https://drive.google.com/thumbnail?id=${paymentInfo.qrisInfo}&sz=w800`;
-                          }
-                        }}
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      Scan dari BCA mobile, Livin, BRImo, GoPay, OVO, ShopeePay
-                    </p>
-
-                    <div className="flex items-center justify-center gap-2 pt-0.5">
-                      <a
-                        href={directQrisUrl}
-                        download="qris-cleanique.png"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Unduh</span>
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={handleShareQris}
-                        className="px-3 py-1 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>Buka / Share</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mt-1">
-                      <div className="flex flex-col text-left">
-                        <span className="text-slate-600 font-medium flex items-center gap-1">
-                          <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-                          Nominal Bayar:
-                        </span>
-                        {pricing.discountAmount > 0 && (
-                          <span className="text-[10px] text-emerald-600 font-medium ml-4.5">
-                            Diskon Referral: Hemat {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.discountAmount)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-bold text-blue-700 font-mono text-sm">
-                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(pricing.finalPrice)}
-                        <span className="text-[10px] font-normal text-slate-400">/bln</span>
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-6 space-y-1">
-                    <QrCode className="w-8 h-8 text-slate-300 mx-auto" />
-                    <p className="text-xs text-slate-500">Tautan QRIS belum dikonfigurasi.</p>
-                    <p className="text-[11px] text-slate-400">Silakan gunakan opsi No. Rekening.</p>
-                  </div>
-                )}
-              </div>
-            )}
+            </div>
 
             {/* Action buttons */}
             <div className="pt-1 flex items-center gap-2">

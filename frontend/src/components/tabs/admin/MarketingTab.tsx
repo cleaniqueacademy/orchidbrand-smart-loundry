@@ -186,7 +186,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   };
 
   const handleCopyLink = async (code: string) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://app.laundrycleanique.com";
     const shareUrl = `${origin}/register?ref=${code}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -199,7 +199,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   };
 
   const handleDirectWhatsAppShare = (code: string) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://app.laundrycleanique.com";
     const shareUrl = `${origin}/register?ref=${code}`;
     const text = `Halo! Gunakan kode referral resmi tim marketing "${code}" saat mendaftar di Laundry Cleanique untuk mendapatkan potongan langganan Rp 5.000/bulan dan GRATIS uji coba 7 hari!\n\nDaftar sekarang di:\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");

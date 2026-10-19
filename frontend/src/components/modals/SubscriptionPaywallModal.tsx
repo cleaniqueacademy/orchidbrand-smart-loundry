@@ -49,7 +49,6 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
   const [appliedReferral, setAppliedReferral] = useState<string | null>(null);
   const [checkingReferral, setCheckingReferral] = useState<boolean>(false);
   const [referralMessage, setReferralMessage] = useState<string | null>(null);
-  const [paywallTab, setPaywallTab] = useState<"qris" | "bank">("qris");
   const [checkingStatus, setCheckingStatus] = useState<boolean>(false);
 
   if (!isOpen || !user) return null;
@@ -361,116 +360,61 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
           {/* Payment Account Details */}
           <div className="bg-gradient-to-br from-zinc-50 to-zinc-100/60 rounded-2xl border border-zinc-200 p-4 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-200/70 text-xs">
-              <div className="flex items-center gap-2 text-zinc-700 font-bold">
-                <Building className="w-4 h-4 text-emerald-600" />
-                <span>Metode Pembayaran Resmi Laundry Cleanique</span>
+              <div className="flex items-center gap-2 text-zinc-800 font-bold">
+                <QrCode className="w-4 h-4 text-emerald-600" />
+                <span>Metode Pembayaran Resmi (QRIS Statis)</span>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                QRIS & Bank BCA
+                GoPay Merchant / GPN
               </span>
             </div>
 
-            {/* Toggle Tabs */}
-            <div className="flex border border-zinc-200 rounded-xl p-1 bg-white">
-              <button
-                type="button"
-                onClick={() => setPaywallTab("qris")}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  paywallTab === "qris"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Scan QRIS</span>
-                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
-                  paywallTab === "qris" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
-                }`}>
-                  Utama
+            <div className="bg-white rounded-xl p-4 border border-zinc-200/80 text-center space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] pb-1 border-b border-zinc-100">
+                <span className="font-bold text-zinc-800">LAUNDRY CLEANIQUE</span>
+                <span className="font-mono text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">NMID: ID1026618371243</span>
+              </div>
+
+              <div className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 flex flex-col items-center justify-center">
+                <img
+                  src="/qris.png"
+                  alt="QRIS Pembayaran Laundry Cleanique"
+                  className="w-full h-auto object-contain rounded-xl"
+                />
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 text-xs">
+                <span className="text-[11px] text-zinc-600 block">Total Pembayaran QRIS:</span>
+                <span className="text-lg font-black text-emerald-600 font-mono">
+                  Rp {totalAmount.toLocaleString("id-ID")}
                 </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaywallTab("bank")}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  paywallTab === "bank"
-                    ? "bg-zinc-900 text-white shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <Building className="w-3.5 h-3.5" />
-                <span>Transfer BCA</span>
-              </button>
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  Bisa di-scan dari BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay & Semua Mobile Banking
+                </p>
+              </div>
+
+              <div className="flex justify-center gap-2 pt-1">
+                <a
+                  href="/qris.png"
+                  download="QRIS_Cleanique.png"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Unduh QRIS</span>
+                </a>
+                <a
+                  href="/qris.png"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Buka Layar Penuh</span>
+                </a>
+              </div>
             </div>
-
-            {paywallTab === "qris" ? (
-              <div className="bg-white rounded-xl p-4 border border-zinc-200/80 text-center space-y-2.5">
-                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-zinc-100">
-                  <span className="font-bold text-zinc-800">LAUNDRY CLEANIQUE</span>
-                  <span className="font-mono text-zinc-500">NMID: ID1026618371243</span>
-                </div>
-
-                <div className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 flex flex-col items-center justify-center">
-                  <img
-                    src="/qris.png"
-                    alt="QRIS Pembayaran Laundry Cleanique"
-                    className="w-full h-auto object-contain rounded-xl"
-                  />
-                </div>
-
-                <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 text-xs">
-                  <span className="text-[11px] text-zinc-600 block">Total Pembayaran QRIS:</span>
-                  <span className="text-lg font-black text-emerald-600 font-mono">
-                    Rp {totalAmount.toLocaleString("id-ID")}
-                  </span>
-                  <p className="text-[10px] text-zinc-500 mt-1">
-                    Bisa di-scan dari BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay & Semua Mobile Banking
-                  </p>
-                </div>
-
-                <div className="flex justify-center gap-2 pt-1">
-                  <a
-                    href="/qris.png"
-                    download="QRIS_Cleanique.png"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Unduh QRIS</span>
-                  </a>
-                  <a
-                    href="/qris.png"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Buka Layar Penuh</span>
-                  </a>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-white p-3 rounded-xl border border-zinc-200">
-                <div>
-                  <span className="text-zinc-500 block text-[11px]">Bank BCA (Transfer Bank)</span>
-                  <span className="font-mono font-extrabold text-sm text-zinc-900 tracking-wider">
-                    8295-0192-8812
-                  </span>
-                  <span className="text-zinc-600 text-[11px] block">a.n. Cleanique Laundry Indonesia</span>
-                </div>
-
-                <div className="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-zinc-200">
-                  <span className="text-zinc-500 block text-[11px]">Total yang Harus Ditransfer</span>
-                  <span className="text-lg font-black text-blue-700 font-mono">
-                    Rp {totalAmount.toLocaleString("id-ID")}
-                  </span>
-                  <span className="text-zinc-500 text-[10px] block">
-                    ({durationMonths} bulan • {selectedPlan === "premium" ? "Paket Premium" : "Paket Pro"})
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Actions */}

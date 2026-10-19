@@ -18,7 +18,7 @@ export const ReferralCodeShareBox: React.FC<ReferralCodeShareBoxProps> = ({
   const [copied, setCopied] = useState(false);
   const [qrUrl, setQrUrl] = useState<string>("");
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://cleaniquelaundry.com";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://app.laundrycleanique.com";
   const codeVal = code?.code || "";
   const shareUrl = `${origin}/register?ref=${codeVal}`;
 

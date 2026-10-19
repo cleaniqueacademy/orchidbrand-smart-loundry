@@ -87,9 +87,9 @@ export async function seedInitialData(force = true) {
       defaultTrialDays: 7,
       defaultAiDailyQuota: 50,
       supportPhone: "081299881122",
-      supportEmail: "support@cleaniquelaundry.com",
-      termsUrl: "https://cleaniquelaundry.com/terms",
-      privacyUrl: "https://cleaniquelaundry.com/privacy",
+      supportEmail: "support@laundrycleanique.com",
+      termsUrl: "https://laundrycleanique.com/terms",
+      privacyUrl: "https://laundrycleanique.com/privacy",
       updatedAt: today,
     });
 

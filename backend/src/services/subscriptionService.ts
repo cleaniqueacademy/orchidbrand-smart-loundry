@@ -84,7 +84,7 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
           bankName: settings.bankName,
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
-          qrisInfo: (settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png") ? settings.qrisInfo : "/qris.png",
+          qrisInfo: (settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")) ? settings.qrisInfo : "/qris.png",
         }
       : {
           bankName: "BCA (Bank Central Asia)",
@@ -233,7 +233,7 @@ export async function createSubscriptionInvoice(params: {
           bankName: settings.bankName,
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
-          qrisInfo: (settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png") ? settings.qrisInfo : "/qris.png",
+          qrisInfo: (settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")) ? settings.qrisInfo : "/qris.png",
         }
       : {
           bankName: "BCA (Bank Central Asia)",
