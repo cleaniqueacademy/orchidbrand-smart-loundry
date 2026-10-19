@@ -58,7 +58,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
   onSuccess,
 }) => {
   const [step, setStep] = useState<"select" | "invoice">("select");
-  const [paymentTab, setPaymentTab] = useState<"bank" | "qris">("bank");
+  const [paymentTab, setPaymentTab] = useState<"bank" | "qris">("qris");
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [referralCode, setReferralCode] = useState("");
@@ -316,39 +316,104 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
 
                   {paymentDest && (
                     <div className="space-y-3">
-                      {paymentDest.qrisInfo && (
-                        <div className="flex border border-slate-200 dark:border-slate-700 rounded-xl p-1 bg-slate-100/70 dark:bg-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => setPaymentTab("bank")}
-                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                              paymentTab === "bank"
-                                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                                : "text-slate-500 hover:text-slate-800"
-                            }`}
-                          >
-                            <Building2 className="w-3.5 h-3.5" />
-                            <span>Transfer Rekening</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPaymentTab("qris")}
-                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                              paymentTab === "qris"
-                                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                                : "text-slate-500 hover:text-slate-800"
-                            }`}
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            <span>Scan QRIS</span>
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex border border-slate-200 dark:border-slate-700 rounded-xl p-1 bg-slate-100/70 dark:bg-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentTab("qris")}
+                          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            paymentTab === "qris"
+                              ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm border border-emerald-200/80 dark:border-emerald-800"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Scan QRIS</span>
+                          <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full">
+                            Utama
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentTab("bank")}
+                          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            paymentTab === "bank"
+                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>Transfer Bank</span>
+                        </button>
+                      </div>
 
-                      {paymentTab === "bank" ? (
+                      {paymentTab === "qris" ? (
+                        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 text-center space-y-3 border border-slate-100 dark:border-slate-800">
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 mb-1">
+                              <span>QRIS Standar Nasional (GPN)</span>
+                            </div>
+                            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                              LAUNDRY CLEANIQUE
+                            </h4>
+                            <p className="text-[10px] text-slate-500 font-mono">
+                              NMID: ID1026618371243 • GoPay Merchant
+                            </p>
+                          </div>
+
+                          <div className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+                            <img
+                              src={
+                                paymentDest.qrisInfo && paymentDest.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png"
+                                  ? getDirectImageUrl(paymentDest.qrisInfo)
+                                  : "/qris.png"
+                              }
+                              alt="QRIS Pembayaran Laundry Cleanique"
+                              className="w-full h-auto object-contain rounded-xl"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (target.src !== window.location.origin + "/qris.png") {
+                                  target.src = "/qris.png";
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/80 rounded-xl p-2.5 text-xs">
+                            <span className="text-[11px] text-slate-600 dark:text-slate-400 block">Total Tagihan QRIS:</span>
+                            <span className="text-base font-extrabold text-emerald-600 font-mono">
+                              {formatRp(invoice?.finalAmount || 0)}
+                            </span>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                              Bisa di-scan dari BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay & Semua Mobile Banking
+                            </p>
+                          </div>
+
+                          <div className="flex justify-center gap-2">
+                            <a
+                              href="/qris.png"
+                              download="QRIS_Cleanique.png"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 flex items-center gap-1 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Unduh Gambar</span>
+                            </a>
+                            <a
+                              href="/qris.png"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-indigo-600 flex items-center gap-1 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Buka Layar Penuh</span>
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
                         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 space-y-2.5 text-xs border border-slate-100 dark:border-slate-800">
                           <p className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
-                            Transfer Ke:
+                            Transfer Ke Rekening Resmi:
                           </p>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-500">Bank</span>
@@ -369,7 +434,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
                                   setCopiedAccount(true);
                                   setTimeout(() => setCopiedAccount(false), 2000);
                                 }}
-                                className="px-2.5 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1 border border-slate-200 dark:border-slate-700"
+                                className="px-2.5 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1 border border-slate-200 dark:border-slate-700 cursor-pointer"
                               >
                                 {copiedAccount ? (
                                   <>
@@ -392,45 +457,6 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
                           <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-bold text-emerald-600 text-sm">
                             <span>Jumlah Transfer</span>
                             <span>{formatRp(invoice?.finalAmount || 0)}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 text-center space-y-3 border border-slate-100 dark:border-slate-800">
-                          <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                            Scan kode QRIS melalui aplikasi Mobile Banking atau E-Wallet:
-                          </p>
-                          <div className="w-44 h-44 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
-                            <img
-                              src={getDirectImageUrl(paymentDest.qrisInfo)}
-                              alt="QRIS Pembayaran"
-                              className="w-full h-full object-contain rounded-xl"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                const fallback = getFallbackDriveThumbnailUrl(paymentDest.qrisInfo);
-                                if (target.src !== fallback) target.src = fallback;
-                              }}
-                            />
-                          </div>
-                          <div className="flex justify-center gap-2">
-                            <a
-                              href={getDirectImageUrl(paymentDest.qrisInfo)}
-                              download="QRIS_Cleanique.png"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-3 py-1.5 text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 flex items-center gap-1 hover:bg-slate-50"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Unduh Gambar</span>
-                            </a>
-                            <a
-                              href={getDirectImageUrl(paymentDest.qrisInfo)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-3 py-1.5 text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-indigo-600 flex items-center gap-1 hover:bg-slate-50"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Buka Layar Penuh</span>
-                            </a>
                           </div>
                         </div>
                       )}

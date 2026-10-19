@@ -25,6 +25,11 @@ platformSettingsRoutes.get("/public", async (c) => {
       });
     }
 
+    const defaultQris = "/qris.png";
+    const currentQris = settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png"
+      ? settings.qrisInfo
+      : defaultQris;
+
     return c.json({
       success: true,
       data: {
@@ -33,7 +38,7 @@ platformSettingsRoutes.get("/public", async (c) => {
         bankName: settings.bankName,
         bankAccountNumber: settings.bankAccountNumber,
         bankAccountName: settings.bankAccountName,
-        qrisInfo: settings.qrisInfo,
+        qrisInfo: currentQris,
         defaultTrialDays: settings.defaultTrialDays,
         supportPhone: settings.supportPhone,
         supportEmail: settings.supportEmail,

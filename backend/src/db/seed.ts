@@ -83,7 +83,7 @@ export async function seedInitialData(force = true) {
       bankName: "BCA (Bank Central Asia)",
       bankAccountNumber: "8830-1928-3341",
       bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
-      qrisInfo: "https://cleaniquelaundry.com/qris-official.png",
+      qrisInfo: "/qris.png",
       defaultTrialDays: 7,
       defaultAiDailyQuota: 50,
       supportPhone: "081299881122",

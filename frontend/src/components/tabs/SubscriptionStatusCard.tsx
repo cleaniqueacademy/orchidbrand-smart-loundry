@@ -19,6 +19,9 @@ import {
   Users,
   ShieldCheck,
   Crown,
+  QrCode,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { authHeaders } from "../../utils/api";
 import { useToast } from "../common/ToastContext";
@@ -733,45 +736,106 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
       {/* Petunjuk Pembayaran Transfer / QRIS */}
       <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xs p-6 space-y-4">
         <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-100">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shadow-2xs">
-            <Building className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shadow-2xs">
+            <QrCode className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-zinc-900 text-sm">Rekening Pembayaran Resmi Admin Pusat</h4>
-            <p className="text-[11px] text-zinc-500">Kirim pembayaran perpanjangan ke salah satu rekening resmi di bawah</p>
+            <h4 className="font-bold text-zinc-900 text-sm">Metode Pembayaran Resmi SaaS Cleanique</h4>
+            <p className="text-[11px] text-zinc-500">Gunakan QRIS resmi di bawah ini untuk transaksi instan dan verifikasi cepat</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Rekening Bank */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-zinc-50 to-zinc-100/60 border border-zinc-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Transfer Bank {settings?.bankName || "BCA"}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+          {/* QRIS Utama */}
+          <div className="md:col-span-2 p-5 rounded-xl bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 border-2 border-emerald-500/30 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                  QRIS Statis Resmi (Rekomendasi Utama)
+                </span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-2xs">
+                GoPay Merchant / GPN
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Bank Resmi</span>
             </div>
-            <div className="text-lg font-mono font-extrabold text-zinc-900 tracking-wider">
-              {settings?.bankAccountNumber || "8295-0192-8812"}
-            </div>
-            <div className="text-xs text-zinc-600 font-medium">
-              a.n. {settings?.bankAccountName || "Cleanique Laundry Indonesia"}
+
+            <div className="flex flex-col sm:flex-row items-center gap-5 pt-1">
+              <div className="relative group shrink-0">
+                <div className="p-2.5 bg-white rounded-xl border border-emerald-200/90 shadow-md">
+                  <img
+                    src="/qris.png"
+                    alt="QRIS Laundry Cleanique"
+                    className="w-36 h-36 object-contain rounded-lg"
+                  />
+                </div>
+                <a
+                  href="/qris.png"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute inset-0 bg-emerald-900/40 backdrop-blur-[2px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka
+                </a>
+              </div>
+
+              <div className="space-y-2 text-center sm:text-left flex-1 min-w-0">
+                <div>
+                  <div className="text-[11px] text-emerald-800 font-semibold uppercase tracking-wider">Merchant Name</div>
+                  <div className="text-base font-black text-zinc-900">LAUNDRY CLEANIQUE</div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-zinc-500 font-semibold">NMID (National Merchant ID)</div>
+                  <div className="text-xs font-mono font-bold text-zinc-800 bg-emerald-100/60 px-2 py-0.5 rounded inline-block">
+                    ID1026618371243
+                  </div>
+                </div>
+                <p className="text-[11px] text-zinc-600 leading-relaxed">
+                  Dapat discan dari <strong>BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</strong>, dan seluruh aplikasi e-wallet & mobile banking di Indonesia.
+                </p>
+
+                <div className="pt-1 flex flex-wrap gap-2 justify-center sm:justify-start">
+                  <a
+                    href="/qris.png"
+                    download="QRIS-Laundry-Cleanique.png"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Unduh Gambar QRIS
+                  </a>
+                  <a
+                    href="/qris.png"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Layar Penuh
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* QRIS / Catatan */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-zinc-50 to-zinc-100/60 border border-zinc-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Metode QRIS & Konfirmasi
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Semua E-Wallet</span>
+          {/* Rekening Bank Alternatif */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-zinc-50 to-zinc-100/60 border border-zinc-200/80 flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                  Transfer Bank Alternatif
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                  {settings?.bankName || "BCA"}
+                </span>
+              </div>
+              <div className="text-base font-mono font-extrabold text-zinc-900 tracking-wider">
+                {settings?.bankAccountNumber || "8295-0192-8812"}
+              </div>
+              <div className="text-xs text-zinc-600 font-medium">
+                a.n. {settings?.bankAccountName || "Cleanique Laundry Indonesia"}
+              </div>
             </div>
-            <div className="text-xs text-zinc-600 leading-relaxed">
-              Tersedia transfer via BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, dan QRIS.
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Admin akan langsung memperpanjang masa aktif outlet Anda begitu bukti transfer diterima via WhatsApp.
+
+            <div className="pt-2 border-t border-zinc-200/70 text-[11px] text-zinc-500 leading-relaxed">
+              Kirim bukti transfer ke WhatsApp admin pusat setelah melakukan pembayaran untuk aktivasi otomatis.
             </div>
           </div>
         </div>

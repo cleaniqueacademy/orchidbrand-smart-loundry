@@ -77,7 +77,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   // Step 1: Info Status Akun Nonaktif / Kedaluwarsa
   // Step 2: Pembayaran Langsung (Tabs Rekening / QRIS) & Konfirmasi WA
   const [step, setStep] = useState<1 | 2>(1);
-  const [paymentTab, setPaymentTab] = useState<"rekening" | "qris">("rekening");
+  const [paymentTab, setPaymentTab] = useState<"rekening" | "qris">("qris");
   const [copiedRekening, setCopiedRekening] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkedNotice, setCheckedNotice] = useState<string | null>(null);
@@ -206,7 +206,9 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
   const waConfirmUrl = `https://wa.me/${cleanPhone}?text=${waConfirmText}`;
 
   const isInactiveStatus = statusInfo.isInactiveStatus;
-  const directQrisUrl = getDirectImageUrl(paymentInfo.qrisInfo || "");
+  const directQrisUrl = (paymentInfo.qrisInfo && paymentInfo.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png")
+    ? getDirectImageUrl(paymentInfo.qrisInfo)
+    : "/qris.png";
 
   const handleShareQris = async () => {
     if (navigator.share && directQrisUrl) {
@@ -447,6 +449,22 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
             <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
               <button
                 type="button"
+                onClick={() => setPaymentTab("qris")}
+                className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  paymentTab === "qris"
+                    ? "bg-white text-emerald-700 shadow-xs border border-emerald-200/80"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Scan QRIS</span>
+                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full">
+                  Utama
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setPaymentTab("rekening")}
                 className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   paymentTab === "rekening"
@@ -456,19 +474,6 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>No. Rekening</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentTab("qris")}
-                className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                  paymentTab === "qris"
-                    ? "bg-white text-blue-700 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Scan QRIS</span>
               </button>
             </div>
 

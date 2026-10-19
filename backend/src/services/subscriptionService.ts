@@ -84,9 +84,14 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
           bankName: settings.bankName,
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
-          qrisInfo: settings.qrisInfo,
+          qrisInfo: (settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png") ? settings.qrisInfo : "/qris.png",
         }
-      : undefined,
+      : {
+          bankName: "BCA (Bank Central Asia)",
+          bankAccountNumber: "8830-1928-3341",
+          bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
+          qrisInfo: "/qris.png",
+        },
   };
 }
 
@@ -228,9 +233,14 @@ export async function createSubscriptionInvoice(params: {
           bankName: settings.bankName,
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
-          qrisInfo: settings.qrisInfo,
+          qrisInfo: (settings.qrisInfo && settings.qrisInfo !== "https://cleaniquelaundry.com/qris-official.png") ? settings.qrisInfo : "/qris.png",
         }
-      : null,
+      : {
+          bankName: "BCA (Bank Central Asia)",
+          bankAccountNumber: "8830-1928-3341",
+          bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
+          qrisInfo: "/qris.png",
+        },
   };
 }
 
