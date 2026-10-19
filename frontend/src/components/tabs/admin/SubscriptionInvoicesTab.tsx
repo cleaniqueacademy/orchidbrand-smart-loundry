@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   CheckCircle2,
@@ -12,23 +12,42 @@ import {
   AlertCircle,
   Eye,
   X,
+  ShieldCheck,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { api } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
+import { useToast } from "../../common/ToastContext";
+import { useConfirm } from "../../common/ConfirmContext";
 
-export const SubscriptionInvoicesTab: React.FC = () => {
+interface SubscriptionInvoicesTabProps {
+  onVerifySuccess?: () => void;
+}
+
+export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = ({
+  onVerifySuccess,
+}) => {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Modal Penolakan Bukti
+  const [rejectingInvoice, setRejectingInvoice] = useState<SubscriptionInvoice | null>(null);
+  const [rejectReason, setRejectReason] = useState("Bukti transfer tidak valid atau tidak terbaca");
+  const [submittingReject, setSubmittingReject] = useState(false);
+
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      const url = statusFilter !== "all"
-        ? `/api/subscription/invoices?status=${statusFilter}`
-        : "/api/subscription/invoices";
+      const url =
+        statusFilter !== "all"
+          ? `/api/subscription/invoices?status=${statusFilter}`
+          : "/api/subscription/invoices";
       const res = await api.get<{ success: boolean; data: SubscriptionInvoice[] }>(url);
       if (res.success && res.data) {
         setInvoices(res.data);
@@ -45,13 +64,23 @@ export const SubscriptionInvoicesTab: React.FC = () => {
   }, [statusFilter]);
 
   const handleVerify = async (invoice: SubscriptionInvoice) => {
-    if (
-      !confirm(
-        `Verifikasi pembayaran Invoice #${invoice.invoiceNo} sebesar Rp ${invoice.finalAmount.toLocaleString("id-ID")}? Masa aktif outlet akan diperpanjang.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Verifikasi Pembayaran Langganan?",
+      description: (
+        <span>
+          Verifikasi pembayaran Invoice <strong>#{invoice.invoiceNo}</strong> sebesar{" "}
+          <strong className="text-emerald-700">Rp {invoice.finalAmount.toLocaleString("id-ID")}</strong> untuk outlet{" "}
+          <strong>{invoice.outletName || "Outlet Laundry"}</strong>?
+          <br /><br />
+          Masa aktif akun kasir outlet akan diperpanjang <strong>{invoice.durationMonths} Bulan</strong> dan pemasukan otomatis tercatat di buku kas platform.
+        </span>
+      ),
+      confirmText: "Ya, Verifikasi & Aktifkan",
+      cancelText: "Batal",
+      variant: "info",
+    });
+
+    if (!ok) return;
 
     try {
       const res = await api.put<{ success: boolean; message: string }>(
@@ -59,29 +88,46 @@ export const SubscriptionInvoicesTab: React.FC = () => {
         {}
       );
       if (res.success) {
-        alert(res.message);
-        fetchInvoices();
+        toast.success(
+          "Invoice Berhasil Diverifikasi!",
+          res.message || "Masa aktif langganan outlet telah berhasil diperpanjang."
+        );
+        await fetchInvoices();
+        if (onVerifySuccess) onVerifySuccess();
+      } else {
+        toast.error("Gagal Memverifikasi", res.message);
       }
     } catch (err: any) {
-      alert(err.message || "Gagal memverifikasi invoice");
+      toast.error("Gagal Memverifikasi", err.message || "Terjadi kesalahan server");
     }
   };
 
-  const handleReject = async (invoice: SubscriptionInvoice) => {
-    const reason = prompt("Masukkan alasan penolakan bukti pembayaran:", "Bukti transfer tidak valid atau tidak terbaca");
-    if (reason === null) return;
+  const handleOpenRejectModal = (invoice: SubscriptionInvoice) => {
+    setRejectingInvoice(invoice);
+    setRejectReason("Bukti transfer tidak valid atau tidak terbaca");
+  };
 
+  const handleConfirmReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingInvoice) return;
+
+    setSubmittingReject(true);
     try {
       const res = await api.put<{ success: boolean; message: string }>(
-        `/api/subscription/invoices/${invoice.id}/reject`,
-        { reason }
+        `/api/subscription/invoices/${rejectingInvoice.id}/reject`,
+        { reason: rejectReason }
       );
       if (res.success) {
-        alert(res.message);
-        fetchInvoices();
+        toast.info("Invoice Ditolak", res.message || "Status tagihan telah ditolak.");
+        setRejectingInvoice(null);
+        await fetchInvoices();
+      } else {
+        toast.error("Gagal Menolak", res.message);
       }
     } catch (err: any) {
-      alert(err.message || "Gagal menolak invoice");
+      toast.error("Gagal Menolak", err.message || "Terjadi kesalahan server");
+    } finally {
+      setSubmittingReject(false);
     }
   };
 
@@ -253,8 +299,8 @@ export const SubscriptionInvoicesTab: React.FC = () => {
                             <span>Verifikasi</span>
                           </button>
                           <button
-                            onClick={() => handleReject(inv)}
-                            className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition-all inline-flex items-center gap-1"
+                            onClick={() => handleOpenRejectModal(inv)}
+                            className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
                           >
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Tolak</span>
@@ -282,7 +328,7 @@ export const SubscriptionInvoicesTab: React.FC = () => {
               </h4>
               <button
                 onClick={() => setPreviewImage(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Tutup"
               >
                 <X className="w-4 h-4" />
@@ -295,6 +341,83 @@ export const SubscriptionInvoicesTab: React.FC = () => {
                 className="w-full h-auto object-contain rounded-xl mx-auto"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Penolakan Tagihan */}
+      {rejectingInvoice && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <XCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-900">
+                    Tolak Bukti Pembayaran
+                  </h4>
+                  <p className="text-[11px] text-zinc-500">
+                    Invoice #{rejectingInvoice.invoiceNo} • {rejectingInvoice.outletName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingInvoice(null)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmReject} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-700 block mb-1">
+                  Alasan Penolakan:
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={3}
+                  className="w-full p-2.5 text-xs border border-zinc-300 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none font-medium"
+                  placeholder="Contoh: Bukti transfer tidak sesuai nominal / gambar buram..."
+                  required
+                />
+                <p className="text-[11px] text-zinc-400 mt-1">
+                  Alasan ini akan tercatat pada invoice agar pemilik outlet dapat mengunggah bukti ulang yang sah.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => setRejectingInvoice(null)}
+                  disabled={submittingReject}
+                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReject || !rejectReason.trim()}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  {submittingReject ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menolak...</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Konfirmasi Tolak</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -16,10 +16,12 @@ import {
   AlertCircle,
   FileText,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { authHeaders } from "../../../utils/api";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
+import { SubscriptionInvoicesTab } from "./SubscriptionInvoicesTab";
 
 interface PlatformCashflowRecord {
   id: string;
@@ -57,6 +59,10 @@ export const PlatformFinanceTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Sub-Tab Switcher: 'invoices' (Approval) vs 'cashflow' (Arus Kas Platform)
+  type SubTabType = "invoices" | "cashflow";
+  const [activeSubTab, setActiveSubTab] = useState<SubTabType>("invoices");
 
   // Modal Expense
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -180,73 +186,115 @@ export const PlatformFinanceTab: React.FC = () => {
   });
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6">
+      {/* Top Header & Sub-Tab Navigation */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200/80">
         <div>
-          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Arus Kas &amp; Rekap Langganan</h2>
-          <p className="text-xs text-zinc-500">Pemasukan perpanjangan outlet dan pengeluaran platform tercatat di sini.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Catat Pengeluaran
-        </button>
-      </div>
-
-      {/* 3 Ringkasan Kartu Metrik */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        {/* Pemasukan Langganan */}
-        <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
-          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-            <span>Total Pemasukan Langganan</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
-            Rp {summary.totalIncome.toLocaleString("id-ID")}
-          </div>
-          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
-            Dari perpanjangan masa aktif outlet
+          <h2 className="text-xl font-bold text-zinc-900 tracking-tight">Arus Kas &amp; Rekap Langganan</h2>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Pusat verifikasi/approval tagihan langganan outlet serta pembukuan arus kas platform.
           </p>
         </div>
 
-        {/* Pengeluaran Platform */}
-        <div className="bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 rounded-2xl border border-rose-200/90 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
-          <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
-            <span>Total Pengeluaran Platform</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
-              <TrendingDown className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl sm:text-2xl font-bold text-rose-950 mt-2.5 tracking-tight">
-            Rp {summary.totalExpense.toLocaleString("id-ID")}
-          </div>
-          <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
-            Server, komisi referral, kuota WA, dll.
-          </p>
-        </div>
-
-        {/* Saldo Bersih - Highlighted Card */}
-        <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
-          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
-            <span>Laba Bersih Kas Platform</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className={`text-xl sm:text-2xl font-bold tracking-tight mt-2.5 ${summary.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"}`}>
-            Rp {summary.netProfit.toLocaleString("id-ID")}
-          </div>
-          <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
-            Saldo kas platform saat ini
-          </p>
+        {/* Sub-tab Pill Switcher */}
+        <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl shrink-0 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("invoices")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === "invoices"
+                ? "bg-white text-zinc-900 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+            <span>Verifikasi Tagihan (Approval)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("cashflow")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === "cashflow"
+                ? "bg-white text-zinc-900 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Buku Kas &amp; Pengeluaran Platform</span>
+          </button>
         </div>
       </div>
 
-      {/* Filter & Search */}
+      {activeSubTab === "invoices" ? (
+        <SubscriptionInvoicesTab onVerifySuccess={fetchCashflow} />
+      ) : (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900">Buku Kas Platform</h3>
+              <p className="text-xs text-zinc-500">Pemasukan perpanjangan outlet dan biaya operasional platform.</p>
+            </div>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Catat Pengeluaran
+            </button>
+          </div>
+
+          {/* 3 Ringkasan Kartu Metrik */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* Pemasukan Langganan */}
+            <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
+                <span>Total Pemasukan Langganan</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
+                Rp {summary.totalIncome.toLocaleString("id-ID")}
+              </div>
+              <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+                Dari perpanjangan masa aktif outlet
+              </p>
+            </div>
+
+            {/* Pengeluaran Platform */}
+            <div className="bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 rounded-2xl border border-rose-200/90 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
+              <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
+                <span>Total Pengeluaran Platform</span>
+                <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-rose-950 mt-2.5 tracking-tight">
+                Rp {summary.totalExpense.toLocaleString("id-ID")}
+              </div>
+              <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
+                Server, komisi referral, kuota WA, dll.
+              </p>
+            </div>
+
+            {/* Saldo Bersih - Highlighted Card */}
+            <div className="bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-xs relative overflow-hidden group hover:border-blue-300 transition">
+              <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+                <span>Laba Bersih Kas Platform</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className={`text-xl sm:text-2xl font-bold tracking-tight mt-2.5 ${summary.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"}`}>
+                Rp {summary.netProfit.toLocaleString("id-ID")}
+              </div>
+              <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
+                Saldo kas platform saat ini
+              </p>
+            </div>
+          </div>
+
+          {/* Filter & Search */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-zinc-200/80 shadow-2xs">
         <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl w-full sm:w-auto">
           <button
@@ -392,6 +440,8 @@ export const PlatformFinanceTab: React.FC = () => {
           </table>
         </div>
       </div>
+    </div>
+  )}
 
       {/* Modal Tambah Pengeluaran Platform */}
       {isModalOpen && (
