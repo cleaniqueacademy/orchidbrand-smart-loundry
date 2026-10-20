@@ -645,7 +645,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 data={cashierStatusData.length > 0 ? cashierStatusData : [{ label: "Belum Ada Pesanan", value: 1, color: "#94a3b8" }]}
                 centerTitle={`${orders.length}`}
                 centerSubtitle="Total Nota"
-                size={170}
+                size={140}
               />
               <BarChart
                 title={`Penerimaan Nota (${chartPeriod === "7d" ? "7 Hari" : chartPeriod === "30d" ? "30 Hari" : "Bulan Ini"})`}

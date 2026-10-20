@@ -377,7 +377,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
               data={orderStatusDonutData}
               centerTitle={`${orders.length}`}
               centerSubtitle="Total Order"
-              size={180}
+              size={140}
             />
           </div>
         </div>

@@ -507,7 +507,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
               data={licenseDistributionData}
               centerTitle={`${tenants.length}`}
               centerSubtitle="Total Toko"
-              size={180}
+              size={140}
             />
           </div>
         </div>
@@ -534,46 +534,46 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
                 color: b.color,
               }))}
               actionSlot={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
                   {/* Sort By Toggle */}
-                  <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl text-xs font-semibold text-zinc-600">
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 sm:p-1 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                     <button
                       onClick={() => setBranchSortBy("omset")}
-                      className={`px-2.5 py-1 rounded-lg transition ${
+                      className={`px-2 sm:px-2.5 py-1 rounded-lg transition ${
                         branchSortBy === "omset"
-                          ? "bg-white text-zinc-900 font-bold shadow-2xs"
-                          : "hover:text-zinc-900"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
+                          : "hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
-                      Berdasarkan Omset
+                      Omset (Rp)
                     </button>
                     <button
                       onClick={() => setBranchSortBy("orders")}
-                      className={`px-2.5 py-1 rounded-lg transition ${
+                      className={`px-2 sm:px-2.5 py-1 rounded-lg transition ${
                         branchSortBy === "orders"
-                          ? "bg-white text-zinc-900 font-bold shadow-2xs"
-                          : "hover:text-zinc-900"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
+                          : "hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
-                      Berdasarkan Order
+                      Order
                     </button>
                   </div>
 
                   {/* View Mode Toggle */}
-                  <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl text-xs font-semibold text-zinc-600">
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 sm:p-1 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                     <button
                       onClick={() => setBranchViewMode("ranking")}
-                      className="px-2.5 py-1 rounded-lg bg-white text-zinc-900 font-bold shadow-2xs"
+                      className="px-2 sm:px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
                       title="Lihat dalam bentuk list ranking lengkap"
                     >
-                      Ranking List
+                      Ranking
                     </button>
                     <button
                       onClick={() => setBranchViewMode("bars")}
-                      className="px-2.5 py-1 rounded-lg hover:text-zinc-900 transition"
+                      className="px-2 sm:px-2.5 py-1 rounded-lg hover:text-zinc-900 dark:hover:text-white transition"
                       title="Lihat dalam bentuk grafik batang vertikal"
                     >
-                      Grafik Batang
+                      Grafik
                     </button>
                   </div>
                 </div>
@@ -587,41 +587,41 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
               height={200}
               barColor="#2563eb"
               actionSlot={
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl text-xs font-semibold text-zinc-600">
+                <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 sm:p-1 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                     <button
                       onClick={() => setBranchSortBy("omset")}
-                      className={`px-2.5 py-1 rounded-lg transition ${
+                      className={`px-2 sm:px-2.5 py-1 rounded-lg transition ${
                         branchSortBy === "omset"
-                          ? "bg-white text-zinc-900 font-bold shadow-2xs"
-                          : "hover:text-zinc-900"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
+                          : "hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       Omset (Rp)
                     </button>
                     <button
                       onClick={() => setBranchSortBy("orders")}
-                      className={`px-2.5 py-1 rounded-lg transition ${
+                      className={`px-2 sm:px-2.5 py-1 rounded-lg transition ${
                         branchSortBy === "orders"
-                          ? "bg-white text-zinc-900 font-bold shadow-2xs"
-                          : "hover:text-zinc-900"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
+                          : "hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
-                      Jumlah Order
+                      Order
                     </button>
                   </div>
-                  <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl text-xs font-semibold text-zinc-600">
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 sm:p-1 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                     <button
                       onClick={() => setBranchViewMode("ranking")}
-                      className="px-2.5 py-1 rounded-lg hover:text-zinc-900 transition"
+                      className="px-2 sm:px-2.5 py-1 rounded-lg hover:text-zinc-900 dark:hover:text-white transition"
                     >
-                      Ranking List
+                      Ranking
                     </button>
                     <button
                       onClick={() => setBranchViewMode("bars")}
-                      className="px-2.5 py-1 rounded-lg bg-white text-zinc-900 font-bold shadow-2xs"
+                      className="px-2 sm:px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white font-bold shadow-2xs"
                     >
-                      Grafik Batang
+                      Grafik
                     </button>
                   </div>
                 </div>

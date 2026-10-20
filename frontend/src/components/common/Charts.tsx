@@ -26,8 +26,8 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   title,
   subtitle,
   data,
-  size = 180,
-  strokeWidth = 22,
+  size = 145,
+  strokeWidth = 20,
   centerTitle,
   centerSubtitle,
   actionSlot,
@@ -41,8 +41,8 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   let accumulatedPercent = 0;
 
   const chart = (
-    <div className="flex flex-col sm:flex-row items-center gap-5 justify-around w-full py-1">
-      <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
+    <div className="flex flex-col items-center gap-4 w-full py-1">
+      <div className="relative shrink-0 flex items-center justify-center my-1" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="transform -rotate-90 overflow-visible">
           {/* Background circle */}
           <circle
@@ -81,7 +81,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
                   r={radius}
                   fill="transparent"
                   stroke={seg.color}
-                  strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
+                  strokeWidth={isHovered ? strokeWidth + 3 : strokeWidth}
                   strokeDasharray={strokeDasharray}
                   strokeDashoffset={strokeDashoffset}
                   strokeLinecap="round"
@@ -111,7 +111,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
       </div>
 
       {/* Legend list with clean badge style */}
-      <div className="space-y-2 w-full sm:w-auto min-w-[160px] flex-1 max-w-xs">
+      <div className="space-y-1.5 w-full">
         {data.map((seg, idx) => {
           const isHovered = hoveredIdx === idx;
           const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
@@ -120,23 +120,23 @@ export const DonutChart: React.FC<DonutChartProps> = ({
               key={idx}
               onMouseEnter={() => setHoveredIdx(idx)}
               onMouseLeave={() => setHoveredIdx(null)}
-              className={`flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl cursor-pointer transition border ${
+              className={`flex items-center justify-between text-xs py-1.5 px-3 rounded-xl cursor-pointer transition border ${
                 isHovered
                   ? "bg-zinc-100/90 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 font-bold shadow-2xs"
-                  : "bg-zinc-50/70 dark:bg-zinc-800/40 hover:bg-zinc-100/60 border-zinc-150 dark:border-zinc-800/80 font-medium text-zinc-700 dark:text-zinc-300"
+                  : "bg-zinc-50/70 dark:bg-zinc-800/40 hover:bg-zinc-100/60 border-zinc-200/80 dark:border-zinc-800/80 font-medium text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0 pr-2">
+              <div className="flex items-center gap-2 min-w-0 pr-2 flex-1">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs transition-transform"
                   style={{
                     backgroundColor: seg.color,
-                    transform: isHovered ? "scale(1.25)" : "scale(1)",
+                    transform: isHovered ? "scale(1.2)" : "scale(1)",
                   }}
                 />
-                <span className="truncate text-[11.5px]">{seg.label}</span>
+                <span className="truncate text-xs">{seg.label}</span>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 ml-1">
                 <span className="font-bold text-zinc-900 dark:text-white text-xs">{seg.value}</span>
                 <span className="text-[10px] font-semibold text-zinc-400 bg-white dark:bg-zinc-700/60 px-1.5 py-0.2 rounded-md border border-zinc-200/80 dark:border-zinc-700">
                   {pct}%
@@ -152,15 +152,17 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   if (!title) return chart;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5 h-full flex flex-col justify-between">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5 h-full flex flex-col justify-between overflow-hidden">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <h4 className="font-bold text-zinc-900 dark:text-white text-xs sm:text-sm">{title}</h4>
           {subtitle && <p className="text-[11px] text-zinc-400 mt-0.5">{subtitle}</p>}
         </div>
         {actionSlot && <div className="shrink-0">{actionSlot}</div>}
       </div>
-      {chart}
+      <div className="flex-1 flex flex-col justify-center w-full min-h-0">
+        {chart}
+      </div>
     </div>
   );
 };
@@ -292,13 +294,13 @@ export const BarChart: React.FC<BarChartProps> = ({
   if (!title) return chart;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <h4 className="font-bold text-zinc-900 dark:text-white text-xs sm:text-sm">{title}</h4>
           {subtitle && <p className="text-[11px] text-zinc-400 mt-0.5">{subtitle}</p>}
         </div>
-        {actionSlot && <div className="shrink-0">{actionSlot}</div>}
+        {actionSlot && <div className="shrink-0 max-w-full overflow-x-auto">{actionSlot}</div>}
       </div>
       {chart}
     </div>
@@ -526,13 +528,13 @@ export const AreaLineChart: React.FC<AreaLineChartProps> = ({
   if (!title) return chart;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h4 className="font-bold text-zinc-900 dark:text-white text-xs sm:text-sm">{title}</h4>
           {subtitle && <p className="text-[11px] text-zinc-400 mt-0.5">{subtitle}</p>}
         </div>
-        {actionSlot && <div className="shrink-0">{actionSlot}</div>}
+        {actionSlot && <div className="shrink-0 max-w-full overflow-x-auto">{actionSlot}</div>}
       </div>
 
       {/* Summary Metrics Strip */}
@@ -710,13 +712,13 @@ export const HorizontalBarList: React.FC<HorizontalBarListProps> = ({
   if (!title) return list;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-xs space-y-3.5 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <h4 className="font-bold text-zinc-900 dark:text-white text-xs sm:text-sm">{title}</h4>
           {subtitle && <p className="text-[11px] text-zinc-400 mt-0.5">{subtitle}</p>}
         </div>
-        {actionSlot && <div className="shrink-0">{actionSlot}</div>}
+        {actionSlot && <div className="shrink-0 max-w-full overflow-x-auto">{actionSlot}</div>}
       </div>
       {list}
     </div>
