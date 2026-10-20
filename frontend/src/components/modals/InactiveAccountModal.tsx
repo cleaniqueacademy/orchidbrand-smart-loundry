@@ -20,6 +20,7 @@ import {
   X,
   Tag,
   Loader2,
+  Maximize2,
 } from "lucide-react";
 import { User } from "../../types";
 import {
@@ -30,6 +31,7 @@ import {
 import { getDirectImageUrl } from "../../utils/googleDriveUtils";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
+import { QrisPreviewModal } from "./QrisPreviewModal";
 import { api } from "../../utils/api";
 
 interface InactiveAccountModalProps {
@@ -197,6 +199,30 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
     ? getDirectImageUrl(paymentInfo.qrisInfo)
     : "/qris.png";
 
+  const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
+  const [downloadingQris, setDownloadingQris] = useState(false);
+
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      const response = await fetch(directQrisUrl);
+      if (!response.ok) throw new Error("Gagal mengambil file gambar");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "QRIS-Laundry-Cleanique.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      setIsQrisModalOpen(true);
+    } finally {
+      setTimeout(() => setDownloadingQris(false), 300);
+    }
+  };
+
   const handleShareQris = async () => {
     if (navigator.share && directQrisUrl) {
       try {
@@ -206,10 +232,10 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
           url: directQrisUrl,
         });
       } catch {
-        window.open(directQrisUrl, "_blank");
+        setIsQrisModalOpen(true);
       }
-    } else if (directQrisUrl) {
-      window.open(directQrisUrl, "_blank");
+    } else {
+      setIsQrisModalOpen(true);
     }
   };
 
@@ -440,11 +466,15 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
               </div>
 
               <div className="space-y-2">
-                <div className="p-2.5 bg-white rounded-xl border border-slate-200 inline-block shadow-sm">
+                <div
+                  onClick={() => setIsQrisModalOpen(true)}
+                  className="p-2.5 bg-white rounded-xl border border-slate-200 inline-block shadow-sm cursor-pointer group relative overflow-hidden"
+                  title="Klik untuk membuka modal QRIS layar penuh"
+                >
                   <img
                     src={directQrisUrl || "/qris.png"}
                     alt="QRIS Cleanique"
-                    className="max-h-52 max-w-full mx-auto object-contain rounded-lg"
+                    className="max-h-52 max-w-full mx-auto object-contain rounded-lg group-hover:scale-102 transition-transform duration-200"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (!target.src.endsWith("/qris.png")) {
@@ -452,30 +482,33 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
                       }
                     }}
                   />
+                  <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-bold gap-1 rounded-xl">
+                    <Maximize2 className="w-5 h-5 text-white drop-shadow-xs" />
+                    <span>Buka Layar Penuh</span>
+                  </div>
                 </div>
                 <p className="text-[11px] text-slate-600 font-medium">
                   Scan dari <strong>BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</strong> & seluruh mobile banking di Indonesia.
                 </p>
 
                 <div className="flex items-center justify-center gap-2 pt-1">
-                  <a
-                    href={directQrisUrl || "/qris.png"}
-                    download="QRIS-Laundry-Cleanique.png"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
+                  <button
+                    type="button"
+                    onClick={handleDownloadQris}
+                    disabled={downloadingQris}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs cursor-pointer disabled:opacity-60"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Unduh Gambar</span>
-                  </a>
+                    <span>{downloadingQris ? "Mengunduh..." : "Unduh Gambar"}</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={handleShareQris}
+                    onClick={() => setIsQrisModalOpen(true)}
                     className="px-3.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                   >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Buka / Share</span>
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>Buka Layar Penuh</span>
                   </button>
                 </div>
 
@@ -529,6 +562,15 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
           Laundry Cleanique • Layanan Kasir Multi-Cabang
         </div>
       </div>
+
+      <QrisPreviewModal
+        isOpen={isQrisModalOpen}
+        onClose={() => setIsQrisModalOpen(false)}
+        qrisUrl={directQrisUrl || "/qris.png"}
+        merchantName="LAUNDRY CLEANIQUE"
+        amount={pricing.finalPrice}
+        downloadFileName="QRIS-Laundry-Cleanique.png"
+      />
     </ModalWrapper>
   );
 };

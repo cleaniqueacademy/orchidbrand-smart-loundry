@@ -19,6 +19,7 @@ import {
   Layers,
   ArrowUpDown,
   RotateCcw,
+  X,
 } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { CashflowStats, Order, Tenant, User, TabType, SubscriptionInvoice } from "../../../types";
@@ -54,6 +55,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
 }) => {
   const [pendingInvoices, setPendingInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
+  const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
 
   // Dashboard Filters State
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("7d");
@@ -436,15 +438,14 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
 
                 <div className="pt-1 flex items-center gap-2">
                   {inv.paymentProofUrl && (
-                    <a
-                      href={inv.paymentProofUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-1.5 px-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-center text-xs font-semibold inline-flex items-center justify-center gap-1 transition"
+                    <button
+                      type="button"
+                      onClick={() => setPreviewProofUrl(inv.paymentProofUrl || null)}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-center text-xs font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Bukti Struk</span>
-                    </a>
+                    </button>
                   )}
                   <button
                     onClick={() => setActiveTab("cashflow")}
@@ -1033,6 +1034,33 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal Preview Bukti Struk */}
+      {previewProofUrl && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 max-w-lg w-full border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Bukti Pembayaran / Struk Transfer
+              </span>
+              <button
+                onClick={() => setPreviewProofUrl(null)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto rounded-2xl bg-zinc-100 dark:bg-zinc-800 p-2 flex items-center justify-center">
+              <img
+                src={previewProofUrl}
+                alt="Bukti Transfer"
+                className="w-full h-auto object-contain rounded-xl mx-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
