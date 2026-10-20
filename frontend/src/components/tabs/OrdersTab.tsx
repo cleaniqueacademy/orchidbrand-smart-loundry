@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus,
   Phone,
@@ -14,6 +14,9 @@ import {
   History,
   RefreshCw,
   X,
+  BarChart3,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
@@ -23,6 +26,7 @@ import {
   filterByDatePreset,
 } from "../common/ShadcnDataTable";
 import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
+import { DonutChart, BarChart, StatProgressBar } from "../common/Charts";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -76,6 +80,56 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [tenantFilter, setTenantFilter] = useState<string>("all");
   const [quickPayOrder, setQuickPayOrder] = useState<Order | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(true);
+
+  // Status distribution for cashier
+  const cashierStatusData = useMemo(() => {
+    let pending = 0;
+    let washing = 0;
+    let dryingIroning = 0;
+    let ready = 0;
+    let completed = 0;
+
+    orders.forEach((o) => {
+      if (o.status === "pending") pending++;
+      else if (o.status === "washing") washing++;
+      else if (o.status === "drying_ironing" || o.status === "process") dryingIroning++;
+      else if (o.status === "ready") ready++;
+      else if (o.status === "completed") completed++;
+    });
+
+    return [
+      { label: "Antrian Baru", value: pending, color: "#f59e0b" },
+      { label: "Sedang Dicuci", value: washing, color: "#0ea5e9" },
+      { label: "Kering & Setrika", value: dryingIroning, color: "#8b5cf6" },
+      { label: "Siap Diambil", value: ready, color: "#10b981" },
+      { label: "Sudah Diambil", value: completed, color: "#3b82f6" },
+    ].filter((item) => item.value > 0);
+  }, [orders]);
+
+  // Daily order volume for the week
+  const cashier7DaysVolume = useMemo(() => {
+    const days: { label: string; dateKey: string; value: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      days.push({ label, dateKey, value: 0 });
+    }
+
+    orders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
+      const found = days.find((d) => d.dateKey === oDate);
+      if (found) {
+        found.value += 1;
+      }
+    });
+
+    return days.map((d) => ({ label: d.label, value: d.value, color: "#2563eb" }));
+  }, [orders]);
 
   const isOrderOverdue = (order: Order) =>
     order.status === "ready" &&
@@ -558,6 +612,64 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             </div>
             <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">Tuntas & terverifikasi</p>
           </div>
+        </div>
+      )}
+
+      {/* Visual Analytics Queue Status & Volume for Cashier */}
+      {!isSuperAdmin && (
+        <div className="bg-white rounded-2xl border border-zinc-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-zinc-900 text-xs sm:text-sm">
+                  Distribusi Antrian & Volume Layanan Kasir
+                </h3>
+                <p className="text-[11px] text-zinc-400">
+                  Pantauan visual progress cucian toko dan statistik order 7 hari terakhir
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition cursor-pointer"
+            >
+              <span>{showAnalytics ? "Ringkas" : "Lihat Chart"}</span>
+              {showAnalytics ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+
+          {/* Quick Stat Progress Bar (Always visible) */}
+          <StatProgressBar
+            title="Alur Antrian Cucian Aktif"
+            items={cashierStatusData.length > 0 ? cashierStatusData : [{ label: "Kosong", value: 1, color: "#94a3b8" }]}
+          />
+
+          {/* Expandable Charts */}
+          {showAnalytics && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+              <DonutChart
+                title="Sebaran Status Cucian"
+                subtitle="Komposisi cucian di meja kerja"
+                data={cashierStatusData.length > 0 ? cashierStatusData : [{ label: "Belum Ada Pesanan", value: 1, color: "#94a3b8" }]}
+                centerTitle={`${orders.length}`}
+                centerSubtitle="Total Nota"
+                size={170}
+              />
+              <BarChart
+                title="Penerimaan Nota Harian (7 Hari)"
+                subtitle="Aktivitas order masuk kasir per hari"
+                data={cashier7DaysVolume}
+                height={170}
+                barColor="#2563eb"
+                valueUnit=" Nota"
+              />
+            </div>
+          )}
         </div>
       )}
 

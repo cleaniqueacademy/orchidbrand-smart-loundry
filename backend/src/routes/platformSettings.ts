@@ -79,6 +79,12 @@ platformSettingsRoutes.get("/", requireRole(["superadmin"]), async (c) => {
       settings = created;
     }
 
+    if (settings) {
+      if (!settings.qrisInfo || settings.qrisInfo.includes("qris-official.png")) {
+        settings.qrisInfo = "/qris.png";
+      }
+    }
+
     return c.json({ success: true, data: settings });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);

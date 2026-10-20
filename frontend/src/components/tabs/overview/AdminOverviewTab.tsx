@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp,
   Building2,
@@ -14,9 +14,14 @@ import {
   Database,
   ShieldCheck,
   CheckCircle2,
+  Eye,
+  BarChart3,
+  Zap,
 } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
-import { CashflowStats, Order, Tenant, User, TabType } from "../../../types";
+import { CashflowStats, Order, Tenant, User, TabType, SubscriptionInvoice } from "../../../types";
+import { api } from "../../../utils/api";
+import { DonutChart, BarChart, AreaLineChart } from "../../common/Charts";
 
 interface AdminOverviewTabProps {
   stats: CashflowStats;
@@ -38,6 +43,28 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   onOpenUserModal,
   setActiveTab,
 }) => {
+  const [pendingInvoices, setPendingInvoices] = useState<SubscriptionInvoice[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      setLoadingPending(true);
+      try {
+        const res = await api.get<{ success: boolean; data: SubscriptionInvoice[] }>(
+          "/api/subscription/invoices?status=pending_verification"
+        );
+        if (res.success && res.data) {
+          setPendingInvoices(res.data);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil tagihan pending verifikasi:", err);
+      } finally {
+        setLoadingPending(false);
+      }
+    };
+    fetchPending();
+  }, []);
+
   // Sort tenants by subscription urgency for platform monitoring
   const sortedTenants = [...tenants].sort((a, b) => {
     const timeA = a.subscriptionUntil ? new Date(a.subscriptionUntil).getTime() : Infinity;
@@ -65,6 +92,92 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
     const diff = new Date(t.subscriptionUntil).getTime() - now.getTime();
     return diff <= 7 * 24 * 60 * 60 * 1000;
   }).length;
+
+  // 1. Data Tren Omset 7 Hari Terakhir (AreaLineChart)
+  const network7DaysTrend = useMemo(() => {
+    const days: { label: string; dateKey: string; value: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      days.push({ label, dateKey, value: 0 });
+    }
+
+    orders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
+      const found = days.find((d) => d.dateKey === oDate);
+      if (found) {
+        found.value += o.totalAmount || 0;
+      }
+    });
+
+    return days.map((d) => ({ label: d.label, value: d.value }));
+  }, [orders]);
+
+  // 2. Data Status Lisensi Tenant (DonutChart)
+  const licenseDistributionData = useMemo(() => {
+    let active = 0;
+    let critical = 0;
+    let expired = 0;
+    let trial = 0;
+
+    tenants.forEach((t) => {
+      if (t.status === "inactive") {
+        expired++;
+      } else if (!t.subscriptionUntil) {
+        trial++;
+      } else {
+        const diffDays = Math.ceil(
+          (new Date(t.subscriptionUntil).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diffDays < 0) {
+          expired++;
+        } else if (diffDays <= 7) {
+          critical++;
+        } else {
+          active++;
+        }
+      }
+    });
+
+    const items = [
+      { label: "Aktif Berlangganan", value: active, color: "#10b981" },
+      { label: "Masa Percobaan (Trial)", value: trial, color: "#6366f1" },
+      { label: "Masa Kritis (≤7 Hari)", value: critical, color: "#f59e0b" },
+      { label: "Kedaluwarsa / Nonaktif", value: expired, color: "#ef4444" },
+    ].filter((item) => item.value > 0);
+
+    return items.length > 0 ? items : [{ label: "Belum Ada Toko", value: 1, color: "#94a3b8" }];
+  }, [tenants, now]);
+
+  // 3. Data Aktivitas Order per Cabang (BarChart)
+  const branchActivityData = useMemo(() => {
+    const branchMap = new Map<string, number>();
+    orders.forEach((o) => {
+      const t = tenants.find((item) => item.id === o.tenantId);
+      const name = t?.outletName || "Cabang Toko";
+      branchMap.set(name, (branchMap.get(name) || 0) + 1);
+    });
+
+    tenants.slice(0, 6).forEach((t) => {
+      if (!branchMap.has(t.outletName)) {
+        branchMap.set(t.outletName, 0);
+      }
+    });
+
+    const result = Array.from(branchMap.entries())
+      .slice(0, 6)
+      .map(([name, count]) => ({
+        label: name.length > 12 ? name.slice(0, 10) + "…" : name,
+        value: count,
+        color: "#2563eb",
+      }));
+
+    return result.length > 0 ? result : [{ label: "Cabang", value: 0, color: "#2563eb" }];
+  }, [orders, tenants]);
 
   return (
     <div className="space-y-6">
@@ -161,6 +274,158 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
           <div className="text-[11px] text-indigo-700/90 font-medium mt-1">
             {ownerCount} Owner • {staffCount} Staff
           </div>
+        </div>
+      </div>
+
+      {/* Pending Renewal Invoices Notification Card */}
+      {pendingInvoices.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border-2 border-amber-300 rounded-3xl p-5 shadow-sm space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/60 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-sm shrink-0 animate-pulse">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-zinc-900">
+                    Menunggu Verifikasi Perpanjangan Langganan
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-500 text-white shadow-2xs">
+                    {pendingInvoices.length} Pengajuan
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 mt-0.5">
+                  Outlet telah mengunggah bukti pembayaran via QRIS dan menunggu approval Superadmin untuk memperpanjang masa aktif.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveTab("cashflow")}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold shadow-xs transition cursor-pointer self-start sm:self-auto shrink-0"
+            >
+              <span>Buka Menu Approval</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingInvoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-2xs hover:border-amber-400 transition space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-zinc-900">
+                    #{inv.invoiceNo}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                    {inv.durationMonths} Bulan
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center shrink-0">
+                    <Building2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-zinc-900 text-xs truncate">
+                      {inv.outletName || "Cabang Toko"}
+                    </h4>
+                    <span className="text-[10px] text-zinc-400 block font-mono">
+                      {new Date(inv.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-between text-xs">
+                  <span className="text-zinc-500 text-[11px]">Nominal Bayar:</span>
+                  <span className="font-mono font-black text-emerald-700 text-sm">
+                    Rp {inv.finalAmount.toLocaleString("id-ID")}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-center gap-2">
+                  {inv.paymentProofUrl && (
+                    <a
+                      href={inv.paymentProofUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-1.5 px-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-center text-xs font-semibold inline-flex items-center justify-center gap-1 transition"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Bukti Struk</span>
+                    </a>
+                  )}
+                  <button
+                    onClick={() => setActiveTab("cashflow")}
+                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-center text-xs font-bold inline-flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verifikasi</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SaaS Analytics Visual Charts Grid */}
+      <div className="space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-700" />
+              <span>Analitik Visual & Performa Platform</span>
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Visualisasi tren transaksi jaringan, status lisensi outlet, dan order per cabang
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Chart 1: Tren Omset 7 Hari Terakhir (AreaLineChart) */}
+          <div className="lg:col-span-2">
+            <AreaLineChart
+              title="Tren Omset Jaringan Laundry (7 Hari Terakhir)"
+              subtitle="Total nilai transaksi cucian seluruh cabang toko"
+              data={network7DaysTrend}
+              height={220}
+              currencyPrefix="Rp "
+              color="#2563eb"
+            />
+          </div>
+
+          {/* Chart 2: Status Lisensi Toko (DonutChart) */}
+          <div className="lg:col-span-1">
+            <DonutChart
+              title="Status Lisensi Outlet"
+              subtitle="Komposisi aktif, trial, dan masa kritis"
+              data={licenseDistributionData}
+              centerTitle={`${tenants.length}`}
+              centerSubtitle="Total Toko"
+              size={180}
+            />
+          </div>
+        </div>
+
+        {/* Chart 3: Volume Order per Cabang (BarChart) */}
+        <div className="w-full">
+          <BarChart
+            title="Aktivitas Transaksi per Cabang Toko"
+            subtitle="Volume pesanan laundry yang sedang aktif & diselesaikan di setiap cabang"
+            data={branchActivityData}
+            height={200}
+            barColor="#3b82f6"
+            valueUnit=" Order"
+          />
         </div>
       </div>
 

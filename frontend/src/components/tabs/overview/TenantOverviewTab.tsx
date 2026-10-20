@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -16,12 +16,14 @@ import {
   ShieldCheck,
   Calendar,
   RefreshCw,
+  BarChart3,
 } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { CashflowStats, Order, TabType, Tenant, Role, User, CashierShift } from "../../../types";
 import { useConfirm } from "../../common/ConfirmContext";
 import { formatCurrency } from "../../../utils/formatUtils";
 import { WAStatusData } from "../../../hooks/useWhatsAppGateway";
+import { DonutChart, BarChart, AreaLineChart } from "../../common/Charts";
 
 interface TenantOverviewTabProps {
   stats: CashflowStats;
@@ -116,6 +118,81 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
   };
 
   const isShiftActive = Boolean(currentShift && currentShift.status === "open");
+
+  // 1. Tren Pendapatan 7 Hari Terakhir Toko (AreaLineChart)
+  const owner7DaysTrend = useMemo(() => {
+    const days: { label: string; dateKey: string; value: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      days.push({ label, dateKey, value: 0 });
+    }
+
+    orders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
+      const found = days.find((d) => d.dateKey === oDate);
+      if (found) {
+        found.value += o.totalAmount || 0;
+      }
+    });
+
+    return days.map((d) => ({ label: d.label, value: d.value }));
+  }, [orders]);
+
+  // 2. Komposisi Status Pesanan Cucian (DonutChart)
+  const orderStatusDonutData = useMemo(() => {
+    let pending = 0;
+    let washing = 0;
+    let dryingIroning = 0;
+    let ready = 0;
+    let completed = 0;
+
+    orders.forEach((o) => {
+      if (o.status === "pending") pending++;
+      else if (o.status === "washing") washing++;
+      else if (o.status === "drying_ironing" || o.status === "process") dryingIroning++;
+      else if (o.status === "ready") ready++;
+      else if (o.status === "completed") completed++;
+    });
+
+    const items = [
+      { label: "Antrian / Baru", value: pending, color: "#f59e0b" },
+      { label: "Proses Cuci", value: washing, color: "#0ea5e9" },
+      { label: "Kering & Setrika", value: dryingIroning, color: "#8b5cf6" },
+      { label: "Siap Diambil", value: ready, color: "#10b981" },
+      { label: "Selesai", value: completed, color: "#3b82f6" },
+    ].filter((item) => item.value > 0);
+
+    return items.length > 0 ? items : [{ label: "Belum Ada Pesanan", value: 1, color: "#94a3b8" }];
+  }, [orders]);
+
+  // 3. Volume Order Harian (BarChart)
+  const owner7DaysVolume = useMemo(() => {
+    const days: { label: string; dateKey: string; value: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      days.push({ label, dateKey, value: 0 });
+    }
+
+    orders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
+      const found = days.find((d) => d.dateKey === oDate);
+      if (found) {
+        found.value += 1;
+      }
+    });
+
+    return days.map((d) => ({ label: d.label, value: d.value, color: "#10b981" }));
+  }, [orders]);
 
   // Format subscription info
   const subscriptionText = activeTenant.subscriptionUntil
@@ -233,6 +310,59 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
           <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
             {stats.readyOrdersCount} pesanan siap diambil
           </p>
+        </div>
+      </div>
+
+      {/* SaaS Analytics Visual Charts Grid */}
+      <div className="space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-emerald-600" />
+              <span>Analitik & Performa Toko</span>
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Tren omset harian, komposisi status antrian cucian, dan volume pesanan
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Chart 1: Tren Omset 7 Hari Terakhir (AreaLineChart) */}
+          <div className="lg:col-span-2">
+            <AreaLineChart
+              title="Tren Pendapatan Toko (7 Hari Terakhir)"
+              subtitle="Pergerakan omset harian cucian laundry masuk"
+              data={owner7DaysTrend}
+              height={220}
+              currencyPrefix="Rp "
+              color="#059669"
+            />
+          </div>
+
+          {/* Chart 2: Komposisi Status Pesanan (DonutChart) */}
+          <div className="lg:col-span-1">
+            <DonutChart
+              title="Status Antrian Cucian"
+              subtitle="Sebaran tahapan operasional pakaian"
+              data={orderStatusDonutData}
+              centerTitle={`${orders.length}`}
+              centerSubtitle="Total Order"
+              size={180}
+            />
+          </div>
+        </div>
+
+        {/* Chart 3: Volume Order Harian (BarChart) */}
+        <div className="w-full">
+          <BarChart
+            title="Volume Pesanan Harian (7 Hari Terakhir)"
+            subtitle="Jumlah transaksi nota laundry yang dibuat per hari"
+            data={owner7DaysVolume}
+            height={190}
+            barColor="#10b981"
+            valueUnit=" Nota"
+          />
         </div>
       </div>
 

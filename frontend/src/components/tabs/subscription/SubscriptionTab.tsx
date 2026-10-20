@@ -17,13 +17,16 @@ import {
   QrCode,
   Download,
   ExternalLink,
+  Zap,
 } from "lucide-react";
+import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { api } from "../../../utils/api";
 import { SubscriptionSummary, SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
 import { RenewSubscriptionModal } from "./RenewSubscriptionModal";
 import { UploadPaymentProofModal } from "./UploadPaymentProofModal";
+import { QrisPreviewModal } from "../../modals/QrisPreviewModal";
 
 interface SubscriptionTabProps {
   tenantId?: string;
@@ -39,6 +42,37 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SubscriptionInvoice | null>(null);
+  const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
+  const [downloadingQris, setDownloadingQris] = useState(false);
+
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      const response = await fetch("/qris.png");
+      if (!response.ok) throw new Error("Gagal mengambil file gambar");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "QRIS-Laundry-Cleanique.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success("Gambar QRIS berhasil diunduh.");
+    } catch {
+      const link = document.createElement("a");
+      link.href = "/qris.png";
+      link.download = "QRIS-Laundry-Cleanique.png";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Gambar QRIS dibuka untuk diunduh.");
+    } finally {
+      setTimeout(() => setDownloadingQris(false), 400);
+    }
+  };
 
   // Referral code management state
   const [isEditingReferral, setIsEditingReferral] = useState(false);
@@ -401,22 +435,23 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         </div>
 
         <div className="flex flex-col md:flex-row items-center gap-6">
-          <div className="relative group shrink-0">
-            <div className="p-3 bg-white rounded-2xl border border-emerald-200/90 shadow-md">
+          <div
+            onClick={() => setIsQrisModalOpen(true)}
+            className="relative group shrink-0 cursor-pointer"
+            title="Klik untuk membuka modal QRIS layar penuh"
+          >
+            <div className="p-3 bg-white rounded-2xl border border-emerald-200/90 shadow-md group-hover:border-emerald-500 transition-colors">
               <img
                 src="/qris.png"
                 alt="QRIS Pembayaran Laundry Cleanique"
                 className="w-40 h-40 object-contain rounded-xl"
               />
             </div>
-            <a
-              href="/qris.png"
-              target="_blank"
-              rel="noreferrer"
-              className="absolute inset-0 bg-emerald-950/40 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5"
-            >
-              <ExternalLink className="w-4 h-4" /> Buka Layar Penuh
-            </a>
+            <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 text-center p-2">
+              <QrCode className="w-5 h-5 text-emerald-300" />
+              <span>Buka Modal QRIS</span>
+              <span className="text-[10px] text-emerald-200 font-normal">Klik untuk perbesar</span>
+            </div>
           </div>
 
           <div className="space-y-3 flex-1 min-w-0 text-center md:text-left">
@@ -433,21 +468,32 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
             </p>
 
             <div className="flex flex-wrap gap-2.5 justify-center md:justify-start pt-1">
-              <a
-                href="/qris.png"
-                download="QRIS-Laundry-Cleanique.png"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+              <button
+                type="button"
+                onClick={handleDownloadQris}
+                disabled={downloadingQris}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition cursor-pointer disabled:opacity-70"
               >
-                <Download className="w-3.5 h-3.5" /> Unduh Gambar QRIS
-              </a>
-              <a
-                href="/qris.png"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+                {downloadingQris ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengunduh...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh Gambar QRIS</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsQrisModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold border border-zinc-200 transition cursor-pointer"
               >
-                <ExternalLink className="w-3.5 h-3.5" /> Lihat Layar Penuh
-              </a>
+                <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Buka Modal QRIS (Layar Penuh)</span>
+              </button>
             </div>
 
             <div className="text-[11px] text-zinc-500 bg-zinc-50 p-2.5 rounded-xl border border-zinc-100">
@@ -459,6 +505,46 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
 
       {/* 4. Tabel Riwayat Invoice (Identik dengan Sistem ShadcnDataTable / ReportLedgerTable) */}
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Booster Banner for Pending Invoices */}
+        {invoices.some((i) => i.status === "pending_verification") && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-sky-500/10 border border-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                <Zap className="w-5 h-5 text-amber-300 fill-amber-300" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-zinc-900 text-xs sm:text-sm">
+                    Pengajuan Perpanjangan Sedang Ditinjau Admin
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                    Menunggu Approval
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 mt-0.5">
+                  Ingin masa aktif langsung aktif sekarang tanpa menunggu? Klik tombol Booster untuk verifikasi kilat via WhatsApp Admin.
+                </p>
+              </div>
+            </div>
+            {(() => {
+              const pendingInv = invoices.find((i) => i.status === "pending_verification");
+              return (
+                <a
+                  href={`https://wa.me/6281223406368?text=${encodeURIComponent(
+                    `Halo Admin Cleanique, saya dari outlet *${summary?.outletName || "Cabang"}* ingin konfirmasi pengajuan perpanjangan langganan (Invoice *#${pendingInv?.invoiceNo || "-"}*, Total *Rp ${(pendingInv?.finalAmount || 0).toLocaleString("id-ID")}*). Bukti pembayaran sudah kami unggah. Tolong bantu percepat verifikasi (Booster) ya. Terima kasih!`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-xs transition shrink-0 cursor-pointer"
+                >
+                  <WhatsAppIcon className="w-4 h-4" />
+                  <span>⚡ Booster Chat Admin</span>
+                </a>
+              );
+            })()}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div>
             <h3 className="text-sm font-bold text-zinc-900">
@@ -532,7 +618,23 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                             <span>Unggah Bukti</span>
                           </button>
                         ) : inv.status === "pending_verification" ? (
-                          <span className="text-zinc-400 text-xs italic">Sedang Ditinjau</span>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-amber-700 font-semibold text-[11px] bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                              Menunggu Approval
+                            </span>
+                            <a
+                              href={`https://wa.me/6281223406368?text=${encodeURIComponent(
+                                `Halo Admin Cleanique, saya dari outlet *${inv.outletName || summary?.outletName || "Cabang"}* ingin konfirmasi perpanjangan langganan (Invoice *#${inv.invoiceNo}*, Nominal *Rp ${inv.finalAmount.toLocaleString("id-ID")}*). Bukti sudah di-upload. Tolong dibantu booster aktivasi ya. Terima kasih!`
+                              )}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="h-8 px-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11px] font-bold shadow-2xs transition inline-flex items-center gap-1 cursor-pointer"
+                              title="Booster verifikasi cepat dengan chat WhatsApp Admin"
+                            >
+                              <WhatsAppIcon className="w-3.5 h-3.5" />
+                              <span>⚡ Booster WA</span>
+                            </a>
+                          </div>
                         ) : (
                           <span className="text-emerald-700 font-semibold text-xs">Terverifikasi</span>
                         )}
@@ -559,6 +661,15 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         onClose={() => setIsUploadModalOpen(false)}
         invoice={selectedInvoice}
         onSuccess={fetchData}
+      />
+
+      <QrisPreviewModal
+        isOpen={isQrisModalOpen}
+        onClose={() => setIsQrisModalOpen(false)}
+        qrisUrl="/qris.png"
+        merchantName="LAUNDRY CLEANIQUE"
+        nmid="ID1026618371243"
+        downloadFileName="QRIS-Laundry-Cleanique.png"
       />
     </div>
   );

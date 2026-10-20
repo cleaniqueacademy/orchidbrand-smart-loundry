@@ -52,7 +52,11 @@ export const PlatformSettingsTab: React.FC = () => {
     try {
       const res = await api.get<{ success: boolean; data: PlatformSettings }>("/api/platform-settings");
       if (res.success && res.data) {
-        setFormData(res.data);
+        const sanitized = { ...res.data };
+        if (!sanitized.qrisInfo || sanitized.qrisInfo.includes("qris-official.png")) {
+          sanitized.qrisInfo = "/qris.png";
+        }
+        setFormData(sanitized);
       }
     } catch (err) {
       console.error("Gagal memuat setting:", err);
@@ -194,11 +198,27 @@ export const PlatformSettingsTab: React.FC = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Contoh: https://drive.google.com/file/d/1A2B3C.../view?usp=sharing"
+                placeholder="Contoh: /qris.png atau tautan Google Drive / URL Gambar"
                 value={formData.qrisInfo || ""}
                 onChange={(e) => setFormData({ ...formData, qrisInfo: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, qrisInfo: "/qris.png" }))}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition cursor-pointer shadow-2xs"
+              >
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Gunakan QRIS Statis Bawaan (/qris.png)</span>
+              </button>
+              {formData.qrisInfo === "/qris.png" && (
+                <span className="text-xs font-medium text-emerald-700 flex items-center gap-1 bg-emerald-50/60 px-2 py-1 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Aktif memakai QRIS Bawaan Sistem
+                </span>
+              )}
             </div>
 
             {/* Live Preview QRIS Box */}
@@ -210,7 +230,7 @@ export const PlatformSettingsTab: React.FC = () => {
                     Preview Live QRIS untuk Tenant
                   </span>
                   <a
-                    href={getDirectImageUrl(formData.qrisInfo)}
+                    href={formData.qrisInfo === "/qris.png" ? "/qris.png" : getDirectImageUrl(formData.qrisInfo)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline"
@@ -223,14 +243,20 @@ export const PlatformSettingsTab: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-4 bg-white dark:bg-slate-900/80 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
                   <div className="relative w-36 h-36 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex items-center justify-center p-2 shadow-inner shrink-0">
                     <img
-                      src={getDirectImageUrl(formData.qrisInfo)}
+                      src={formData.qrisInfo === "/qris.png" ? "/qris.png" : getDirectImageUrl(formData.qrisInfo)}
                       alt="Preview QRIS"
                       className="w-full h-full object-contain rounded-lg"
                       onError={(e) => {
                         const target = e.currentTarget;
-                        const fallback = getFallbackDriveThumbnailUrl(formData.qrisInfo || "");
-                        if (target.src !== fallback) {
-                          target.src = fallback;
+                        if (isGoogleDriveUrl(formData.qrisInfo || "")) {
+                          const fallback = getFallbackDriveThumbnailUrl(formData.qrisInfo || "");
+                          if (target.src !== fallback) {
+                            target.src = fallback;
+                            return;
+                          }
+                        }
+                        if (target.src !== window.location.origin + "/qris.png") {
+                          target.src = "/qris.png";
                         }
                       }}
                     />

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, Upload, AlertCircle, Loader2 } from "lucide-react";
+import { X, Upload, AlertCircle, Loader2, Zap } from "lucide-react";
+import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { api } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
 
@@ -164,11 +165,11 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2.5">
+          <div className="pt-2 flex items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
             >
               Batal
             </button>
@@ -180,6 +181,27 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
               {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Kirim Bukti Pembayaran</span>
             </button>
+          </div>
+
+          {/* Booster WhatsApp Button */}
+          <div className="pt-3 border-t border-zinc-100 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-zinc-500">
+              <span>Ingin aktivasi instan tanpa menunggu?</span>
+              <span className="font-bold text-emerald-600 flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Booster Prioritas
+              </span>
+            </div>
+            <a
+              href={`https://wa.me/6281223406368?text=${encodeURIComponent(
+                `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan outlet:\n• No. Invoice: *#${invoice.invoiceNo}*\n• Outlet: *${invoice.outletName || "Cabang"}*\n• Total: *Rp ${invoice.finalAmount.toLocaleString("id-ID")}*\n• Durasi: *${invoice.durationMonths} Bulan*\n\nBukti transfer sudah saya upload. Tolong dibantu percepat approval (Booster) ya. Terima kasih!`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl py-2.5 font-bold text-xs shadow-xs transition cursor-pointer"
+            >
+              <WhatsAppIcon className="w-4 h-4" />
+              <span>⚡ Booster Chat WhatsApp Admin</span>
+            </a>
           </div>
         </form>
       </div>

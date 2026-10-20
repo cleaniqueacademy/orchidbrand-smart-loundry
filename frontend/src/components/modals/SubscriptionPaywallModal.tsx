@@ -22,6 +22,7 @@ import {
 import { User, AccountTier } from "../../types";
 import { useToast } from "../common/ToastContext";
 import { authHeaders } from "../../utils/api";
+import { QrisPreviewModal } from "./QrisPreviewModal";
 
 interface SubscriptionPaywallModalProps {
   isOpen: boolean;
@@ -50,6 +51,36 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
   const [checkingReferral, setCheckingReferral] = useState<boolean>(false);
   const [referralMessage, setReferralMessage] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState<boolean>(false);
+  const [isQrisModalOpen, setIsQrisModalOpen] = useState<boolean>(false);
+  const [downloadingQris, setDownloadingQris] = useState<boolean>(false);
+
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      const response = await fetch("/qris.png");
+      if (!response.ok) throw new Error("Gagal mengambil file gambar");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "QRIS-Laundry-Cleanique.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success("Gambar QRIS berhasil diunduh.");
+    } catch {
+      const link = document.createElement("a");
+      link.href = "/qris.png";
+      link.download = "QRIS-Laundry-Cleanique.png";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setTimeout(() => setDownloadingQris(false), 400);
+    }
+  };
 
   if (!isOpen || !user) return null;
 
@@ -375,12 +406,20 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
                 <span className="font-mono text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">NMID: ID1026618371243</span>
               </div>
 
-              <div className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 flex flex-col items-center justify-center">
+              <div
+                onClick={() => setIsQrisModalOpen(true)}
+                className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 flex flex-col items-center justify-center cursor-pointer group relative hover:border-emerald-500 transition-colors"
+                title="Klik untuk membuka QRIS layar penuh"
+              >
                 <img
                   src="/qris.png"
                   alt="QRIS Pembayaran Laundry Cleanique"
                   className="w-full h-auto object-contain rounded-xl"
                 />
+                <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 text-center p-2">
+                  <QrCode className="w-5 h-5 text-emerald-300" />
+                  <span>Perbesar QRIS</span>
+                </div>
               </div>
 
               <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 text-xs">
@@ -394,25 +433,23 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
               </div>
 
               <div className="flex justify-center gap-2 pt-1">
-                <a
-                  href="/qris.png"
-                  download="QRIS_Cleanique.png"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
+                <button
+                  type="button"
+                  onClick={handleDownloadQris}
+                  disabled={downloadingQris}
+                  className="px-3.5 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs disabled:opacity-60"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Unduh QRIS</span>
-                </a>
-                <a
-                  href="/qris.png"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
+                  <span>{downloadingQris ? "Mengunduh..." : "Unduh QRIS"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsQrisModalOpen(true)}
+                  className="px-3.5 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <QrCode className="w-3.5 h-3.5" />
                   <span>Buka Layar Penuh</span>
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -464,6 +501,16 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
           Laundry Cleanique • Sistem Manajemen Laundry Multi-Cabang Modern
         </div>
       </div>
+
+      <QrisPreviewModal
+        isOpen={isQrisModalOpen}
+        onClose={() => setIsQrisModalOpen(false)}
+        qrisUrl="/qris.png"
+        merchantName="LAUNDRY CLEANIQUE"
+        nmid="ID1026618371243"
+        amount={totalAmount}
+        downloadFileName="QRIS-Laundry-Cleanique.png"
+      />
     </div>
   );
 };
