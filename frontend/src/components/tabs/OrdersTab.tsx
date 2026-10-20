@@ -27,6 +27,7 @@ import {
 } from "../common/ShadcnDataTable";
 import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
 import { DonutChart, BarChart, StatProgressBar } from "../common/Charts";
+import { DashboardPeriod, generateVolumeData } from "../../utils/dashboardPeriodUtils";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -107,29 +108,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     ].filter((item) => item.value > 0);
   }, [orders]);
 
-  // Daily order volume for the week
-  const cashier7DaysVolume = useMemo(() => {
-    const days: { label: string; dateKey: string; value: number }[] = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-      days.push({ label, dateKey, value: 0 });
-    }
+  const [chartPeriod, setChartPeriod] = useState<DashboardPeriod>("7d");
 
-    orders.forEach((o) => {
-      if (o.status === "cancelled") return;
-      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
-      const found = days.find((d) => d.dateKey === oDate);
-      if (found) {
-        found.value += 1;
-      }
+  // Dynamic order volume based on selected period
+  const cashierVolume = useMemo(() => {
+    return generateVolumeData(orders, chartPeriod, {
+      tenantId: tenantFilter !== "all" ? tenantFilter : undefined,
+      defaultColor: "#2563eb",
     });
-
-    return days.map((d) => ({ label: d.label, value: d.value, color: "#2563eb" }));
-  }, [orders]);
+  }, [orders, chartPeriod, tenantFilter]);
 
   const isOrderOverdue = (order: Order) =>
     order.status === "ready" &&
@@ -661,12 +648,49 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 size={170}
               />
               <BarChart
-                title="Penerimaan Nota Harian (7 Hari)"
-                subtitle="Aktivitas order masuk kasir per hari"
-                data={cashier7DaysVolume}
+                title={`Penerimaan Nota (${chartPeriod === "7d" ? "7 Hari" : chartPeriod === "30d" ? "30 Hari" : "Bulan Ini"})`}
+                subtitle={`Aktivitas nota masuk (${cashierVolume.totalOrders} total transaksi)`}
+                data={cashierVolume.chartData}
                 height={170}
                 barColor="#2563eb"
                 valueUnit=" Nota"
+                actionSlot={
+                  <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg text-[10px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setChartPeriod("7d")}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        chartPeriod === "7d"
+                          ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      7 Hari
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartPeriod("30d")}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        chartPeriod === "30d"
+                          ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      30 Hari
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartPeriod("this_month")}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        chartPeriod === "this_month"
+                          ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      Bulan Ini
+                    </button>
+                  </div>
+                }
               />
             </div>
           )}

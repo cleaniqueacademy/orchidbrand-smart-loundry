@@ -11,12 +11,12 @@ import {
   Calculator,
   Clock,
   AlertTriangle,
-  Users,
   Settings,
   ShieldCheck,
   Calendar,
   RefreshCw,
   BarChart3,
+  RotateCcw,
 } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { CashflowStats, Order, TabType, Tenant, Role, User, CashierShift } from "../../../types";
@@ -24,6 +24,12 @@ import { useConfirm } from "../../common/ConfirmContext";
 import { formatCurrency } from "../../../utils/formatUtils";
 import { WAStatusData } from "../../../hooks/useWhatsAppGateway";
 import { DonutChart, BarChart, AreaLineChart } from "../../common/Charts";
+import {
+  DashboardPeriod,
+  PERIOD_OPTIONS,
+  generateTrendData,
+  generateVolumeData,
+} from "../../../utils/dashboardPeriodUtils";
 
 interface TenantOverviewTabProps {
   stats: CashflowStats;
@@ -66,6 +72,9 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
 }) => {
   const confirm = useConfirm();
   const [sendingWaId, setSendingWaId] = useState<string | null>(null);
+
+  // Period filter state (no longer limited to weekly!)
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("7d");
 
   const activeTenant =
     tenants.find((t) => t.id === tenantId) ||
@@ -119,29 +128,12 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
 
   const isShiftActive = Boolean(currentShift && currentShift.status === "open");
 
-  // 1. Tren Pendapatan 7 Hari Terakhir Toko (AreaLineChart)
-  const owner7DaysTrend = useMemo(() => {
-    const days: { label: string; dateKey: string; value: number }[] = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-      days.push({ label, dateKey, value: 0 });
-    }
-
-    orders.forEach((o) => {
-      if (o.status === "cancelled") return;
-      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
-      const found = days.find((d) => d.dateKey === oDate);
-      if (found) {
-        found.value += o.totalAmount || 0;
-      }
+  // 1. Tren Pendapatan Toko (Dynamic Period)
+  const ownerTrend = useMemo(() => {
+    return generateTrendData(orders, selectedPeriod, {
+      tenantId: activeTenant.id,
     });
-
-    return days.map((d) => ({ label: d.label, value: d.value }));
-  }, [orders]);
+  }, [orders, selectedPeriod, activeTenant.id]);
 
   // 2. Komposisi Status Pesanan Cucian (DonutChart)
   const orderStatusDonutData = useMemo(() => {
@@ -170,29 +162,13 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
     return items.length > 0 ? items : [{ label: "Belum Ada Pesanan", value: 1, color: "#94a3b8" }];
   }, [orders]);
 
-  // 3. Volume Order Harian (BarChart)
-  const owner7DaysVolume = useMemo(() => {
-    const days: { label: string; dateKey: string; value: number }[] = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-      days.push({ label, dateKey, value: 0 });
-    }
-
-    orders.forEach((o) => {
-      if (o.status === "cancelled") return;
-      const oDate = new Date(o.createdAt).toISOString().split("T")[0];
-      const found = days.find((d) => d.dateKey === oDate);
-      if (found) {
-        found.value += 1;
-      }
+  // 3. Volume Order Harian (Dynamic Period)
+  const ownerVolume = useMemo(() => {
+    return generateVolumeData(orders, selectedPeriod, {
+      tenantId: activeTenant.id,
+      defaultColor: "#10b981",
     });
-
-    return days.map((d) => ({ label: d.label, value: d.value, color: "#10b981" }));
-  }, [orders]);
+  }, [orders, selectedPeriod, activeTenant.id]);
 
   // Format subscription info
   const subscriptionText = activeTenant.subscriptionUntil
@@ -204,7 +180,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
     : "Aktif";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header Dashboard Tenant Owner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
@@ -229,14 +205,14 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenOrderModal}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Order Baru</span>
           </button>
           <button
             onClick={onOpenExpenseModal}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <DollarSign className="w-3.5 h-3.5 text-zinc-500" />
             <span>Catat Biaya</span>
@@ -244,51 +220,96 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         </div>
       </div>
 
-      {/* 4 Financial & Operational KPI Cards */}
+      {/* Modern Dashboard Filter Toolbar */}
+      <div className="bg-white rounded-2xl border border-zinc-200/90 p-3 sm:p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 mr-2 text-xs font-bold text-zinc-500 shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Periode:</span>
+          </div>
+          {PERIOD_OPTIONS.map((opt) => {
+            const isSelected = selectedPeriod === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedPeriod(opt.value)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
+                  isSelected
+                    ? "bg-emerald-700 text-white shadow-xs font-bold"
+                    : "bg-zinc-100/80 hover:bg-zinc-200/70 text-zinc-700 hover:text-zinc-900"
+                }`}
+              >
+                {opt.shortLabel}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+          {selectedPeriod !== "7d" && (
+            <button
+              onClick={() => setSelectedPeriod("7d")}
+              title="Reset ke default (7 Hari)"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-semibold transition cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 bg-zinc-50 px-2.5 py-1 rounded-xl border border-zinc-200/70">
+            <span>📅 {ownerTrend.dateRangeText}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Financial & Operational KPI Cards (Polished & Harmonious) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Pemasukan */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
-          <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-            <span>Pemasukan</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 via-white to-white p-4 sm:p-5 shadow-2xs hover:shadow-xs hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-xs text-emerald-900 font-bold">
+            <span>Pemasukan Toko</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-emerald-950 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-black text-zinc-900 tracking-tight font-mono">
             Rp {stats.totalIncome.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
+          <p className="text-[11px] text-emerald-700 font-medium mt-1 truncate">
             Belum lunas: Rp {stats.pendingPaymentAmount.toLocaleString("id-ID")}
           </p>
         </div>
 
         {/* Pengeluaran */}
-        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/90 via-pink-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-rose-300 transition">
-          <div className="flex items-center justify-between text-xs text-rose-800 font-semibold">
-            <span>Pengeluaran</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/80 via-white to-white p-4 sm:p-5 shadow-2xs hover:shadow-xs hover:border-rose-300 transition">
+          <div className="flex items-center justify-between text-xs text-rose-900 font-bold">
+            <span>Pengeluaran Toko</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-rose-950 tracking-tight">
+          <div className="mt-2.5 text-xl sm:text-2xl font-black text-zinc-900 tracking-tight font-mono">
             Rp {stats.totalExpense.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
-            Biaya operasional toko
+          <p className="text-[11px] text-rose-700 font-medium mt-1 truncate">
+            Biaya operasional outlet
           </p>
         </div>
 
         {/* Laba Bersih */}
-        <div className="rounded-2xl border border-blue-300 bg-gradient-to-br from-blue-50 via-sky-50/70 to-indigo-50/30 p-4 sm:p-5 shadow-xs relative overflow-hidden group hover:border-blue-400 transition">
-          <div className="flex items-center justify-between text-xs text-blue-800 font-bold">
+        <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-50/80 via-white to-white p-4 sm:p-5 shadow-2xs hover:shadow-xs hover:border-blue-300 transition">
+          <div className="flex items-center justify-between text-xs text-blue-900 font-bold">
             <span>Laba Bersih</span>
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className={`mt-2.5 text-xl sm:text-2xl font-bold tracking-tight ${
-            stats.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"
-          }`}>
+          <div
+            className={`mt-2.5 text-xl sm:text-2xl font-black tracking-tight font-mono ${
+              stats.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"
+            }`}
+          >
             {formatCurrency(stats.netProfit)}
           </div>
           <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
@@ -297,46 +318,54 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         </div>
 
         {/* Cucian Aktif */}
-        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
-          <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-4 sm:p-5 shadow-2xs hover:shadow-xs hover:border-amber-300 transition">
+          <div className="flex items-center justify-between text-xs text-amber-900 font-bold">
             <span>Dalam Proses</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
               <Waves className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5 text-xl sm:text-2xl font-bold text-amber-950 tracking-tight">
-            {stats.activeOrdersCount} <span className="text-xs font-semibold text-amber-700">Order</span>
+          <div className="mt-2.5 text-xl sm:text-2xl font-black text-zinc-900 tracking-tight font-mono">
+            {stats.activeOrdersCount} <span className="text-xs font-semibold text-amber-700 font-sans">Order</span>
           </div>
-          <p className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
+          <p className="text-[11px] text-amber-700 font-medium mt-1 truncate">
             {stats.readyOrdersCount} pesanan siap diambil
           </p>
         </div>
       </div>
 
       {/* SaaS Analytics Visual Charts Grid */}
-      <div className="space-y-3.5">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-emerald-600" />
               <span>Analitik & Performa Toko</span>
             </h2>
             <p className="text-xs text-zinc-500">
-              Tren omset harian, komposisi status antrian cucian, dan volume pesanan
+              Tren omset pendapatan ({ownerTrend.periodLabel}), komposisi status antrian cucian, dan volume pesanan
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Chart 1: Tren Omset 7 Hari Terakhir (AreaLineChart) */}
+          {/* Chart 1: Tren Omset (AreaLineChart) */}
           <div className="lg:col-span-2">
             <AreaLineChart
-              title="Tren Pendapatan Toko (7 Hari Terakhir)"
-              subtitle="Pergerakan omset harian cucian laundry masuk"
-              data={owner7DaysTrend}
-              height={220}
+              title={`Tren Pendapatan Toko (${ownerTrend.periodLabel})`}
+              subtitle="Pergerakan omset cucian laundry masuk"
+              data={ownerTrend.chartData}
+              height={230}
               currencyPrefix="Rp "
               color="#059669"
+              summaryMetrics={{
+                totalLabel: `Total Omset (${ownerTrend.periodLabel})`,
+                totalValue: ownerTrend.totalOmset,
+                avgLabel: "Rata-rata",
+                avgValue: ownerTrend.averageOmset,
+                peakLabel: ownerTrend.peakPoint ? `Puncak (${ownerTrend.peakPoint.label})` : "Puncak",
+                peakValue: ownerTrend.peakPoint ? ownerTrend.peakPoint.value : 0,
+              }}
             />
           </div>
 
@@ -353,12 +382,12 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
           </div>
         </div>
 
-        {/* Chart 3: Volume Order Harian (BarChart) */}
+        {/* Chart 3: Volume Order (BarChart) */}
         <div className="w-full">
           <BarChart
-            title="Volume Pesanan Harian (7 Hari Terakhir)"
-            subtitle="Jumlah transaksi nota laundry yang dibuat per hari"
-            data={owner7DaysVolume}
+            title={`Volume Pesanan (${ownerTrend.periodLabel})`}
+            subtitle={`Jumlah transaksi nota laundry yang dibuat per waktu (${ownerVolume.totalOrders} total nota)`}
+            data={ownerVolume.chartData}
             height={190}
             barColor="#10b981"
             valueUnit=" Nota"
@@ -371,9 +400,11 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-zinc-100 gap-2">
             <div className="flex items-center gap-2.5">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs ${
-                isShiftActive ? "bg-emerald-600 text-white" : "bg-zinc-100 text-zinc-500"
-              }`}>
+              <div
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs ${
+                  isShiftActive ? "bg-emerald-600 text-white" : "bg-zinc-100 text-zinc-500"
+                }`}
+              >
                 <Calculator className="w-4 h-4" />
               </div>
               <div>
@@ -381,11 +412,13 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                   <h3 className="font-semibold text-zinc-900 text-sm">
                     Pengawasan Kas Laci & Shift Kasir
                   </h3>
-                  <span className={`text-[10px] font-bold px-2 py-0.2 rounded-md ${
-                    isShiftActive
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                      : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                  }`}>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.2 rounded-md ${
+                      isShiftActive
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                    }`}
+                  >
                     {isShiftActive ? "Kasir Bertugas" : "Shift Belum Buka"}
                   </span>
                 </div>
@@ -412,7 +445,11 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                   {currentShift?.cashierName || "Kasir"}
                 </span>
                 <span className="text-[10px] text-zinc-400 block mt-0.5">
-                  Buka: {new Date(currentShift!.openedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                  Buka:{" "}
+                  {new Date(currentShift!.openedAt).toLocaleTimeString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
 
@@ -538,7 +575,7 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                         {order.invoiceNo}
                       </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 mt-1 ml-3.5">
+                    <p className="text-[11px] text-zinc-500 mt-1">
                       {order.serviceType} ({order.weightOrQty} {order.unit})
                       {" · "}
                       <span className="font-bold text-zinc-900 font-mono">
@@ -630,11 +667,13 @@ export const TenantOverviewTab: React.FC<TenantOverviewTabProps> = ({
                 <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                 <span className="text-xs font-medium text-zinc-700">WhatsApp Gateway</span>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 inline-flex items-center ${
-                waData?.status === "connected"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-zinc-200 text-zinc-600"
-              }`}>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 inline-flex items-center ${
+                  waData?.status === "connected"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-zinc-200 text-zinc-600"
+                }`}
+              >
                 {waData?.status === "connected" ? "Terhubung" : "Mode Manual / Putus"}
               </span>
             </div>
