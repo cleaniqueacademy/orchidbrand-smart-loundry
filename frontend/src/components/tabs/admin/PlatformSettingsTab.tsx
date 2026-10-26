@@ -17,8 +17,9 @@ import {
   Image as ImageIcon,
   Check,
   Maximize2,
+  Upload,
 } from "lucide-react";
-import { api } from "../../../utils/api";
+import { api, uploadFile } from "../../../utils/api";
 import { PlatformSettings } from "../../../types";
 import { QrisPreviewModal } from "../../modals/QrisPreviewModal";
 import {
@@ -49,6 +50,32 @@ export const PlatformSettingsTab: React.FC = () => {
     null
   );
   const [isQrisPreviewOpen, setIsQrisPreviewOpen] = useState(false);
+  const [uploadingQris, setUploadingQris] = useState(false);
+
+  const handleQrisUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMsg({ type: "error", text: "Ukuran gambar QRIS maksimal 5 MB." });
+      return;
+    }
+
+    setUploadingQris(true);
+    try {
+      const res = await uploadFile(file, "qris");
+      if (res.success && res.data?.url) {
+        setFormData((prev) => ({ ...prev, qrisInfo: res.data!.url }));
+        setStatusMsg({ type: "success", text: "Foto QRIS platform berhasil diunggah." });
+      } else {
+        setStatusMsg({ type: "error", text: res.message || "Gagal mengunggah QRIS." });
+      }
+    } catch (err: any) {
+      setStatusMsg({ type: "error", text: err.message || "Terjadi kesalahan saat mengunggah QRIS." });
+    } finally {
+      setUploadingQris(false);
+    }
+  };
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -209,6 +236,27 @@ export const PlatformSettingsTab: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition cursor-pointer shadow-2xs">
+                {uploadingQris ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengunggah...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Upload Foto QRIS Baru</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQrisUpload}
+                  disabled={uploadingQris}
+                  className="hidden"
+                />
+              </label>
+
               <button
                 type="button"
                 onClick={() => setFormData((prev) => ({ ...prev, qrisInfo: "/qris.png" }))}

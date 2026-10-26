@@ -27,6 +27,9 @@ import planRoutes from "./routes/plans";
 import platformSettingsRoutes from "./routes/platformSettings";
 import subscriptionRoutes from "./routes/subscription";
 import platformCashflowRoutes from "./routes/platformCashflow";
+import uploadRoutes from "./routes/upload";
+import { getUploadsBaseDir } from "./services/storageService";
+import path from "path";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
 import { DEFAULT_PRESET_SERVICES } from "./constants/services";
 import { askLaundryAssistant } from "./services/aiService";
@@ -72,6 +75,25 @@ app.route("/api/platform-settings", platformSettingsRoutes);
 app.route("/api/subscription", subscriptionRoutes);
 // Platform Cashflow & Operations Routes
 app.route("/api/platform/cashflow", platformCashflowRoutes);
+// Local File Storage Upload Routes
+app.route("/api/upload", uploadRoutes);
+
+// Static Local Storage File Serving
+app.get("/uploads/*", async (c) => {
+  const baseDir = getUploadsBaseDir();
+  const relativePath = c.req.path.replace(/^\/uploads\//, "");
+  const resolvedPath = path.resolve(baseDir, relativePath);
+
+  if (!resolvedPath.startsWith(baseDir)) {
+    return c.text("Forbidden", 403);
+  }
+
+  const file = Bun.file(resolvedPath);
+  if (!(await file.exists())) {
+    return c.text("File tidak ditemukan", 404);
+  }
+  return new Response(file);
+});
 
 // 1. Health check
 app.get("/api/health", (c) => {

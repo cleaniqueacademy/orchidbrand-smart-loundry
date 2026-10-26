@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utility untuk komunikasi API dan autentikasi token Bearer
  */
 
@@ -111,4 +111,30 @@ export const api = {
     return res.json();
   },
 };
+
+export interface UploadResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    url: string;
+    filename: string;
+    category: string;
+    size: number;
+    mimeType: string;
+  };
+}
+
+/**
+ * Helper untuk mengunggah file ke backend Local Storage (/api/upload)
+ */
+export async function uploadFile(
+  file: File,
+  category: "payments" | "qris" | "logos" | "general" = "general"
+): Promise<UploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+
+  return api.post<UploadResponse>("/api/upload", formData);
+}
 

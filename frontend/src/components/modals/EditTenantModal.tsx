@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { X, Building2, CreditCard, Clock, Save } from "lucide-react";
+import { X, Building2, CreditCard, Clock, Save, Upload, Loader2, Image as ImageIcon } from "lucide-react";
 import { useToast } from "../common/ToastContext";
 import { ModalWrapper } from "../common/ModalWrapper";
 import { Tenant } from "../../types";
+import { uploadFile } from "../../utils/api";
 
 const BANK_OPTIONS = ["BCA", "Mandiri", "BRI", "BNI", "BSI", "CIMB Niaga", "Permata", "Danamon", "Mega", "BTN", "Lainnya"];
 
@@ -62,6 +63,32 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
   const [hoursSaturday, setHoursSaturday] = useState("08:00 - 13:00");
   const [hoursSunday, setHoursSunday] = useState("Tutup");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingQris, setUploadingQris] = useState(false);
+
+  const handleQrisUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran gambar QRIS maksimal 5 MB.");
+      return;
+    }
+
+    setUploadingQris(true);
+    try {
+      const res = await uploadFile(file, "qris");
+      if (res.success && res.data?.url) {
+        setQrisInfo(res.data.url);
+        toast.success("Gambar QRIS berhasil diunggah.");
+      } else {
+        toast.error(res.message || "Gagal mengunggah gambar QRIS.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Terjadi kesalahan saat mengunggah QRIS.");
+    } finally {
+      setUploadingQris(false);
+    }
+  };
 
   // Populate form saat tenant berubah
   useEffect(() => {
@@ -252,16 +279,51 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Info QRIS <span className="text-slate-400 font-normal">(opsional)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Nomor QRIS atau keterangan"
-                value={qrisInfo}
-                onChange={(e) => setQrisInfo(e.target.value)}
-                className={inputClass}
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-800">
+                  Info / Gambar QRIS <span className="text-slate-400 font-normal">(opsional)</span>
+                </label>
+                <label className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer">
+                  {uploadingQris ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Mengunggah...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3 h-3" />
+                      <span>Upload Foto QRIS</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleQrisUpload}
+                    disabled={uploadingQris}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  placeholder="Nomor QRIS, tautan gambar, atau upload foto QRIS"
+                  value={qrisInfo}
+                  onChange={(e) => setQrisInfo(e.target.value)}
+                  className={inputClass}
+                />
+                {qrisInfo && (qrisInfo.startsWith("/uploads/") || qrisInfo.startsWith("http")) && (
+                  <a
+                    href={qrisInfo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+                    title="Pratinjau QRIS"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 

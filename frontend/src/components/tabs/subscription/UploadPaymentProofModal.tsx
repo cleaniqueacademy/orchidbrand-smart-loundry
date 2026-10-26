@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, Upload, AlertCircle, Loader2, Zap } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
-import { api } from "../../../utils/api";
+import { api, uploadFile } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
 
 interface UploadPaymentProofModalProps {
@@ -17,7 +17,8 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
   invoice,
   onSuccess,
 }) => {
-  const [proofUrl, setProofUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [manualUrl, setManualUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -33,19 +34,15 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setProofUrl(base64);
-      setPreviewUrl(base64);
-      setErrorMsg(null);
-    };
-    reader.readAsDataURL(file);
+    setSelectedFile(file);
+    const objUrl = URL.createObjectURL(file);
+    setPreviewUrl(objUrl);
+    setErrorMsg(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!proofUrl.trim()) {
+    if (!selectedFile && !manualUrl.trim()) {
       setErrorMsg("Harap pilih foto bukti transfer atau masukkan tautan bukti.");
       return;
     }
@@ -54,9 +51,19 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
     setErrorMsg(null);
 
     try {
+      let finalProofUrl = manualUrl.trim();
+
+      if (selectedFile) {
+        const uploadRes = await uploadFile(selectedFile, "payments");
+        if (!uploadRes.success || !uploadRes.data?.url) {
+          throw new Error(uploadRes.message || "Gagal mengunggah file ke server.");
+        }
+        finalProofUrl = uploadRes.data.url;
+      }
+
       const res = await api.post<{ success: boolean; message?: string }>(
         `/api/subscription/invoices/${invoice.id}/proof`,
-        { proofUrl }
+        { proofUrl: finalProofUrl }
       );
 
       if (res.success) {
@@ -119,7 +126,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
                     type="button"
                     onClick={() => {
                       setPreviewUrl(null);
-                      setProofUrl("");
+                      setSelectedFile(null);
                     }}
                     className="text-xs text-rose-600 hover:text-rose-700 hover:underline font-semibold cursor-pointer"
                   >
@@ -139,7 +146,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
                   </span>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -156,10 +163,12 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
             <input
               type="url"
               placeholder="https://..."
-              value={proofUrl.startsWith("data:") ? "" : proofUrl}
+              value={manualUrl}
               onChange={(e) => {
-                setProofUrl(e.target.value);
-                setPreviewUrl(e.target.value || null);
+                setManualUrl(e.target.value);
+                if (!selectedFile) {
+                  setPreviewUrl(e.target.value || null);
+                }
               }}
               className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
             />

@@ -31,8 +31,9 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - AIVENE_API_KEY=${AIVENE_API_KEY:-}
     volumes:
-      # Sesi WhatsApp Baileys wajib persisten agar tidak minta scan QR ulang saat restart
+      # Sesi WhatsApp Baileys & Uploads wajib persisten agar tidak hilang saat restart
       - cleanique_wa_sessions:/app/auth_info_baileys
+      - cleanique_uploads_data:/app/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +58,8 @@ volumes:
   cleanique_postgres_data:
     driver: local
   cleanique_wa_sessions:
+    driver: local
+  cleanique_uploads_data:
     driver: local
 
 networks:
