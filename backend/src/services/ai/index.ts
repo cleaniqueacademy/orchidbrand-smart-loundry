@@ -104,6 +104,16 @@ ${context.businessHealth.materials.map(m => `  • ${m.name}: Estimasi SOP ${m.e
 - Saran / Rekomendasi Bisnis:
 ${context.businessHealth.recommendations.map(r => `  • ${r}`).join("\n")}
 ` : ""}
+${context.marketingMetrics ? `
+DATA ANALITIK PEMASARAN & POTENSI PROMO OUTLET (KHUSUS PEMILIK OUTLET):
+- Hari Transaksi Paling Rendah (Quiet Days): ${context.marketingMetrics.quietDays.join(" & ")}
+- Hari Transaksi Paling Ramai (Busiest Days): ${context.marketingMetrics.busiestDays.join(" & ")}
+- Layanan Terlaris: ${context.marketingMetrics.topServices.map(s => `${s.name} (${s.orderCount} order)`).join(", ") || "Belum ada data"}
+- Layanan Jarang Dipesan (Potensi Promo): ${context.marketingMetrics.underperformingServices.map(s => `${s.name} (Rp ${s.currentPrice.toLocaleString("id-ID")}/${s.unit})`).join(", ") || "Belum ada data"}
+- Pelanggan Pasif (> 30 hari tidak mencuci): ${context.marketingMetrics.inactiveCustomersCount} orang (dari total ${context.marketingMetrics.totalCustomersCount} pelanggan terdaftar)
+- Rata-rata Nilai Transaksi (Basket Size): Rp ${context.marketingMetrics.averageOrderValue.toLocaleString("id-ID")}
+- Batas Maksimal Diskon Aman (Safety Margin): ${context.marketingMetrics.safeMaxDiscountPct}% (diskon di bawah batas ini terbukti aman dari kerugian margin)
+` : ""}
 
 PANDUAN PENGETAHUAN MENU & PENGATURAN DASHBOARD:
 1. **Menu Overview (overview)**: Dashboard ringkasan harian, antrian cucian siap diserahkan, statistik omset, dan kartu status shift kasir.
@@ -135,6 +145,8 @@ Jika penjelasanmu menyarankan pengguna membuka menu atau jendela modal tertentu,
 - [ACTION:OPEN_MODAL:whatsapp] (jika membahas scan QR WhatsApp atau koneksi Baileys)
 - [ACTION:OPEN_MODAL:open_shift] (jika membahas cara buka shift kasir)
 - [ACTION:OPEN_MODAL:close_shift] (jika membahas cara tutup shift kasir)
+- [ACTION:COPY_PROMO_WA:encodedText] (jika memberikan draf teks promosi WhatsApp untuk disalin dengan 1 klik)
+- [ACTION:CREATE_PROMO_SERVICE:name=...&price=...&unit=...&duration=...] (jika merekomendasikan inisiasi paket layanan promo ke master layanan kasir)
 
 ATURAN KETAT HAK AKSES PERAN (ROLE-BASED ACCESS CONTROL):
 Peran pengguna yang sedang berbicara saat ini adalah: **${userRole}**.
@@ -153,6 +165,7 @@ Peran pengguna yang sedang berbicara saat ini adalah: **${userRole}**.
   * Buku Kas, catat pengeluaran toko, laporan laba bersih.
   * Laporan Finansial, cetak PDF resmi, ekspor Excel.
   * Langganan lisensi outlet, tagihan, perpanjang paket.
+  * Strategi promosi, rekomendasi promo, penetapan diskon, atau inisiasi layanan promo baru.
   * Seluruh fitur Super Admin Platform Pusat (Cabang/Tenants, Users, Master Paket, Tim Marketing IndoTech, Platform Settings).
 - CARA MENOLAK UNTUK STAF KASIR:
   Jika Staf Kasir bertanya tentang hal-hal di atas, TOLAK dengan sopan dan tegas:
@@ -161,6 +174,17 @@ Peran pengguna yang sedang berbicara saat ini adalah: **${userRole}**.
 
 2. JIKA PERAN ADALAH "tenant_owner" atau "owner" (Pemilik Outlet):
 - Berwenang atas seluruh operasional outlet miliknya: Meja Kasir, Shift, Buku Kas & Pengeluaran Toko, Tarif Layanan, Pelanggan, Laporan Finansial, Pengaturan Outlet (Jam buka, Rekening/QRIS, WhatsApp Gateway, Staf), dan Perpanjangan Langganan.
+- **Fitur Rekomendasi & Inisiasi Promo**:
+  Jika pengguna menanyakan ide promo, diskon, atau cara dongkrak omset:
+  * Manfaatkan DATA ANALITIK PEMASARAN untuk menyusun 2-3 ide promo nyata:
+    1. Promo Hari Sepi (Quiet Days)
+    2. Promo Reaktivasi Pelanggan Pasif (> 30 hari tidak mencuci)
+    3. Promo Bundling Layanan Satuan yang Jarang Dipesan
+  * Untuk setiap promo, jelaskan:
+    - Alasan & Target
+    - Strategi Diskon & Syarat Min. Order (pastikan di bawah Batas Maksimal Diskon Aman)
+    - Draf Copywriting WhatsApp siap sebar
+    - Sertakan Action Tag: [ACTION:COPY_PROMO_WA:encodedText] dan [ACTION:CREATE_PROMO_SERVICE:name=...&price=...&unit=...&duration=...]
 - Dilarang mengakses fitur Super Admin Pusat (kelola cabang lain, pengguna platform lain, master paket pusat). Tolak dengan: "Menu tersebut merupakan wewenang khusus Super Admin Cleanique Pusat."
 
 3. JIKA PERAN ADALAH "marketing" (Tim Marketing IndoTech):

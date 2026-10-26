@@ -39,6 +39,9 @@ platformSettingsRoutes.get("/public", async (c) => {
         bankAccountNumber: settings.bankAccountNumber,
         bankAccountName: settings.bankAccountName,
         qrisInfo: currentQris,
+        ewalletName: settings.ewalletName,
+        ewalletNumber: settings.ewalletNumber,
+        ewalletAccountName: settings.ewalletAccountName,
         defaultTrialDays: settings.defaultTrialDays,
         supportPhone: settings.supportPhone,
         supportEmail: settings.supportEmail,
@@ -111,6 +114,10 @@ platformSettingsRoutes.put("/", requireRole(["superadmin"]), async (c) => {
       bankAccountName:
         body.bankAccountName !== undefined ? body.bankAccountName : existing?.bankAccountName,
       qrisInfo: body.qrisInfo !== undefined ? body.qrisInfo : existing?.qrisInfo,
+      ewalletName: body.ewalletName !== undefined ? body.ewalletName : existing?.ewalletName,
+      ewalletNumber: body.ewalletNumber !== undefined ? body.ewalletNumber : existing?.ewalletNumber,
+      ewalletAccountName:
+        body.ewalletAccountName !== undefined ? body.ewalletAccountName : existing?.ewalletAccountName,
       defaultTrialDays:
         body.defaultTrialDays !== undefined ? Number(body.defaultTrialDays) : existing?.defaultTrialDays,
       defaultAiDailyQuota:

@@ -31,6 +31,9 @@ export interface SubscriptionSummary {
     bankAccountNumber: string | null;
     bankAccountName: string | null;
     qrisInfo: string | null;
+    ewalletName?: string | null;
+    ewalletNumber?: string | null;
+    ewalletAccountName?: string | null;
   };
 }
 
@@ -85,12 +88,18 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
           qrisInfo: (settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")) ? settings.qrisInfo : "/qris.png",
+          ewalletName: settings.ewalletName || null,
+          ewalletNumber: settings.ewalletNumber || null,
+          ewalletAccountName: settings.ewalletAccountName || null,
         }
       : {
           bankName: "BCA (Bank Central Asia)",
           bankAccountNumber: "8830-1928-3341",
           bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
           qrisInfo: "/qris.png",
+          ewalletName: "DANA / GoPay",
+          ewalletNumber: "0812-2340-6368",
+          ewalletAccountName: "PT CLEANIQUE SISTEM DIGITAL",
         },
   };
 }
@@ -234,12 +243,18 @@ export async function createSubscriptionInvoice(params: {
           bankAccountNumber: settings.bankAccountNumber,
           bankAccountName: settings.bankAccountName,
           qrisInfo: (settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")) ? settings.qrisInfo : "/qris.png",
+          ewalletName: settings.ewalletName || null,
+          ewalletNumber: settings.ewalletNumber || null,
+          ewalletAccountName: settings.ewalletAccountName || null,
         }
       : {
           bankName: "BCA (Bank Central Asia)",
           bankAccountNumber: "8830-1928-3341",
           bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
           qrisInfo: "/qris.png",
+          ewalletName: "DANA / GoPay",
+          ewalletNumber: "0812-2340-6368",
+          ewalletAccountName: "PT CLEANIQUE SISTEM DIGITAL",
         },
   };
 }

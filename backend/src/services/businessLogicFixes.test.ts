@@ -460,5 +460,42 @@ describe("Business Logic Fixes & AI Assistant Verification", () => {
       expect(body.data.reply).toContain("Meja Kasir");
       expect(body.data.reply).toContain("[ACTION:NAVIGATE:orders]");
     });
+
+    it("POST /api/ai/chat memberikan rekomendasi & inisiasi promo terstruktur untuk Owner", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ownerToken}`,
+        },
+        body: JSON.stringify({ message: "Rekomendasikan promo khusus untuk dongkrak omset di hari sepi toko saya" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Rekomendasi & Inisiasi Promo");
+      expect(body.data.reply).toContain("Hari Paling Sepi");
+      expect(body.data.reply).toContain("[ACTION:COPY_PROMO_WA:");
+      expect(body.data.reply).toContain("[ACTION:CREATE_PROMO_SERVICE:");
+    });
+
+    it("POST /api/ai/chat MENOLAK kasir (staff) yang menanyakan strategi promo atau diskon", async () => {
+      const res = await app.request("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ message: "Bisa buatkan saya ide promo diskon untuk pelanggan?" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.reply).toContain("Akses Terbatas");
+      expect(body.data.reply).toContain("Pemilik Outlet");
+      expect(body.data.reply).not.toContain("[ACTION:CREATE_PROMO_SERVICE:");
+    });
   });
 });

@@ -22,6 +22,8 @@ import {
   QrCode,
   Download,
   ExternalLink,
+  Smartphone,
+  Copy,
 } from "lucide-react";
 import { authHeaders } from "../../utils/api";
 import { useToast } from "../common/ToastContext";
@@ -47,6 +49,9 @@ interface PlatformPublicSettings {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
+  ewalletName?: string;
+  ewalletNumber?: string;
+  ewalletAccountName?: string;
   qrisInfo?: string;
   supportPhone?: string;
 }
@@ -78,6 +83,14 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
   const [downloadingQris, setDownloadingQris] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const handleDownloadQris = async () => {
     setDownloadingQris(true);
@@ -764,7 +777,7 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
         </div>
       </div>
 
-      {/* Petunjuk Pembayaran QRIS Statis Resmi */}
+      {/* Petunjuk Pembayaran Resmi */}
       <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xs p-6 space-y-4">
         <div className="flex items-center justify-between gap-2.5 pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2.5">
@@ -772,14 +785,73 @@ export const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
               <QrCode className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-zinc-900 text-sm">Metode Pembayaran Resmi SaaS Cleanique (QRIS Statis)</h4>
-              <p className="text-[11px] text-zinc-500">Seluruh pembayaran langganan resmi dilakukan melalui scan QRIS statis di bawah ini</p>
+              <h4 className="font-bold text-zinc-900 text-sm">Metode Pembayaran Resmi SaaS Cleanique</h4>
+              <p className="text-[11px] text-zinc-500">Pembayaran langganan resmi dapat melalui QRIS, Transfer Bank, atau E-Wallet resmi</p>
             </div>
           </div>
           <span className="hidden sm:inline-flex px-3 py-1 rounded-full text-[11px] font-black bg-emerald-600 text-white shadow-2xs">
-            GoPay Merchant / QRIS GPN
+            QRIS & Transfer Resmi
           </span>
         </div>
+
+        {/* Opsi Transfer Bank & E-Wallet */}
+        {(settings?.bankAccountNumber || settings?.ewalletNumber) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {settings?.bankAccountNumber && (
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    {settings.bankName || "Transfer Bank"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(settings.bankAccountNumber!, "bank")}
+                    className="text-xs font-semibold text-zinc-600 hover:text-emerald-600 flex items-center gap-1 cursor-pointer transition"
+                  >
+                    {copiedKey === "bank" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === "bank" ? "Tersalin" : "Salin"}</span>
+                  </button>
+                </div>
+                <div className="font-mono font-extrabold text-sm text-zinc-900 tracking-wide">
+                  {settings.bankAccountNumber}
+                </div>
+                {settings.bankAccountName && (
+                  <div className="text-[11px] text-zinc-500">
+                    a.n. {settings.bankAccountName}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {settings?.ewalletNumber && (
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    {settings.ewalletName || "E-Wallet"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(settings.ewalletNumber!, "ewallet")}
+                    className="text-xs font-semibold text-zinc-600 hover:text-emerald-600 flex items-center gap-1 cursor-pointer transition"
+                  >
+                    {copiedKey === "ewallet" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === "ewallet" ? "Tersalin" : "Salin"}</span>
+                  </button>
+                </div>
+                <div className="font-mono font-extrabold text-sm text-zinc-900 tracking-wide">
+                  {settings.ewalletNumber}
+                </div>
+                {settings.ewalletAccountName && (
+                  <div className="text-[11px] text-zinc-500">
+                    a.n. {settings.ewalletAccountName}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* QRIS Container Full Width */}
         <div className="p-5 sm:p-6 rounded-xl bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 border-2 border-emerald-500/30 shadow-2xs space-y-4">

@@ -19,6 +19,7 @@ export type OrderStatus =
   | "washing"
   | "drying_ironing";
 export type PaymentStatus = "paid" | "unpaid";
+export type PaymentMethod = "cash" | "qris" | "transfer" | "ewallet" | string;
 
 export interface OrderItem {
   id: string;
@@ -200,6 +201,9 @@ export interface Tenant {
   bankAccountNumber?: string | null;
   bankAccountName?: string | null;
   qrisInfo?: string | null;
+  ewalletName?: string | null;
+  ewalletNumber?: string | null;
+  ewalletAccountName?: string | null;
   openingHours?: string | null;
   isTrial?: string | boolean;
   source?: string;
@@ -357,6 +361,9 @@ export interface PlatformSettings {
   bankAccountNumber?: string | null;
   bankAccountName?: string | null;
   qrisInfo?: string | null;
+  ewalletName?: string | null;
+  ewalletNumber?: string | null;
+  ewalletAccountName?: string | null;
   defaultTrialDays: number;
   defaultAiDailyQuota: number;
   supportPhone?: string | null;

@@ -173,6 +173,46 @@ describe("AIAssistantWidget Role-Based Route & Navigation Logic", () => {
       }
     });
 
+    it("should allow owner to access promo actions (copy WA & create service)", () => {
+      const copyRes = canRoleAccessAction("owner", {
+        type: "COPY_PROMO_WA",
+        target: "promo_wa",
+        payload: { text: "Promo Diskon 15%" },
+      });
+      expect(copyRes.allowed).toBe(true);
+
+      const createRes = canRoleAccessAction("tenant_owner", {
+        type: "CREATE_PROMO_SERVICE",
+        target: "services",
+        payload: { name: "Promo Kiloan", price: 7000 },
+      });
+      expect(createRes.allowed).toBe(true);
+    });
+
+    it("should strictly block staff and marketing from promo actions", () => {
+      const staffCopy = canRoleAccessAction("staff", { type: "COPY_PROMO_WA", target: "promo_wa" });
+      expect(staffCopy.allowed).toBe(false);
+      expect(staffCopy.reason).toContain("Pemilik Outlet");
+
+      const staffCreate = canRoleAccessAction("kasir", { type: "CREATE_PROMO_SERVICE", target: "services" });
+      expect(staffCreate.allowed).toBe(false);
+      expect(staffCreate.reason).toContain("Pemilik Outlet");
+
+      const mktCopy = canRoleAccessAction("marketing", { type: "COPY_PROMO_WA", target: "promo_wa" });
+      expect(mktCopy.allowed).toBe(false);
+    });
+
+    it("should provide promo-specific button labels", () => {
+      expect(getActionLabel({ type: "COPY_PROMO_WA", target: "promo_wa" })).toBe("Salin Draf Pesan WA");
+      expect(
+        getActionLabel({
+          type: "CREATE_PROMO_SERVICE",
+          target: "services",
+          payload: { name: "Promo Hari Selasa", price: 7000 },
+        })
+      ).toBe("Inisiasi ke Master Layanan: Promo Hari Selasa (Rp 7.000)");
+    });
+
     it("should provide owner-specific button labels", () => {
       expect(getActionLabel({ type: "NAVIGATE", target: "settings" }, "owner")).toBe("Buka Menu Pengaturan");
       expect(getActionLabel({ type: "NAVIGATE", target: "cashflow" }, "owner")).toBe("Buka Keuangan & Laporan");
@@ -221,9 +261,9 @@ describe("AIAssistantWidget Role-Based Route & Navigation Logic", () => {
       }
     });
 
-    it("owner should have operational menu, settings, pos, and biz health categories", () => {
+    it("owner should have operational menu, settings, pos, promo, and biz health categories", () => {
       const { categories, prompts } = getRoleQuickPrompts("owner");
-      expect(categories.map((c) => c.id)).toEqual(["all", "menus", "settings", "pos", "biz"]);
+      expect(categories.map((c) => c.id)).toEqual(["all", "promo", "menus", "settings", "pos", "biz"]);
       for (const p of prompts) {
         expect(p.roles.some((r) => r === "owner" || r === "tenant_owner")).toBe(true);
         expect(p.roles).not.toContain("superadmin");

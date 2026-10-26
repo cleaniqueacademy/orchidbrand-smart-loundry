@@ -9,10 +9,42 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
   const activeTenant = tenants.find((t) => t.id === order.tenantId);
   const outletName = activeTenant ? activeTenant.outletName : "Laundry Cleanique";
   const custName = order.customer?.name || "Pelanggan";
+  const methodLabelMap: Record<string, string> = {
+    cash: "TUNAI",
+    qris: "QRIS",
+    transfer: "TRANSFER BANK",
+    ewallet: "E-WALLET",
+  };
+  const paymentMethodLabel =
+    methodLabelMap[order.paymentMethod?.toLowerCase() || "cash"] ||
+    order.paymentMethod?.toUpperCase() ||
+    "TUNAI";
+
   const paymentText =
     order.paymentStatus === "paid"
-      ? `✅ LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
+      ? `✅ LUNAS (${paymentMethodLabel})`
       : `⚠️ BELUM LUNAS (Rp ${order.totalAmount.toLocaleString("id-ID")})`;
+
+  let paymentInstructions = "";
+  if (order.paymentStatus !== "paid" && activeTenant) {
+    const payList: string[] = [];
+    if (activeTenant.bankAccountNumber) {
+      payList.push(
+        `• Transfer ${activeTenant.bankName || "Bank"}: *${activeTenant.bankAccountNumber}* a/n ${activeTenant.bankAccountName || outletName}`
+      );
+    }
+    if (activeTenant.ewalletNumber) {
+      payList.push(
+        `• E-Wallet ${activeTenant.ewalletName || ""}: *${activeTenant.ewalletNumber}* a/n ${activeTenant.ewalletAccountName || outletName}`
+      );
+    }
+    if (activeTenant.qrisInfo) {
+      payList.push(`• QRIS: Tersedia scan di outlet / cek resi online`);
+    }
+    if (payList.length > 0) {
+      paymentInstructions = `\n💳 *Cara Pembayaran:*\n${payList.join("\n")}\n`;
+    }
+  }
 
   const itemsText =
     order.items && order.items.length > 0
@@ -37,7 +69,7 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
     text = `Halo Kak ${custName}! 👋\n\nPengingat ramah dari *${outletName}* 🧺\nCucian Anda dengan No. Nota *${order.invoiceNo}* sudah selesai dan tersimpan di outlet selama ${daysCount} hari.\n\n${itemsText}\n💰 *Status Bayar:* ${paymentText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nMohon pakaian dapat segera diambil ya Kak. Terima kasih banyak! 🙏`;
   } else if (order.status === "ready") {
     // Skenario Cucian Siap Diambil
-    text = `Halo Kak ${custName}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💰 *Status Bayar:* ${paymentText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    text = `Halo Kak ${custName}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💰 *Status Bayar:* ${paymentText}${paymentInstructions}\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
   } else if (order.status === "completed") {
     // Skenario Selesai Diambil
     text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺✨\nPesanan No. Nota *${order.invoiceNo}* telah selesai diambil.\n\nSemoga pakaian selalu bersih, rapi, dan harum. Ditunggu kunjungan berikutnya ya Kak! 🙏`;
@@ -46,7 +78,7 @@ export function getWaMessageText(order: Order, tenants: Tenant[]): { phone: stri
     text = `Halo Kak ${custName}! 🙏\nPemberitahuan bahwa pesanan laundry *${order.invoiceNo}* di *${outletName}* telah dibatalkan.\nJika ada pertanyaan silakan hubungi kami kembali. Terima kasih.`;
   } else {
     // Skenario Nota Diterima / Konfirmasi Pesanan Baru
-    text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺\nPesanan Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💵 *Total Biaya:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
+    text = `Halo Kak ${custName}! 👋\n\nTerima kasih telah mencuci di *${outletName}* 🧺\nPesanan Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${order.invoiceNo}\n${itemsText}\n💵 *Total Biaya:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentText}${paymentInstructions}\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
   }
 
   return { phone: cleanPhone, text };

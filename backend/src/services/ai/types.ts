@@ -13,6 +13,17 @@ export interface ChatOptions {
   history?: ChatMessage[];
 }
 
+export interface MarketingMetrics {
+  quietDays: string[];
+  busiestDays: string[];
+  topServices: Array<{ name: string; orderCount: number; revenue: number }>;
+  underperformingServices: Array<{ name: string; currentPrice: number; unit: string; orderCount: number }>;
+  inactiveCustomersCount: number;
+  totalCustomersCount: number;
+  averageOrderValue: number;
+  safeMaxDiscountPct: number;
+}
+
 export interface OperationalContext {
   outletName: string;
   todayStr: string;
@@ -48,6 +59,8 @@ export interface OperationalContext {
     };
     recommendations: string[];
   };
+  // Metrik Analitik Pemasaran & Promo (Khusus Owner / Superadmin)
+  marketingMetrics?: MarketingMetrics;
 }
 
 export interface AIResponse {

@@ -17,6 +17,11 @@ import {
   Star,
   ArrowLeft,
   Loader2,
+  Copy,
+  Check,
+  CreditCard,
+  Smartphone,
+  QrCode,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 
@@ -42,6 +47,16 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trackingData, setTrackingData] = useState<any | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 2000);
+  };
 
   const fetchTracking = async (inv: string) => {
     const clean = inv.trim();
@@ -430,6 +445,189 @@ export const PublicTrackingPage: React.FC<PublicTrackingPageProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Cara Pembayaran (Unpaid Order) */}
+            {order.paymentStatus !== "paid" && outlet?.paymentMethods && (
+              <div className="bg-zinc-900/90 border border-amber-500/30 rounded-2xl p-5 space-y-4 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wide">
+                      Petunjuk Pembayaran Non-Tunai
+                    </h3>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-semibold">
+                    Belum Lunas
+                  </span>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Silakan selesaikan pembayaran tagihan sebesar{" "}
+                  <strong className="text-white font-mono font-bold">
+                    Rp {Number(order.totalAmount || 0).toLocaleString("id-ID")}
+                  </strong>{" "}
+                  melalui salah satu opsi transfer di bawah ini:
+                </p>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {/* Transfer Bank */}
+                  {outlet.paymentMethods.bankAccountNumber && outlet.paymentMethods.bankName && (
+                    <div className="bg-zinc-950/70 border border-zinc-800 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                          <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                          Transfer Bank {outlet.paymentMethods.bankName}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 uppercase">Bank Transfer</span>
+                      </div>
+                      <div className="flex items-center justify-between bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800/80">
+                        <div>
+                          <div className="text-[10px] text-zinc-500">Nomor Rekening</div>
+                          <div className="text-sm font-mono font-bold text-white tracking-wide">
+                            {outlet.paymentMethods.bankAccountNumber}
+                          </div>
+                          {outlet.paymentMethods.bankAccountName && (
+                            <div className="text-[10px] text-zinc-400 mt-0.5">
+                              a.n. {outlet.paymentMethods.bankAccountName}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(outlet.paymentMethods.bankAccountNumber, "bank")}
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1 transition shrink-0 cursor-pointer"
+                        >
+                          {copiedKey === "bank" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 text-[11px]">Tersalin</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Salin</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* E-Wallet */}
+                  {outlet.paymentMethods.ewalletNumber && outlet.paymentMethods.ewalletName && (
+                    <div className="bg-zinc-950/70 border border-zinc-800 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                          <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                          E-Wallet {outlet.paymentMethods.ewalletName}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 uppercase">E-Wallet</span>
+                      </div>
+                      <div className="flex items-center justify-between bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800/80">
+                        <div>
+                          <div className="text-[10px] text-zinc-500">Nomor E-Wallet / HP</div>
+                          <div className="text-sm font-mono font-bold text-white tracking-wide">
+                            {outlet.paymentMethods.ewalletNumber}
+                          </div>
+                          {outlet.paymentMethods.ewalletAccountName && (
+                            <div className="text-[10px] text-zinc-400 mt-0.5">
+                              a.n. {outlet.paymentMethods.ewalletAccountName}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(outlet.paymentMethods.ewalletNumber, "ewallet")}
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1 transition shrink-0 cursor-pointer"
+                        >
+                          {copiedKey === "ewallet" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 text-[11px]">Tersalin</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">Salin</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* QRIS */}
+                  {outlet.paymentMethods.qrisInfo && (
+                    <div className="bg-zinc-950/70 border border-zinc-800 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                          <QrCode className="w-3.5 h-3.5 text-purple-400" />
+                          QRIS Pembayaran ({outlet.outletName})
+                        </span>
+                        <span className="text-[10px] text-zinc-500 uppercase">QRIS / GPN</span>
+                      </div>
+                      {outlet.paymentMethods.qrisInfo.startsWith("http") ||
+                      outlet.paymentMethods.qrisInfo.startsWith("/uploads/") ||
+                      outlet.paymentMethods.qrisInfo.startsWith("data:image") ? (
+                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-zinc-900 p-3 rounded-lg border border-zinc-800/80">
+                          <img
+                            src={outlet.paymentMethods.qrisInfo}
+                            alt="QRIS Outlet"
+                            className="w-28 h-28 object-contain bg-white p-1 rounded-lg shrink-0"
+                          />
+                          <div className="text-xs text-zinc-400 space-y-1.5 text-center sm:text-left">
+                            <p className="font-semibold text-zinc-200">
+                              Scan QRIS dengan aplikasi m-Banking atau E-Wallet apa saja
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              Mendukung BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay & LinkAja.
+                            </p>
+                            <a
+                              href={outlet.paymentMethods.qrisInfo}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-purple-300 pt-1"
+                            >
+                              <span>Buka Gambar QRIS Penuh</span>
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800/80">
+                          <div>
+                            <div className="text-[10px] text-zinc-500">Info QRIS / NMID</div>
+                            <div className="text-xs font-mono font-bold text-white tracking-wide">
+                              {outlet.paymentMethods.qrisInfo}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(outlet.paymentMethods.qrisInfo, "qris")}
+                            className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1 transition shrink-0 cursor-pointer"
+                          >
+                            {copiedKey === "qris" ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-400 text-[11px]">Tersalin</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span className="text-[11px]">Salin</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-zinc-400 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
+                  💡 <em>Setelah mentransfer, silakan konfirmasi bukti bayar ke kasir via WhatsApp agar status pesanan langsung diperbarui.</em>
+                </div>
+              </div>
+            )}
 
             {/* Outlet Information & Contact */}
             <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-5 space-y-3.5">

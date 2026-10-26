@@ -21,6 +21,9 @@ interface EditTenantModalProps {
     bankAccountNumber: string;
     bankAccountName: string;
     qrisInfo: string;
+    ewalletName: string;
+    ewalletNumber: string;
+    ewalletAccountName: string;
     openingHours: string;
     subscriptionUntil: string;
     status: string;
@@ -59,6 +62,9 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankAccountName, setBankAccountName] = useState("");
   const [qrisInfo, setQrisInfo] = useState("");
+  const [ewalletName, setEwalletName] = useState("DANA");
+  const [ewalletNumber, setEwalletNumber] = useState("");
+  const [ewalletAccountName, setEwalletAccountName] = useState("");
   const [hoursWeekdays, setHoursWeekdays] = useState("08:00 - 16:00");
   const [hoursSaturday, setHoursSaturday] = useState("08:00 - 13:00");
   const [hoursSunday, setHoursSunday] = useState("Tutup");
@@ -102,6 +108,9 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
     setBankAccountNumber(tenant.bankAccountNumber || "");
     setBankAccountName(tenant.bankAccountName || "");
     setQrisInfo(tenant.qrisInfo || "");
+    setEwalletName(tenant.ewalletName || "DANA");
+    setEwalletNumber(tenant.ewalletNumber || "");
+    setEwalletAccountName(tenant.ewalletAccountName || "");
     const hours = parseOpeningHours(tenant.openingHours);
     setHoursWeekdays(hours.weekdays);
     setHoursSaturday(hours.saturday);
@@ -132,6 +141,9 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
         bankAccountNumber: bankAccountNumber.trim(),
         bankAccountName: bankAccountName.trim(),
         qrisInfo: qrisInfo.trim(),
+        ewalletName: ewalletName.trim(),
+        ewalletNumber: ewalletNumber.trim(),
+        ewalletAccountName: ewalletAccountName.trim(),
         openingHours: JSON.stringify(openingHoursObj),
       });
       if (ok) {
@@ -323,6 +335,50 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({
                     <ImageIcon className="w-4 h-4" />
                   </a>
                 )}
+              </div>
+            </div>
+
+            {/* E-Wallet Info */}
+            <div className="pt-2 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                E-Wallet Outlet <span className="text-slate-400 font-normal">(DANA / GoPay / OVO / ShopeePay)</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Penyedia</label>
+                  <select
+                    value={ewalletName}
+                    onChange={(e) => setEwalletName(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="DANA">DANA</option>
+                    <option value="GoPay">GoPay</option>
+                    <option value="OVO">OVO</option>
+                    <option value="ShopeePay">ShopeePay</option>
+                    <option value="LinkAja">LinkAja</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nomor Akun / HP</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    value={ewalletNumber}
+                    onChange={(e) => setEwalletNumber(e.target.value)}
+                    className={`${inputClass} font-mono`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Atas Nama (A/N)</label>
+                  <input
+                    type="text"
+                    placeholder="Nama akun e-wallet"
+                    value={ewalletAccountName}
+                    onChange={(e) => setEwalletAccountName(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
           </div>

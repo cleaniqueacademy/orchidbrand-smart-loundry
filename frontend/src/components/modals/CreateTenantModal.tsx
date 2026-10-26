@@ -21,6 +21,9 @@ interface CreateTenantModalProps {
     bankAccountNumber?: string;
     bankAccountName?: string;
     qrisInfo?: string;
+    ewalletName?: string;
+    ewalletNumber?: string;
+    ewalletAccountName?: string;
     openingHours?: string;
   }) => Promise<void>;
 }
@@ -43,6 +46,9 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankAccountName, setBankAccountName] = useState("");
   const [qrisInfo, setQrisInfo] = useState("");
+  const [ewalletName, setEwalletName] = useState("DANA");
+  const [ewalletNumber, setEwalletNumber] = useState("");
+  const [ewalletAccountName, setEwalletAccountName] = useState("");
   // Opening hours
   const [hoursWeekdays, setHoursWeekdays] = useState("08:00 - 16:00");
   const [hoursSaturday, setHoursSaturday] = useState("08:00 - 13:00");
@@ -79,6 +85,7 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
     setOutletName(""); setPhone(""); setAddress(""); setCity("");
     setOwnerName(""); setOwnerEmail(""); setPassword("");
     setBankName(""); setBankAccountNumber(""); setBankAccountName(""); setQrisInfo("");
+    setEwalletName("DANA"); setEwalletNumber(""); setEwalletAccountName("");
     setHoursWeekdays("08:00 - 16:00"); setHoursSaturday("08:00 - 13:00"); setHoursSunday("Tutup");
   };
 
@@ -107,6 +114,9 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
         bankAccountNumber: bankAccountNumber || undefined,
         bankAccountName: bankAccountName || undefined,
         qrisInfo: qrisInfo || undefined,
+        ewalletName: ewalletName.trim() || undefined,
+        ewalletNumber: ewalletNumber.trim() || undefined,
+        ewalletAccountName: ewalletAccountName.trim() || undefined,
         openingHours: JSON.stringify(openingHoursObj),
       });
       resetForm();
@@ -340,6 +350,50 @@ export const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                     <ImageIcon className="w-4 h-4" />
                   </a>
                 )}
+              </div>
+            </div>
+
+            {/* E-Wallet Info */}
+            <div className="pt-2 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                E-Wallet Outlet <span className="text-slate-400 font-normal">(DANA / GoPay / OVO / ShopeePay)</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Penyedia</label>
+                  <select
+                    value={ewalletName}
+                    onChange={(e) => setEwalletName(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="DANA">DANA</option>
+                    <option value="GoPay">GoPay</option>
+                    <option value="OVO">OVO</option>
+                    <option value="ShopeePay">ShopeePay</option>
+                    <option value="LinkAja">LinkAja</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nomor Akun / HP</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    value={ewalletNumber}
+                    onChange={(e) => setEwalletNumber(e.target.value)}
+                    className={`${inputClass} font-mono`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Atas Nama (A/N)</label>
+                  <input
+                    type="text"
+                    placeholder="Nama akun e-wallet"
+                    value={ewalletAccountName}
+                    onChange={(e) => setEwalletAccountName(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
           </div>

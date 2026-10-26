@@ -300,7 +300,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             className="inline-flex items-center justify-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition cursor-pointer whitespace-nowrap"
             title="Ubah status bayar"
           >
-            Lunas ▾
+            {order.paymentMethod === "qris"
+              ? "Lunas (QRIS) ▾"
+              : order.paymentMethod === "transfer"
+              ? "Lunas (Transfer) ▾"
+              : order.paymentMethod === "ewallet"
+              ? "Lunas (E-Wallet) ▾"
+              : "Lunas (Tunai) ▾"}
           </button>
         ) : (
           <button
@@ -801,7 +807,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             {quickPayOrder.paymentStatus !== "paid" ? (
               <div className="space-y-2">
                 <span className="text-xs font-semibold text-slate-700 block">Metode Pembayaran:</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -831,6 +837,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     className="py-2 px-1 text-center bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl font-bold text-xs transition cursor-pointer"
                   >
                     Transfer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdatePayment(quickPayOrder.id, "paid", "ewallet");
+                      setQuickPayOrder(null);
+                    }}
+                    className="py-2 px-1 text-center bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 text-indigo-800 rounded-xl font-bold text-xs transition cursor-pointer"
+                  >
+                    E-Wallet
                   </button>
                 </div>
               </div>

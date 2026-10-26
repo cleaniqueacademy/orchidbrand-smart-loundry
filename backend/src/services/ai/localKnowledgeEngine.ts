@@ -35,6 +35,72 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
+  // 0C. INISIASI & REKOMENDASI PROMO STRATEGIS (Owner & Superadmin only)
+  // =========================================================================
+  if (
+    lower.includes("promo") ||
+    lower.includes("diskon") ||
+    lower.includes("voucher") ||
+    lower.includes("kupon") ||
+    lower.includes("potongan harga") ||
+    lower.includes("hari sepi") ||
+    lower.includes("pelanggan lama") ||
+    lower.includes("reaktivasi") ||
+    lower.includes("promosi")
+  ) {
+    const metrics = context.marketingMetrics;
+    const quietDaysStr = metrics?.quietDays && metrics.quietDays.length > 0 ? metrics.quietDays.join(" & ") : "Selasa & Rabu";
+    const inactiveCount = metrics?.inactiveCustomersCount || 0;
+    const safeDiscount = metrics?.safeMaxDiscountPct || 15;
+    const underperforming = metrics?.underperformingServices || [];
+    const slowService = underperforming[0]?.name || "Cuci Bedcover";
+    const slowPrice = underperforming[0]?.currentPrice || 25000;
+    const promoSlowPrice = Math.round(slowPrice * (1 - safeDiscount / 100));
+
+    // Draf WA Promo 1 (Hari Sepi)
+    const waQuietDraft = `Halo Kak! ✨ Mau cucian numpuk beres tanpa ribet? Khusus hari ${quietDaysStr}, ada PROMO SPESIAL diskon ${safeDiscount}% untuk Cuci Komplit Kiloan di ${context.outletName}! Yuk antar cucianmu hari ini ya! 🧺✨`;
+
+    // Draf WA Promo 2 (Reaktivasi Pelanggan)
+    const waReactivationDraft = `Halo Kak! Sudah lama nih pakaiannya tidak mampir ke ${context.outletName}. Kangen wangi segar khas kami? Dapatkan DISKON KHUSUS ${safeDiscount}% untuk cucian berikutnya. Cukup tunjukkan pesan ini ke kasir ya! 🙏🌸`;
+
+    // Draf WA Promo 3 (Bundling Layanan Satuan)
+    const waBundlingDraft = `Halo Kak! Mau tidur makin nyaman? Nikmati PROMO BUNDLING SPESIAL di ${context.outletName}: Diskon spesial untuk layanan ${slowService} hanya Rp ${promoSlowPrice.toLocaleString("id-ID")}! Yuk laundry sekarang juga! 🛏️✨`;
+
+    return (
+      `🎯 **Rekomendasi & Inisiasi Promo Berdasarkan Data ${context.outletName}:**\n\n` +
+      `Berdasarkan data performa transaksi outlet Anda:\n` +
+      `• **Hari Paling Sepi:** ${quietDaysStr} (potensi peningkatan kapasitas mesin)\n` +
+      `• **Pelanggan Perlu Reaktivasi:** ${inactiveCount} pelanggan (> 30 hari tidak mencuci)\n` +
+      `• **Batas Diskon Aman (Safety Margin):** Maksimal **${safeDiscount}%** (laba tetap sehat)\n\n` +
+      `Berikut 3 opsi strategi promo terukur yang siap diinisiasi:\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `### 1. 📅 Promo Hari Sepi ("${quietDaysStr} Berkah Diskon ${safeDiscount}%")\n` +
+      `• **Tujuan:** Meratakan antrian mesin cuci & mendongkrak omset di hari transaksi rendah.\n` +
+      `• **Strategi:** Diskon ${safeDiscount}% untuk Cuci Komplit Kiloan khusus hari ${quietDaysStr} (Min. 3 kg).\n` +
+      `• **Draf WhatsApp:**\n` +
+      `> "${waQuietDraft}"\n\n` +
+      `[ACTION:COPY_PROMO_WA:${encodeURIComponent(waQuietDraft)}]\n` +
+      `[ACTION:CREATE_PROMO_SERVICE:name=Promo+Kiloan+Hari+${encodeURIComponent(quietDaysStr)}&price=7000&unit=kg&duration=48]\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `### 2. 💌 Promo Reaktivasi Pelanggan ("Kangen Wangi Bersih")\n` +
+      `• **Tujuan:** Mengajak kembali ${inactiveCount} pelanggan lama yang sudah pasif.\n` +
+      `• **Strategi:** Potongan diskon ${safeDiscount}% untuk order pertama setelah masa pasif.\n` +
+      `• **Draf WhatsApp:**\n` +
+      `> "${waReactivationDraft}"\n\n` +
+      `[ACTION:COPY_PROMO_WA:${encodeURIComponent(waReactivationDraft)}]\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `### 3. 🛏️ Promo Bundling Layanan Satuan ("Spesial ${slowService}")\n` +
+      `• **Tujuan:** Mendongkrak layanan satuan yang jarang dipesan agar margin omset naik.\n` +
+      `• **Strategi:** Paket spesial ${slowService} dari tarif normal Rp ${slowPrice.toLocaleString("id-ID")} menjadi Rp ${promoSlowPrice.toLocaleString("id-ID")}.\n` +
+      `• **Draf WhatsApp:**\n` +
+      `> "${waBundlingDraft}"\n\n` +
+      `[ACTION:COPY_PROMO_WA:${encodeURIComponent(waBundlingDraft)}]\n` +
+      `[ACTION:CREATE_PROMO_SERVICE:name=Promo+Spesial+${encodeURIComponent(slowService)}&price=${promoSlowPrice}&unit=${underperforming[0]?.unit || "pcs"}&duration=48]\n\n` +
+      `💡 *Gunakan tombol di atas untuk menyalin draf pesan promosi atau langsung inisiasi paket promo tersebut ke Master Layanan kasir POS Anda!*`
+    );
+  }
+
+  // =========================================================================
   // 1. PANDUAN PENGATURAN & SETTINGS (Owner & Superadmin only)
   // =========================================================================
   if (

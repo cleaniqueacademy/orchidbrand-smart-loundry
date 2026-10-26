@@ -82,6 +82,9 @@ export async function initPostgresTables() {
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_account_number TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_account_name TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS qris_info TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ewallet_name TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ewallet_number TEXT;`;
+    await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ewallet_account_name TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS opening_hours TEXT;`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_trial TEXT NOT NULL DEFAULT 'false';`;
     await client`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';`;
@@ -330,6 +333,9 @@ export async function initPostgresTables() {
         updated_at TEXT NOT NULL
       );
     `;
+    await client`ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS ewallet_name TEXT;`;
+    await client`ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS ewallet_number TEXT;`;
+    await client`ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS ewallet_account_name TEXT;`;
 
     await client`
       CREATE TABLE IF NOT EXISTS signup_requests (

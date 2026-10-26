@@ -327,11 +327,12 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
             <label className="block text-xs font-bold text-slate-800 mb-1">
               Metode Pembayaran
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: "cash", label: "Tunai (Cash)" },
+                { id: "cash", label: "Tunai" },
                 { id: "qris", label: "QRIS" },
-                { id: "transfer", label: "Transfer" },
+                { id: "transfer", label: "Transfer Bank" },
+                { id: "ewallet", label: "E-Wallet" },
               ].map((m) => (
                 <button
                   type="button"

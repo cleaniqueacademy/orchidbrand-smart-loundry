@@ -21,7 +21,17 @@ interface ReceiptModalProps {
 
 export const generateReceiptPdf = (
   order: Order,
-  activeTenant: { outletName?: string; address?: string; phone?: string },
+  activeTenant: {
+    outletName?: string;
+    address?: string;
+    phone?: string;
+    bankName?: string | null;
+    bankAccountNumber?: string | null;
+    bankAccountName?: string | null;
+    ewalletName?: string | null;
+    ewalletNumber?: string | null;
+    ewalletAccountName?: string | null;
+  },
   paperWidth: "58mm" | "80mm",
   qrDataUrl?: string
 ): jsPDF => {
@@ -160,12 +170,32 @@ export const generateReceiptPdf = (
 
   doc.setFontSize(is58 ? 7 : 8.5);
   doc.text("STATUS:", margin, y);
+  const getPdfMethodLabel = (method?: string) => {
+    switch (method?.toLowerCase()) {
+      case "qris": return "QRIS";
+      case "transfer": return "TRANSFER";
+      case "ewallet": return "E-WALLET";
+      default: return "TUNAI";
+    }
+  };
   const statusStr =
     order.paymentStatus === "paid"
-      ? `LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
+      ? `LUNAS (${getPdfMethodLabel(order.paymentMethod)})`
       : "BELUM LUNAS";
   doc.text(statusStr, rightX, y, { align: "right" });
   y += 3.8;
+
+  if (order.paymentStatus !== "paid" && (activeTenant.bankAccountNumber || activeTenant.ewalletNumber)) {
+    doc.setFontSize(is58 ? 5.5 : 6.8);
+    if (activeTenant.bankAccountNumber) {
+      doc.text(`Bank: ${activeTenant.bankName || "Transfer"} ${activeTenant.bankAccountNumber}`, margin, y);
+      y += 2.8;
+    }
+    if (activeTenant.ewalletNumber) {
+      doc.text(`E-Wallet: ${activeTenant.ewalletName || "E-Wallet"} ${activeTenant.ewalletNumber}`, margin, y);
+      y += 2.8;
+    }
+  }
 
   // Divider
   doc.setFont("courier", "normal");
@@ -232,11 +262,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   }, [printerConfig.paperWidth]);
 
-  const activeTenant = tenant || {
+  const activeTenant: Partial<Tenant> & { outletName: string; phone: string; address: string } = tenant || {
     id: "tenant-active",
     outletName: "Outlet Laundry",
     phone: "-",
     address: "-",
+    bankName: null,
+    bankAccountNumber: null,
+    bankAccountName: null,
+    ewalletName: null,
+    ewalletNumber: null,
+    ewalletAccountName: null,
+    qrisInfo: null,
   };
 
   useEffect(() => {
@@ -352,6 +389,30 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             .join("\n")
         : `Layanan : ${order.serviceType}\nJumlah  : ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
+    const formatReceiptPaymentMethod = (method?: string) => {
+      switch (method?.toLowerCase()) {
+        case "qris": return "QRIS";
+        case "transfer": return "TRANSFER BANK";
+        case "ewallet": return "E-WALLET";
+        case "cash":
+        default: return "TUNAI";
+      }
+    };
+
+    let paymentInstructions = "";
+    if (order.paymentStatus !== "paid") {
+      const pmList: string[] = [];
+      if (activeTenant.bankName && activeTenant.bankAccountNumber) {
+        pmList.push(`• Transfer Bank: ${activeTenant.bankName} - ${activeTenant.bankAccountNumber} (a.n. ${activeTenant.bankAccountName || "-"})`);
+      }
+      if (activeTenant.ewalletName && activeTenant.ewalletNumber) {
+        pmList.push(`• E-Wallet: ${activeTenant.ewalletName} - ${activeTenant.ewalletNumber} (a.n. ${activeTenant.ewalletAccountName || "-"})`);
+      }
+      if (pmList.length > 0) {
+        paymentInstructions = `----------------------------------------\n💳 METODE PEMBAYARAN TERSEDIA:\n` + pmList.join("\n") + `\n`;
+      }
+    }
+
     const text = `🧾 *NOTA LAUNDRY - ${activeTenant.outletName.toUpperCase()}*
 📍 ${activeTenant.address}
 📞 ${activeTenant.phone}
@@ -363,8 +424,8 @@ Pelanggan: ${order.customer?.name || "Pelanggan Umum"} (${order.customer?.phone 
 ${itemsSection}
 ----------------------------------------
 TOTAL   : Rp ${order.totalAmount.toLocaleString("id-ID")}
-Status  : ${order.paymentStatus === "paid" ? `LUNAS (${order.paymentMethod || "Tunai"})` : "BELUM LUNAS"}
-----------------------------------------
+Status  : ${order.paymentStatus === "paid" ? `LUNAS (${formatReceiptPaymentMethod(order.paymentMethod)})` : "BELUM LUNAS"}
+${paymentInstructions}----------------------------------------
 ⏰ Jam Buka Outlet:
 • Senin - Jumat : 08.00 - 16.00
 • Sabtu : 08.00 - 13.00
@@ -381,10 +442,36 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
   const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
 
   const getReceiptText = () => {
+    const formatReceiptPaymentMethod = (method?: string) => {
+      switch (method?.toLowerCase()) {
+        case "qris": return "QRIS";
+        case "transfer": return "TRANSFER BANK";
+        case "ewallet": return "E-WALLET";
+        case "cash":
+        default: return "TUNAI";
+      }
+    };
     const paymentNote =
       order.paymentStatus === "paid"
-        ? `✅ LUNAS (${order.paymentMethod?.toUpperCase() || "CASH"})`
+        ? `✅ LUNAS (${formatReceiptPaymentMethod(order.paymentMethod)})`
         : `⚠️ BELUM LUNAS (Rp ${order.totalAmount.toLocaleString("id-ID")})`;
+
+    let paymentInstructions = "";
+    if (order.paymentStatus !== "paid") {
+      const pmList: string[] = [];
+      if (activeTenant.bankName && activeTenant.bankAccountNumber) {
+        pmList.push(`• *Transfer Bank:* ${activeTenant.bankName} - ${activeTenant.bankAccountNumber} (a.n. ${activeTenant.bankAccountName || "-"})`);
+      }
+      if (activeTenant.ewalletName && activeTenant.ewalletNumber) {
+        pmList.push(`• *E-Wallet:* ${activeTenant.ewalletName} - ${activeTenant.ewalletNumber} (a.n. ${activeTenant.ewalletAccountName || "-"})`);
+      }
+      if (activeTenant.qrisInfo) {
+        pmList.push(`• *QRIS:* Tersedia di kasir / tracking link`);
+      }
+      if (pmList.length > 0) {
+        paymentInstructions = `\n💳 *Metode Pembayaran Tersedia:*\n` + pmList.join("\n") + `\n`;
+      }
+    }
 
     const itemsSummary =
       order.items && order.items.length > 0
@@ -397,7 +484,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
             .join("\n")
         : `🧺 *Layanan:* ${order.serviceType}\n⚖️ *Jumlah:* ${order.weightOrQty} ${order.unit} @ Rp ${order.pricePerUnit.toLocaleString("id-ID")}`;
 
-    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+    return `🧾 *NOTA DIGITAL - ${activeTenant.outletName.toUpperCase()}*\n\nHalo Kak ${order.customer?.name || "Pelanggan"}! 👋\nBerikut rincian nota pesanan cucian Anda:\n\n📄 *No. Nota:* ${order.invoiceNo}\n📅 *Tanggal:* ${formattedDate} ${formattedTime}\n${itemsSummary}\n💰 *Total Tagihan:* Rp ${order.totalAmount.toLocaleString("id-ID")}\n💳 *Status:* ${paymentNote}\n${paymentInstructions}\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
   };
 
   const handleSendViaBaileys = async () => {
@@ -683,7 +770,14 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
                   <span className="text-[10px] font-semibold text-zinc-600">STATUS PEMBAYARAN:</span>
                   {order.paymentStatus === "paid" ? (
                     <span className="font-black px-1.5 py-0.5 bg-zinc-900 text-white text-[10px] rounded">
-                      LUNAS
+                      LUNAS ({(() => {
+                        switch (order.paymentMethod?.toLowerCase()) {
+                          case "qris": return "QRIS";
+                          case "transfer": return "TRANSFER BANK";
+                          case "ewallet": return "E-WALLET";
+                          default: return "TUNAI";
+                        }
+                      })()})
                     </span>
                   ) : (
                     <span className="font-black px-1.5 py-0.5 border border-zinc-900 text-zinc-900 text-[10px] rounded">
@@ -691,6 +785,26 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
                     </span>
                   )}
                 </div>
+
+                {order.paymentStatus !== "paid" && (activeTenant.bankAccountNumber || activeTenant.ewalletNumber) && (
+                  <div className="text-[9.5px] bg-zinc-50 border border-zinc-200 p-2 rounded mt-2 space-y-1">
+                    <div className="font-bold text-zinc-800 text-[9px] uppercase tracking-wide">
+                      Petunjuk Pembayaran Non-Tunai:
+                    </div>
+                    {activeTenant.bankAccountNumber && (
+                      <div className="text-zinc-600 flex justify-between">
+                        <span>Transfer {activeTenant.bankName || "Bank"}:</span>
+                        <span className="font-bold text-zinc-900">{activeTenant.bankAccountNumber}</span>
+                      </div>
+                    )}
+                    {activeTenant.ewalletNumber && (
+                      <div className="text-zinc-600 flex justify-between">
+                        <span>E-Wallet {activeTenant.ewalletName || ""}:</span>
+                        <span className="font-bold text-zinc-900">{activeTenant.ewalletNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Dashed line */}

@@ -384,6 +384,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <option value="cash">Tunai (Cash)</option>
                 <option value="qris">QRIS</option>
                 <option value="transfer">Transfer Bank</option>
+                <option value="ewallet">E-Wallet (DANA / GoPay / OVO)</option>
               </select>
             </div>
           </div>

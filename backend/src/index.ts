@@ -174,6 +174,15 @@ app.get("/api/track/:invoiceNo", async (c) => {
             saturday: "Sabtu : 08.00 - 13.00",
             sunday: "Minggu / Tanggal Merah : Tutup",
           },
+          paymentMethods: {
+            qrisInfo: tenant?.qrisInfo || null,
+            bankName: tenant?.bankName || null,
+            bankAccountNumber: tenant?.bankAccountNumber || null,
+            bankAccountName: tenant?.bankAccountName || null,
+            ewalletName: tenant?.ewalletName || null,
+            ewalletNumber: tenant?.ewalletNumber || null,
+            ewalletAccountName: tenant?.ewalletAccountName || null,
+          },
         },
         customer: {
           name: customer?.name || "Pelanggan",
@@ -488,6 +497,9 @@ app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) 
       bankAccountNumber: bankAccountNumber || null,
       bankAccountName: bankAccountName || null,
       qrisInfo: qrisInfo || null,
+      ewalletName: body.ewalletName || null,
+      ewalletNumber: body.ewalletNumber || null,
+      ewalletAccountName: body.ewalletAccountName || null,
       openingHours: openingHours ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours)) : null,
     });
 
@@ -516,7 +528,8 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
     const body = await c.req.json();
     const {
       outletName, phone, address, status, subscriptionUntil, services, ownerName, enableCashierShift,
-      city, bankName, bankAccountNumber, bankAccountName, qrisInfo, openingHours
+      city, bankName, bankAccountNumber, bankAccountName, qrisInfo, openingHours,
+      ewalletName, ewalletNumber, ewalletAccountName
     } = body;
 
     const updateData: any = {};
@@ -530,11 +543,14 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
     if (enableCashierShift !== undefined) {
       updateData.enableCashierShift = String(enableCashierShift);
     }
-    // Informasi rekening bank
+    // Informasi rekening bank & e-wallet
     if (bankName !== undefined) updateData.bankName = bankName || null;
     if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
     if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName || null;
     if (qrisInfo !== undefined) updateData.qrisInfo = qrisInfo || null;
+    if (ewalletName !== undefined) updateData.ewalletName = ewalletName || null;
+    if (ewalletNumber !== undefined) updateData.ewalletNumber = ewalletNumber || null;
+    if (ewalletAccountName !== undefined) updateData.ewalletAccountName = ewalletAccountName || null;
     if (openingHours !== undefined) {
       updateData.openingHours = openingHours
         ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours))
@@ -1904,7 +1920,18 @@ app.post("/api/orders", authMiddleware, async (c) => {
           }).format(new Date(estimatedCompletionAt))
         : "-";
 
-      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
+      let paymentInstructions = "";
+      if (body.paymentStatus !== "paid" && tenant) {
+        const payList: string[] = [];
+        if (tenant.bankAccountNumber) payList.push(`• Transfer ${tenant.bankName || "Bank"}: *${tenant.bankAccountNumber}* a/n ${tenant.bankAccountName || outletName}`);
+        if (tenant.ewalletNumber) payList.push(`• E-Wallet ${tenant.ewalletName || ""}: *${tenant.ewalletNumber}* a/n ${tenant.ewalletAccountName || outletName}`);
+        if (tenant.qrisInfo) payList.push(`• QRIS: Tersedia di outlet / scan online`);
+        if (payList.length > 0) {
+          paymentInstructions = `\n💳 *Cara Pembayaran Non-Tunai:*\n${payList.join("\n")}\n`;
+        }
+      }
+
+      const messageText = `Halo Kak ${cust.name}! 👋 Terima kasih telah mencuci di *${outletName}*.\n\nPesanan cucian Anda telah kami terima dengan rincian nota digital berikut:\n\n📄 *No. Nota:* ${invoiceNo}\n📅 *Waktu Masuk:* ${formattedDate}\n${itemsFormattedText}\n💵 *Total Biaya:* Rp ${finalTotalAmount.toLocaleString("id-ID")}\n💰 *Status Bayar:* ${paymentNote}\n⏱️ *Estimasi Selesai:* ${slaText}${paymentInstructions}\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nKami akan mengabari Anda kembali via WhatsApp begitu cucian selesai dan siap diambil. Terima kasih! 🙏`;
 
       waData = {
         phone: cleanPhone,
@@ -2039,7 +2066,18 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
             .join("\n");
       }
 
-      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}\n\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
+      let paymentInstructions = "";
+      if (existing.paymentStatus !== "paid" && tenant) {
+        const payList: string[] = [];
+        if (tenant.bankAccountNumber) payList.push(`• Transfer ${tenant.bankName || "Bank"}: *${tenant.bankAccountNumber}* a/n ${tenant.bankAccountName || outletName}`);
+        if (tenant.ewalletNumber) payList.push(`• E-Wallet ${tenant.ewalletName || ""}: *${tenant.ewalletNumber}* a/n ${tenant.ewalletAccountName || outletName}`);
+        if (tenant.qrisInfo) payList.push(`• QRIS: Tersedia di outlet / scan online`);
+        if (payList.length > 0) {
+          paymentInstructions = `\n💳 *Cara Pembayaran:*\n${payList.join("\n")}\n`;
+        }
+      }
+
+      const messageText = `Halo Kak ${cust.name}! 👋\n\nKabar gembira, cucian Anda di *${outletName}* sudah *SELESAI & SIAP DIAMBIL* 🧺✨\n\n📄 *No. Nota:* ${existing.invoiceNo}\n${itemsFormattedText}\n💰 *Status Bayar:* ${paymentNote}${paymentInstructions}\n⏰ *Jam Buka Outlet:*\n• Senin - Jumat : 08.00 - 16.00\n• Sabtu : 08.00 - 13.00\n\nTerima kasih telah mempercayakan pakaian Anda kepada kami! 🙏`;
 
       waData = {
         phone: cleanPhone,

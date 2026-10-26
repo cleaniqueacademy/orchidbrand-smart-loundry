@@ -8,13 +8,19 @@ import {
   User,
   CheckCircle2,
   AlertTriangle,
+  Copy,
+  Check,
+  Sparkles,
+  ChevronRight,
+  Tag,
 } from "lucide-react";
-import { api } from "../../utils/api";
+import { api, authHeaders } from "../../utils/api";
 import { TabType } from "../../types";
 
 export interface ActionItem {
-  type: "NAVIGATE" | "OPEN_MODAL";
+  type: "NAVIGATE" | "OPEN_MODAL" | "COPY_PROMO_WA" | "CREATE_PROMO_SERVICE";
   target: string;
+  payload?: any;
 }
 
 export interface Message {
@@ -53,7 +59,8 @@ export type PromptCategory =
   | "commission"
   | "tenants_marketing"
   | "customers"
-  | "biz";
+  | "biz"
+  | "promo";
 
 export interface QuickPrompt {
   id: string;
@@ -336,6 +343,34 @@ export const ROLE_QUICK_PROMPTS: QuickPrompt[] = [
     text: "Berapa sisa masa sewa ruko saya dan berapa beban sewanya per bulan?",
     roles: ["owner", "tenant_owner"],
   },
+  {
+    id: "owner-promo-quiet",
+    category: "promo",
+    label: "Promo Hari Sepi",
+    text: "Rekomendasikan promo khusus untuk mendongkrak transaksi pada hari-hari sepi di outlet saya.",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-promo-reactivation",
+    category: "promo",
+    label: "Reaktivasi Pelanggan Pasif",
+    text: "Buatkan ide promo dan draf pesan WhatsApp untuk mengajak pelanggan yang sudah lebih dari 30 hari tidak mencuci agar datang kembali.",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-promo-bundling",
+    category: "promo",
+    label: "Bundling Layanan Satuan",
+    text: "Rekomendasikan promo bundling atau diskon untuk layanan satuan yang masih sepi (seperti Bedcover atau Sepatu).",
+    roles: ["owner", "tenant_owner"],
+  },
+  {
+    id: "owner-promo-safety",
+    category: "promo",
+    label: "Batas Diskon Aman",
+    text: "Berapa batas diskon promo yang aman untuk toko saya agar tidak rugi jika ditinjau dari margin laba dan HPP bahan kimia?",
+    roles: ["owner", "tenant_owner"],
+  },
 ];
 
 export function getRoleQuickPrompts(role: string): {
@@ -390,6 +425,7 @@ export function getRoleQuickPrompts(role: string): {
   return {
     categories: [
       { id: "all", label: "Semua" },
+      { id: "promo", label: "🎯 Promo" },
       { id: "menus", label: "Menu & Omset" },
       { id: "settings", label: "Setting & WA" },
       { id: "pos", label: "Kasir & Tarif" },
@@ -606,6 +642,20 @@ export function canRoleAccessAction(role: string, action: ActionItem): RoleAcces
     }
   }
 
+  if (action.type === "COPY_PROMO_WA") {
+    if (isStaff || isMarketing) {
+      return { allowed: false, reason: "Akses ditolak: Fitur promo hanya dapat diakses oleh Pemilik Outlet." };
+    }
+    return { allowed: true, noticeText: "Menyalin draf pesan promosi WhatsApp..." };
+  }
+
+  if (action.type === "CREATE_PROMO_SERVICE") {
+    if (isStaff || isMarketing) {
+      return { allowed: false, reason: "Akses ditolak: Inisiasi promo ke Master Layanan hanya dapat dilakukan oleh Pemilik Outlet." };
+    }
+    return { allowed: true, noticeText: "Menginisiasi layanan promo ke sistem..." };
+  }
+
   return { allowed: false, reason: "Tipe aksi tidak didukung." };
 }
 
@@ -613,6 +663,16 @@ export function getActionLabel(action: ActionItem, role?: string): string {
   const normRole = (role || "staff").toLowerCase();
   const isSuperAdmin = normRole === "superadmin";
   const isMarketing = normRole === "marketing";
+
+  if (action.type === "COPY_PROMO_WA") {
+    return "Salin Draf Pesan WA";
+  }
+
+  if (action.type === "CREATE_PROMO_SERVICE") {
+    const sName = action.payload?.name || "Layanan Promo";
+    const sPrice = action.payload?.price ? ` (Rp ${Number(action.payload.price).toLocaleString("id-ID")})` : "";
+    return `Inisiasi ke Master Layanan: ${sName}${sPrice}`;
+  }
 
   if (action.type === "NAVIGATE") {
     switch (action.target) {
@@ -677,9 +737,10 @@ export function getActionLabel(action: ActionItem, role?: string): string {
 // Helper to parse action tags from text
 function parseActionTags(rawContent: string): { cleanContent: string; actions: ActionItem[] } {
   const actions: ActionItem[] = [];
+
+  // 1. Standard NAVIGATE and OPEN_MODAL
   const actionRegex = /\[ACTION:(NAVIGATE|OPEN_MODAL):([a-zA-Z0-9_\-]+)\]/g;
   let match;
-
   while ((match = actionRegex.exec(rawContent)) !== null) {
     actions.push({
       type: match[1] as "NAVIGATE" | "OPEN_MODAL",
@@ -687,7 +748,43 @@ function parseActionTags(rawContent: string): { cleanContent: string; actions: A
     });
   }
 
-  const cleanContent = rawContent.replace(actionRegex, "").trim();
+  // 2. COPY_PROMO_WA
+  const copyPromoRegex = /\[ACTION:COPY_PROMO_WA:(.*?)\]/g;
+  while ((match = copyPromoRegex.exec(rawContent)) !== null) {
+    let text = match[1];
+    try {
+      text = decodeURIComponent(match[1]);
+    } catch {}
+    actions.push({
+      type: "COPY_PROMO_WA",
+      target: "promo_wa",
+      payload: { text },
+    });
+  }
+
+  // 3. CREATE_PROMO_SERVICE
+  const createPromoRegex = /\[ACTION:CREATE_PROMO_SERVICE:(.*?)\]/g;
+  while ((match = createPromoRegex.exec(rawContent)) !== null) {
+    const rawParams = match[1];
+    const params = new URLSearchParams(rawParams);
+    actions.push({
+      type: "CREATE_PROMO_SERVICE",
+      target: "services",
+      payload: {
+        name: params.get("name") || "Paket Promo",
+        price: Number(params.get("price")) || 0,
+        unit: params.get("unit") || "kg",
+        durationHours: Number(params.get("duration")) || 48,
+      },
+    });
+  }
+
+  const cleanContent = rawContent
+    .replace(actionRegex, "")
+    .replace(copyPromoRegex, "")
+    .replace(createPromoRegex, "")
+    .trim();
+
   return { cleanContent, actions };
 }
 
@@ -719,6 +816,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory>("all");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [copiedActionKey, setCopiedActionKey] = useState<string | null>(null);
 
   const isStaff = currentUserRole === "staff" || currentUserRole === "kasir" || currentUserRole === "cashier";
   const isMarketing = currentUserRole === "marketing";
@@ -819,11 +917,59 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     }
   }, [isOpen, messages]);
 
-  const handleExecuteAction = (action: ActionItem) => {
+  const handleExecuteAction = async (action: ActionItem) => {
     const access = canRoleAccessAction(currentUserRole, action);
     if (!access.allowed) {
       setActionNotice(access.reason || "Akses ditolak: Menu ini tidak tersedia untuk peran Anda.");
       setTimeout(() => setActionNotice(null), 3500);
+      return;
+    }
+
+    if (action.type === "COPY_PROMO_WA") {
+      const waText = action.payload?.text;
+      if (waText) {
+        navigator.clipboard.writeText(waText);
+        setCopiedActionKey(waText.slice(0, 20));
+        setActionNotice("Draf pesan WhatsApp promosi berhasil disalin ke clipboard! 📋");
+        setTimeout(() => {
+          setCopiedActionKey(null);
+          setActionNotice(null);
+        }, 3000);
+      }
+      return;
+    }
+
+    if (action.type === "CREATE_PROMO_SERVICE") {
+      const payload = action.payload;
+      if (!payload || !payload.name) return;
+
+      try {
+        setActionNotice(`Menginisiasi paket promo "${payload.name}" ke Master Layanan...`);
+        const res = await fetch("/api/services", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: payload.name,
+            unit: payload.unit || "kg",
+            pricePerUnit: payload.price || 0,
+            minOrder: payload.unit === "kg" ? 3 : 1,
+            durationHours: payload.durationHours || 48,
+            status: "active",
+          }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          setActionNotice(`✅ Paket promo "${payload.name}" berhasil didaftarkan ke Master Layanan!`);
+          if (setActiveTab) {
+            setActiveTab("services");
+          }
+        } else {
+          setActionNotice(`Gagal membuat layanan promo: ${json.message || "Terjadi kesalahan"}`);
+        }
+      } catch (err: any) {
+        setActionNotice(`Gagal menginisiasi promo: ${err.message || "Masalah jaringan"}`);
+      }
+      setTimeout(() => setActionNotice(null), 4000);
       return;
     }
 
@@ -1360,15 +1506,33 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-1.5">
                       {msg.actions.map((act, actIdx) => {
                         const label = getActionLabel(act, currentUserRole);
+                        const isCopy = act.type === "COPY_PROMO_WA";
+                        const isCreatePromo = act.type === "CREATE_PROMO_SERVICE";
+                        const isCopied = isCopy && copiedActionKey === (act.payload?.text?.slice(0, 20));
+
                         return (
                           <button
                             key={actIdx}
                             type="button"
                             onClick={() => handleExecuteAction(act)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg text-[11px] font-semibold transition-all active:scale-95 cursor-pointer"
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 cursor-pointer ${
+                              isCopy
+                                ? isCopied
+                                  ? "bg-emerald-600 text-white border border-emerald-700 shadow-xs"
+                                  : "bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                : isCreatePromo
+                                ? "bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shadow-xs hover:border-purple-300"
+                                : "bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                            }`}
                           >
-                            <span>{label}</span>
-                            <ArrowRight className="w-3 h-3 text-blue-500" />
+                            {isCopy ? (
+                              isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />
+                            ) : isCreatePromo ? (
+                              <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                            ) : (
+                              <ArrowRight className="w-3 h-3 text-blue-500" />
+                            )}
+                            <span>{isCopied ? "Tersalin ke Clipboard!" : label}</span>
                           </button>
                         );
                       })}

@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Download,
   Zap,
+  Smartphone,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { ModalWrapper } from "../common/ModalWrapper";
@@ -74,6 +75,14 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
   const [proofSubmitted, setProofSubmitted] = useState(false);
   const [isQrisPreviewOpen, setIsQrisPreviewOpen] = useState(false);
   const [downloadingQris, setDownloadingQris] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const getActiveQrisUrl = () => {
     if (paymentDest?.qrisInfo && !paymentDest.qrisInfo.includes("qris-official.png")) {
@@ -368,6 +377,65 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
 
                   {paymentDest && (
                     <div className="space-y-3">
+                      {/* Opsi Transfer Bank & E-Wallet */}
+                      {(paymentDest.bankAccountNumber || paymentDest.ewalletNumber) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {paymentDest.bankAccountNumber && (
+                            <div className="bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                                  {paymentDest.bankName || "Transfer Bank"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(paymentDest.bankAccountNumber, "bank")}
+                                  className="text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1 cursor-pointer"
+                                >
+                                  {copiedKey === "bank" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                                  <span>{copiedKey === "bank" ? "Tersalin" : "Salin"}</span>
+                                </button>
+                              </div>
+                              <div className="font-mono font-extrabold text-xs text-slate-900 dark:text-white tracking-wide">
+                                {paymentDest.bankAccountNumber}
+                              </div>
+                              {paymentDest.bankAccountName && (
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  a.n. {paymentDest.bankAccountName}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {paymentDest.ewalletNumber && (
+                            <div className="bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+                                  {paymentDest.ewalletName || "E-Wallet"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(paymentDest.ewalletNumber, "ewallet")}
+                                  className="text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 flex items-center gap-1 cursor-pointer"
+                                >
+                                  {copiedKey === "ewallet" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                                  <span>{copiedKey === "ewallet" ? "Tersalin" : "Salin"}</span>
+                                </button>
+                              </div>
+                              <div className="font-mono font-extrabold text-xs text-slate-900 dark:text-white tracking-wide">
+                                {paymentDest.ewalletNumber}
+                              </div>
+                              {paymentDest.ewalletAccountName && (
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  a.n. {paymentDest.ewalletAccountName}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 text-center space-y-3 border border-slate-100 dark:border-slate-800">
                         <div>
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 mb-1">

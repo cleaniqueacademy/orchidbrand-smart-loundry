@@ -207,6 +207,51 @@ export const PlatformSettingsTab: React.FC = () => {
             </div>
           </div>
 
+          {/* Pengaturan E-Wallet Platform */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              E-Wallet Resmi Platform (DANA / GoPay / OVO / ShopeePay)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Penyedia E-Wallet
+                </label>
+                <input
+                  type="text"
+                  placeholder="DANA / GoPay / OVO"
+                  value={formData.ewalletName || ""}
+                  onChange={(e) => setFormData({ ...formData, ewalletName: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Nomor Akun / HP
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 081223406368"
+                  value={formData.ewalletNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, ewalletNumber: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Atas Nama Pemilik Akun
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nama pemilik e-wallet"
+                  value={formData.ewalletAccountName || ""}
+                  onChange={(e) => setFormData({ ...formData, ewalletAccountName: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <div>

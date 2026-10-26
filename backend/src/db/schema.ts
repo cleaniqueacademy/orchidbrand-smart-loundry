@@ -40,6 +40,9 @@ export const tenants = pgTable("tenants", {
   bankAccountNumber: text("bank_account_number"), // Nomor rekening
   bankAccountName: text("bank_account_name"), // Atas nama pemilik rekening
   qrisInfo: text("qris_info"), // Nomor QRIS / link QRIS (opsional)
+  ewalletName: text("ewallet_name"), // DANA, GoPay, OVO, ShopeePay, dll.
+  ewalletNumber: text("ewallet_number"), // Nomor akun / HP e-wallet
+  ewalletAccountName: text("ewallet_account_name"), // Atas nama pemilik e-wallet
   openingHours: text("opening_hours"), // JSON: { weekdays: "08:00-16:00", saturday: "08:00-13:00", sunday: "Tutup" }
   // Metadata pendaftaran & referral
   isTrial: text("is_trial").notNull().default("false"), // 'true' | 'false'
@@ -226,6 +229,9 @@ export const platformSettings = pgTable("platform_settings", {
   bankAccountNumber: text("bank_account_number"),
   bankAccountName: text("bank_account_name"),
   qrisInfo: text("qris_info"),
+  ewalletName: text("ewallet_name"),
+  ewalletNumber: text("ewallet_number"),
+  ewalletAccountName: text("ewallet_account_name"),
   defaultTrialDays: doublePrecision("default_trial_days").notNull().default(7),
   defaultAiDailyQuota: doublePrecision("default_ai_daily_quota").notNull().default(50),
   supportPhone: text("support_phone"),

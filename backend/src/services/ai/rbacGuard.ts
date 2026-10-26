@@ -194,7 +194,31 @@ export function checkRoleAccessViolation(
       };
     }
 
-    // 1.6 Menanyakan Langganan, Tagihan, atau Platform Pusat
+    // 1.6 Menanyakan Strategi Promo, Diskon, atau Pembuatan Promo
+    if (
+      lower.includes("promo") ||
+      lower.includes("diskon") ||
+      lower.includes("voucher") ||
+      lower.includes("kupon") ||
+      lower.includes("potongan harga") ||
+      lower.includes("strategi promo") ||
+      lower.includes("rekomendasi promo") ||
+      lower.includes("ide promo") ||
+      lower.includes("bikin promo") ||
+      lower.includes("buat promo")
+    ) {
+      return {
+        isForbidden: true,
+        reason: "Strategi promo dan penentuan besaran diskon merupakan wewenang Pemilik Outlet.",
+        reply:
+          `⛔ **Akses Terbatas (Di Luar Ranah Peran Kasir)**\n\n` +
+          `Maaf, Anda login sebagai **Staf Kasir**. Wewenang untuk merancang **strategi promosi, menentukan diskon, dan inisiasi promo layanan** dikhususkan untuk **Pemilik Outlet (Owner)**.\n\n` +
+          `ℹ️ Sebagai staf kasir, Anda dapat melayani pesanan sesuai dengan daftar tarif dan promo yang telah diaktifkan oleh pemilik outlet di menu kasir POS.\n` +
+          `Silakan sampaikan usulan ide promo Anda langsung kepada pemilik outlet!`,
+      };
+    }
+
+    // 1.7 Menanyakan Langganan, Tagihan, atau Platform Pusat
     if (
       lower.includes("langganan") ||
       lower.includes("perpanjang") ||
