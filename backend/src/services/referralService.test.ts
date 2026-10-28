@@ -312,8 +312,41 @@ describe("referralService - recordCommission", () => {
       .where(eq(marketingCommissions.id, res!.commissionId));
 
     expect(commRow).toBeDefined();
-    expect(commRow.status).toBe("pending");
+    expect(commRow.status).toBe("approved");
     expect(commRow.commissionAmount).toBe(5000);
+
+    // Bersihkan data tes
+    await db.delete(marketingCommissions).where(eq(marketingCommissions.id, res!.commissionId));
+    await db.delete(referralEvents).where(eq(referralEvents.referralCodeId, seedCode.id));
+  });
+
+  it("menghitung komisi dikalikan jumlah bulan (contoh 6 bulan = 30.000)", async () => {
+    const [seedCode] = await db
+      .select()
+      .from(referralCodes)
+      .where(eq(referralCodes.code, MARKETING_SEEDS[0].code));
+
+    expect(seedCode).toBeDefined();
+
+    const res = await recordCommission({
+      referralCodeId: seedCode.id,
+      subscriptionInvoiceId: null,
+      baseAmount: 330000, // 55.000 x 6 bulan
+      durationMonths: 6,
+    });
+
+    expect(res).not.toBeNull();
+    // 5.000 x 6 bulan = 30.000
+    expect(res?.commissionAmount).toBe(30000);
+
+    const [commRow] = await db
+      .select()
+      .from(marketingCommissions)
+      .where(eq(marketingCommissions.id, res!.commissionId));
+
+    expect(commRow).toBeDefined();
+    expect(commRow.status).toBe("approved");
+    expect(commRow.commissionAmount).toBe(30000);
 
     // Bersihkan data tes
     await db.delete(marketingCommissions).where(eq(marketingCommissions.id, res!.commissionId));

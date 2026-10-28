@@ -26,11 +26,14 @@ import {
   MessageCircle,
   Trash2,
   Power,
+  RefreshCw,
 } from "lucide-react";
 import { User, MarketingProfile } from "../../../types";
 import { useMarketing, MarketingReferralCode } from "../../../hooks/useMarketing";
 import { MarketingFormModal } from "./MarketingFormModal";
 import { CommissionPayoutTable } from "./CommissionPayoutTable";
+import { WithdrawalRequestsTable } from "./WithdrawalRequestsTable";
+import { WithdrawalRequestModal } from "./WithdrawalRequestModal";
 import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
 import { ModalWrapper } from "../../common/ModalWrapper";
 import { useConfirm } from "../../common/ConfirmContext";
@@ -46,11 +49,16 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   const {
     profiles,
     commissions,
+    withdrawals,
     meData,
     loading,
     fetchMe,
     fetchProfiles,
     fetchCommissions,
+    fetchWithdrawals,
+    requestWithdrawal,
+    updateWithdrawalStatus,
+    syncBalances,
     createProfile,
     updateProfile,
     updateCommissionStatus,
@@ -61,12 +69,14 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   const confirm = useConfirm();
   const toast = useToast();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [syncingBalances, setSyncingBalances] = useState(false);
 
   const isSuperadmin = currentUser?.role === "superadmin";
   const isMarketing = currentUser?.role === "marketing";
 
-  const [activeSubTab, setActiveSubTab] = useState<"profiles" | "payouts">("profiles");
+  const [activeSubTab, setActiveSubTab] = useState<"profiles" | "withdrawals" | "commissions">("profiles");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [selectedProfileForEdit, setSelectedProfileForEdit] = useState<MarketingProfile | null>(
     null
   );
@@ -83,12 +93,30 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   useEffect(() => {
     if (isSuperadmin) {
       fetchProfiles();
+      fetchWithdrawals();
       fetchCommissions();
     } else if (isMarketing) {
       fetchMe();
+      fetchWithdrawals();
       fetchCommissions();
     }
-  }, [isSuperadmin, isMarketing, fetchProfiles, fetchCommissions, fetchMe]);
+  }, [isSuperadmin, isMarketing, fetchProfiles, fetchWithdrawals, fetchCommissions, fetchMe]);
+
+  const handleSyncBalances = async () => {
+    setSyncingBalances(true);
+    try {
+      const res = await syncBalances();
+      if (res.success) {
+        toast.success(res.message || "Saldo dan komisi berhasil disinkronkan");
+      } else {
+        toast.error(res.message || "Gagal menyinkronkan saldo");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Terjadi kesalahan sistem");
+    } finally {
+      setSyncingBalances(false);
+    }
+  };
 
   const handleOpenCreate = () => {
     setSelectedProfileForEdit(null);
@@ -223,7 +251,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   // Calculations for Superadmin
   const totalEarnedAll = profiles.reduce((acc, p) => acc + (p.totalEarned || 0), 0);
   const totalWithdrawnAll = profiles.reduce((acc, p) => acc + (p.totalWithdrawn || 0), 0);
-  const pendingCommissionsCount = commissions.filter((c) => c.status === "pending").length;
+  const pendingWithdrawalsCount = withdrawals.filter((w) => w.status === "pending").length;
 
   return (
     <div className="space-y-6">
@@ -238,13 +266,24 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
               Kelola akun marketing internal, atur insentif performa, dan proses pencairan dana.
             </p>
           </div>
-          <button
-            onClick={handleOpenCreate}
-            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 self-start transition cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Tambah Anggota
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={handleSyncBalances}
+              disabled={syncingBalances}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+              title="Sinkronkan saldo dan status komisi dari riwayat invoice"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingBalances ? "animate-spin text-blue-600" : ""}`} />
+              <span>{syncingBalances ? "Menyinkronkan..." : "Sinkronkan Saldo"}</span>
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Tambah Anggota
+            </button>
+          </div>
         </div>
       )}
 
@@ -277,7 +316,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
 
             <div className="bg-white/5 rounded-xl p-3 border border-white/5">
               <div className="font-semibold text-white">Pencairan Insentif</div>
-              <div className="text-[11px] text-amber-200/70 mt-0.5">Ditransfer ke rekening bank setelah disetujui</div>
+              <div className="text-[11px] text-amber-200/70 mt-0.5">Ajukan penarikan kapan saja tanpa batas minimal</div>
             </div>
           </div>
         </div>
@@ -320,16 +359,16 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
 
             <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
               <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
-                <span>Menunggu Verifikasi</span>
+                <span>Permohonan Penarikan</span>
                 <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
                   <Clock className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
-                {pendingCommissionsCount} <span className="text-xs font-semibold text-amber-700">Insentif</span>
+                {pendingWithdrawalsCount} <span className="text-xs font-semibold text-amber-700">Permohonan</span>
               </div>
               <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
-                Permohonan pencairan dana
+                Menunggu transfer admin
               </div>
             </div>
           </div>
@@ -347,14 +386,31 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
               Daftar Tim Marketing IndoTech ({profiles.length})
             </button>
             <button
-              onClick={() => setActiveSubTab("payouts")}
-              className={`pb-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
-                activeSubTab === "payouts"
+              onClick={() => setActiveSubTab("withdrawals")}
+              className={`pb-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                activeSubTab === "withdrawals"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              Pencairan & Riwayat Insentif ({commissions.length})
+              <span>Permohonan Pencairan</span>
+              {pendingWithdrawalsCount > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+                  {pendingWithdrawalsCount}
+                </span>
+              ) : (
+                <span className="text-slate-400">({withdrawals.length})</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveSubTab("commissions")}
+              className={`pb-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
+                activeSubTab === "commissions"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Riwayat Komisi Masuk ({commissions.length})
             </button>
           </div>
 
@@ -370,6 +426,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                       <th className="py-3.5 px-4">Insentif per Perpanjangan</th>
                       <th className="py-3.5 px-4">Total Penghasilan</th>
                       <th className="py-3.5 px-4">Sudah Dicairkan</th>
+                      <th className="py-3.5 px-4">Saldo Tersedia</th>
                       <th className="py-3.5 px-4">Status</th>
                       <th className="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
@@ -377,13 +434,13 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
                           Memuat data tim marketing...
                         </td>
                       </tr>
                     ) : profiles.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
                           Belum ada anggota tim marketing yang didaftarkan
                         </td>
                       </tr>
@@ -432,6 +489,11 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                           {/* Total Withdrawn */}
                           <td className="py-3.5 px-4 font-bold text-emerald-600 font-mono">
                             Rp {(p.totalWithdrawn || 0).toLocaleString("id-ID")}
+                          </td>
+
+                          {/* Saldo Tersedia */}
+                          <td className="py-3.5 px-4 font-bold text-blue-700 font-mono">
+                            Rp {(p.availableBalance ?? Math.max(0, (p.totalEarned || 0) - (p.totalWithdrawn || 0))).toLocaleString("id-ID")}
                           </td>
 
                          {/* Status */}
@@ -491,8 +553,17 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
             </div>
           )}
 
-          {/* Content SubTab 2: Payouts */}
-          {activeSubTab === "payouts" && (
+          {/* Content SubTab 2: Withdrawals */}
+          {activeSubTab === "withdrawals" && (
+            <WithdrawalRequestsTable
+              withdrawals={withdrawals}
+              isSuperadmin={true}
+              onUpdateStatus={updateWithdrawalStatus}
+            />
+          )}
+
+          {/* Content SubTab 3: Commissions History */}
+          {activeSubTab === "commissions" && (
             <CommissionPayoutTable
               commissions={commissions}
               onUpdateStatus={updateCommissionStatus}
@@ -524,7 +595,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
 
             <div className="bg-gradient-to-br from-indigo-50/90 via-violet-50/40 to-white p-4 sm:p-5 rounded-2xl border border-indigo-200/90 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
               <div className="flex items-center justify-between text-xs text-indigo-800 font-semibold">
-                <span>Total Insentif Terakumulasi</span>
+                <span>Total Komisi Terakumulasi</span>
                 <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
                   <TrendingUp className="w-4 h-4" />
                 </div>
@@ -533,37 +604,51 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                 Rp {(meData?.commissionsSummary?.totalEarned || 0).toLocaleString("id-ID")}
               </div>
               <div className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
-                Akumulasi insentif performa
+                Total pendapatan dari perpanjangan
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/90 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
-              <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
-                <span>Insentif Sudah Ditransfer</span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+            <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-white p-4 sm:p-5 rounded-2xl border-2 border-emerald-500/40 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs text-emerald-800 font-bold">
+                <span>Saldo Siap Ditarik</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-extrabold text-emerald-900 mt-2 tracking-tight">
+                Rp {(meData?.commissionsSummary?.availableBalance || 0).toLocaleString("id-ID")}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10.5px] text-emerald-700 font-medium">Bebas ditarik</span>
+                <button
+                  type="button"
+                  onClick={() => setIsWithdrawModalOpen(true)}
+                  disabled={(meData?.commissionsSummary?.availableBalance || 0) <= 0}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Tarik Saldo
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-slate-50 via-slate-100/50 to-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-slate-300 transition">
+              <div className="flex items-center justify-between text-xs text-slate-700 font-semibold">
+                <span>Sudah Ditransfer</span>
+                <div className="w-8 h-8 rounded-xl bg-slate-700 text-white flex items-center justify-center shadow-xs">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-emerald-900 mt-2.5 tracking-tight">
+              <div className="text-xl sm:text-2xl font-bold text-slate-900 mt-2.5 tracking-tight">
                 Rp {(meData?.commissionsSummary?.totalWithdrawn || 0).toLocaleString("id-ID")}
               </div>
-              <div className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
-                Telah masuk rekening bank
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-4 sm:p-5 rounded-2xl border border-amber-200/90 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
-              <div className="flex items-center justify-between text-xs text-amber-800 font-semibold">
-                <span>Menunggu Pencairan</span>
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                  <Clock className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-xl sm:text-2xl font-bold text-amber-900 mt-2.5 tracking-tight">
-                Rp {(meData?.commissionsSummary?.pendingCommission || 0).toLocaleString("id-ID")}
-              </div>
-              <div className="text-[11px] text-amber-700/90 font-medium mt-1 truncate">
-                Menunggu verifikasi admin
+              <div className="text-[11px] text-slate-500 font-medium mt-1 truncate">
+                {(meData?.commissionsSummary?.pendingWithdrawals || 0) > 0 ? (
+                  <span className="text-amber-600 font-semibold">
+                    Rp {meData!.commissionsSummary!.pendingWithdrawals!.toLocaleString("id-ID")} diproses admin
+                  </span>
+                ) : (
+                  "Telah masuk ke rekening"
+                )}
               </div>
             </div>
           </div>
@@ -828,12 +913,34 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
             )}
           </div>
 
+          {/* Riwayat Penarikan Dana Self */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Riwayat Penarikan Dana</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Daftar pengajuan pencairan saldo komisi marketing ke rekening Anda.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsWithdrawModalOpen(true)}
+                disabled={(meData?.commissionsSummary?.availableBalance || 0) <= 0}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                Tarik Saldo
+              </button>
+            </div>
+            <WithdrawalRequestsTable withdrawals={withdrawals} isSuperadmin={false} />
+          </div>
+
           {/* Riwayat Insentif Self */}
           <div className="space-y-2">
             <div>
-              <h3 className="text-sm font-bold text-slate-800">Riwayat Insentif Pemasaran</h3>
+              <h3 className="text-sm font-bold text-slate-800">Riwayat Komisi Masuk</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Daftar perolehan insentif dari pembayaran dan perpanjangan paket langganan outlet aktif.
+                Rincian insentif dari pembayaran dan perpanjangan paket langganan outlet aktif.
               </p>
             </div>
             <CommissionPayoutTable commissions={commissions} isSuperadmin={false} />
@@ -963,6 +1070,15 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
         isOpen={!!shareCode}
         onClose={() => setShareCode(null)}
         code={shareCode}
+      />
+
+      {/* Modal Tarik Saldo Komisi */}
+      <WithdrawalRequestModal
+        isOpen={isWithdrawModalOpen}
+        onClose={() => setIsWithdrawModalOpen(false)}
+        profile={meData?.profile}
+        availableBalance={meData?.commissionsSummary?.availableBalance || 0}
+        onSubmit={requestWithdrawal}
       />
     </div>
   );

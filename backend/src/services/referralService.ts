@@ -154,14 +154,22 @@ export function computeDiscount(
 
 /**
  * Catat komisi untuk profil marketing ketika tagihan/langganan berhasil dibayar.
+ * Untuk tipe komisi 'fixed' (misal Rp 5.000/bulan), dikalikan jumlah bulan durasi langganan.
  */
 export async function recordCommission(params: {
   referralCodeId: string;
   subscriptionInvoiceId?: string | null;
   baseAmount: number;
   tenantId?: string | null;
+  durationMonths?: number;
 }) {
-  const { referralCodeId, subscriptionInvoiceId, baseAmount, tenantId } = params;
+  const {
+    referralCodeId,
+    subscriptionInvoiceId,
+    baseAmount,
+    tenantId,
+    durationMonths = 1,
+  } = params;
 
   const foundCodes = await db
     .select()
@@ -173,11 +181,18 @@ export async function recordCommission(params: {
 
   if (!code.marketingProfileId) return null;
 
-  const commissionAmount = calculateCommission(
-    baseAmount,
-    code.commissionType as "percent" | "fixed",
-    code.commissionValue
-  );
+  const months = Math.max(1, Number(durationMonths) || 1);
+  let commissionAmount = 0;
+
+  if (code.commissionType === "fixed") {
+    commissionAmount = roundRupiah(code.commissionValue * months);
+  } else {
+    commissionAmount = calculateCommission(
+      baseAmount,
+      code.commissionType as "percent" | "fixed",
+      code.commissionValue
+    );
+  }
 
   if (commissionAmount <= 0) return null;
 
@@ -190,9 +205,18 @@ export async function recordCommission(params: {
     tenantId: tenantId ?? null,
     baseAmount,
     commissionAmount,
-    status: "pending",
+    status: "approved",
     createdAt: new Date().toISOString(),
   });
+
+  // Perbarui totalEarned pada profil marketing agar saldo siap ditarik bertambah
+  await db
+    .update(marketingProfiles)
+    .set({
+      totalEarned: sql`${marketingProfiles.totalEarned} + ${commissionAmount}`,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(marketingProfiles.id, code.marketingProfileId));
 
   // Catat event pembayaran referral
   await db.insert(referralEvents).values({
@@ -203,6 +227,7 @@ export async function recordCommission(params: {
     metadata: JSON.stringify({
       invoiceId: subscriptionInvoiceId,
       baseAmount,
+      durationMonths: months,
       commissionAmount,
     }),
     createdAt: new Date().toISOString(),

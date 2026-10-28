@@ -297,6 +297,8 @@ export interface MarketingProfile {
   commissionRateDefault: number;
   totalEarned: number;
   totalWithdrawn: number;
+  availableBalance?: number;
+  pendingWithdrawals?: number;
   notes?: string | null;
   createdAt: string;
   userName?: string;
@@ -318,6 +320,24 @@ export interface MarketingCommission {
   createdAt: string;
   codeName?: string;
   marketingName?: string;
+}
+
+export interface MarketingWithdrawal {
+  id: string;
+  marketingProfileId: string;
+  amount: number;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  status: "pending" | "paid" | "rejected";
+  proofUrl?: string | null;
+  notes?: string | null;
+  processedByUserId?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+  marketingName?: string;
+  marketingEmail?: string;
+  marketingPhone?: string;
 }
 
 export interface ReferralStats {

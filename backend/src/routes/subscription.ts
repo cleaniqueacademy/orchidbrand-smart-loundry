@@ -22,7 +22,7 @@ import {
   verifySubscriptionInvoice,
   rejectSubscriptionInvoice,
 } from "../services/subscriptionService";
-import { validateCode } from "../services/referralService";
+import { validateCode, recordCommission } from "../services/referralService";
 import { runTrialReminderCheck } from "../jobs/trialReminder";
 
 const subscriptionRoutes = new Hono();
@@ -366,10 +366,14 @@ subscriptionRoutes.post(
       // Cek apakah tenant punya referral code
       let hasReferral = false;
       let refCodeName: string | null = null;
+      let refCodeId: string | null = null;
       if (targetTenant.referralCodeId) {
         hasReferral = true;
         const refRows = await db.select().from(referralCodes).where(eq(referralCodes.id, targetTenant.referralCodeId)).limit(1);
-        if (refRows[0]) refCodeName = refRows[0].code;
+        if (refRows[0]) {
+          refCodeName = refRows[0].code;
+          refCodeId = refRows[0].id;
+        }
       }
 
       // Harga: 55.000 jika referral, 60.000 jika normal
@@ -392,7 +396,30 @@ subscriptionRoutes.post(
         })
         .where(eq(tenants.id, tenantId));
 
+      // Update owner user jika ada
+      if (targetTenant.userId) {
+        await db
+          .update(users)
+          .set({
+            subscriptionUntil: newExpiry,
+            isTrial: "false",
+            status: "active",
+          })
+          .where(eq(users.id, targetTenant.userId));
+      }
+
       invalidateTenantAuthCache(tenantId);
+
+      // Catat komisi marketing jika tenant terhubung referral code
+      if (refCodeId) {
+        await recordCommission({
+          referralCodeId: refCodeId,
+          subscriptionInvoiceId: null,
+          baseAmount: totalAmount,
+          tenantId: targetTenant.id,
+          durationMonths: months,
+        });
+      }
 
       // Catat Kas Masuk Platform
       const cashflowEntry = {

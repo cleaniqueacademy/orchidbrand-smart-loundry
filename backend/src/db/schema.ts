@@ -299,6 +299,21 @@ export const marketingCommissions = pgTable("marketing_commissions", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+export const marketingWithdrawals = pgTable("marketing_withdrawals", {
+  id: text("id").primaryKey(),
+  marketingProfileId: text("marketing_profile_id").notNull().references(() => marketingProfiles.id),
+  amount: doublePrecision("amount").notNull(),
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountName: text("bank_account_name"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'paid' | 'rejected'
+  proofUrl: text("proof_url"),
+  notes: text("notes"),
+  processedByUserId: text("processed_by_user_id").references(() => users.id),
+  processedAt: text("processed_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export const subscriptionEvents = pgTable("subscription_events", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull().references(() => tenants.id),

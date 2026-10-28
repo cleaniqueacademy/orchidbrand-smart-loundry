@@ -402,6 +402,23 @@ export async function initPostgresTables() {
     `;
 
     await client`
+      CREATE TABLE IF NOT EXISTS marketing_withdrawals (
+        id TEXT PRIMARY KEY,
+        marketing_profile_id TEXT NOT NULL REFERENCES marketing_profiles(id),
+        amount DOUBLE PRECISION NOT NULL,
+        bank_name TEXT,
+        bank_account_number TEXT,
+        bank_account_name TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        proof_url TEXT,
+        notes TEXT,
+        processed_by_user_id TEXT REFERENCES users(id),
+        processed_at TEXT,
+        created_at TEXT NOT NULL
+      );
+    `;
+
+    await client`
       CREATE TABLE IF NOT EXISTS subscription_events (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL REFERENCES tenants(id),

@@ -364,6 +364,7 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
       subscriptionInvoiceId: invoice.id,
       baseAmount: invoice.finalAmount,
       tenantId: tenant.id,
+      durationMonths: invoice.durationMonths,
     });
   }
 
