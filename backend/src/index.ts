@@ -18,7 +18,7 @@ import {
   referralCodeTenants,
   referralEvents,
 } from "./db/schema";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import referralRoutes from "./routes/referralCodes";
 import marketingRoutes from "./routes/marketing";
@@ -1767,6 +1767,37 @@ app.get("/api/orders", authMiddleware, async (c) => {
   }
 });
 
+async function generateOrderInvoiceNo(): Promise<string> {
+  const monthPrefix = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-`;
+  const existingInvoices = await db
+    .select({ invoiceNo: orders.invoiceNo })
+    .from(orders)
+    .where(like(orders.invoiceNo, `${monthPrefix}%`));
+
+  const usedSet = new Set(existingInvoices.map((i) => i.invoiceNo));
+
+  let maxSeq = 0;
+  for (const inv of existingInvoices) {
+    const parts = inv.invoiceNo.split("-");
+    if (parts.length >= 3) {
+      const num = parseInt(parts[2], 10);
+      if (!isNaN(num) && num > maxSeq) {
+        maxSeq = num;
+      }
+    }
+  }
+
+  let candidateSeq = Math.max(maxSeq + 1, existingInvoices.length + 1);
+  let candidate = `${monthPrefix}${String(candidateSeq).padStart(3, "0")}`;
+
+  while (usedSet.has(candidate)) {
+    candidateSeq++;
+    candidate = `${monthPrefix}${String(candidateSeq).padStart(3, "0")}`;
+  }
+
+  return candidate;
+}
+
 app.post("/api/orders", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
@@ -1807,9 +1838,6 @@ app.post("/api/orders", authMiddleware, async (c) => {
     if (user.role !== "superadmin" && cust.tenantId !== tenantId) {
       return c.json({ success: false, message: "Akses ditolak: Pelanggan bukan milik outlet Anda" }, 403);
     }
-
-    const count = (await db.select().from(orders)).length + 1;
-    const invoiceNo = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-${String(count).padStart(3, "0")}`;
 
     let finalServiceType = body.serviceType || "Cuci Komplit (Kg)";
     let finalWeightOrQty = Number(body.weightOrQty) || 0;
@@ -1855,28 +1883,54 @@ app.post("/api/orders", authMiddleware, async (c) => {
       paidShiftId = matchingShift ? matchingShift.id : null;
     }
 
-    const newOrder = {
-      id: `ord-${Date.now()}`,
-      tenantId,
-      customerId,
-      invoiceNo,
-      serviceType: finalServiceType,
-      weightOrQty: finalWeightOrQty,
-      unit: finalUnit,
-      pricePerUnit: finalPricePerUnit,
-      totalAmount: finalTotalAmount,
-      items: itemsJson,
-      status: body.status || "process",
-      paymentStatus,
-      paymentMethod: body.paymentMethod || "cash",
-      notes: body.notes || "",
-      paidAt,
-      paidShiftId,
-      createdAt: new Date().toISOString(),
-      estimatedCompletionAt,
-    };
+    let invoiceNo = "";
+    let newOrder: any = null;
+    let insertSuccess = false;
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    await db.insert(orders).values(newOrder);
+    while (!insertSuccess && attempts < maxAttempts) {
+      attempts++;
+      invoiceNo = await generateOrderInvoiceNo();
+
+      newOrder = {
+        id: `ord-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        tenantId,
+        customerId,
+        invoiceNo,
+        serviceType: finalServiceType,
+        weightOrQty: finalWeightOrQty,
+        unit: finalUnit,
+        pricePerUnit: finalPricePerUnit,
+        totalAmount: finalTotalAmount,
+        items: itemsJson,
+        status: body.status || "process",
+        paymentStatus,
+        paymentMethod: body.paymentMethod || "cash",
+        notes: body.notes || "",
+        paidAt,
+        paidShiftId,
+        createdAt: new Date().toISOString(),
+        estimatedCompletionAt,
+      };
+
+      try {
+        await db.insert(orders).values(newOrder);
+        insertSuccess = true;
+      } catch (err: any) {
+        const isUniqueViolation =
+          err?.code === "23505" ||
+          err?.message?.includes("orders_invoice_no_key") ||
+          err?.message?.includes("unique constraint");
+
+        if (isUniqueViolation && attempts < maxAttempts) {
+          console.warn(`[OrderCreation] Collision on invoiceNo ${invoiceNo}, retrying (attempt ${attempts + 1})...`);
+          await new Promise((resolve) => setTimeout(resolve, 50 * attempts));
+          continue;
+        }
+        throw err;
+      }
+    }
 
     // -------------------------------------------------------------
     // Auto WhatsApp on Order Creation (Konfirmasi Pesanan / Struk Digital)
