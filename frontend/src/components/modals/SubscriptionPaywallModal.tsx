@@ -18,6 +18,7 @@ import {
   QrCode,
   Download,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { User, AccountTier } from "../../types";
 import { useToast } from "../common/ToastContext";
@@ -27,6 +28,7 @@ import { QrisPreviewModal } from "./QrisPreviewModal";
 interface SubscriptionPaywallModalProps {
   isOpen: boolean;
   user: User | null;
+  onClose?: () => void;
   onRefreshStatus?: () => Promise<boolean | void> | void;
   onLogout?: () => void;
 }
@@ -39,6 +41,7 @@ const PREMIUM_MONTHLY_RATE = 100000;
 export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> = ({
   isOpen,
   user,
+  onClose,
   onRefreshStatus,
   onLogout,
 }) => {
@@ -175,7 +178,20 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
         {/* Top Gradient Banner */}
         <div className="h-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 w-full" />
 
-        <div className="p-5 sm:p-7 space-y-6">
+        <div className="p-5 sm:p-7 space-y-6 relative">
+          {/* Close / Dismiss Button (24 Jam) */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 transition shadow-xs cursor-pointer"
+              title="Tutup sementara selama 24 jam"
+              aria-label="Tutup modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Header */}
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -478,6 +494,19 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${checkingStatus ? "animate-spin text-blue-600" : ""}`} />
                   <span>{checkingStatus ? "Memeriksa..." : "Periksa Status Aktivasi"}</span>
+                </button>
+              )}
+
+              {/* Nanti Saja / Tutup Sementara (24 Jam) */}
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl border border-zinc-200 hover:bg-zinc-100 text-zinc-750 hover:text-zinc-900 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  title="Tutup sementara pengingat selama 24 jam"
+                >
+                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Nanti Saja (24 Jam)</span>
                 </button>
               )}
 

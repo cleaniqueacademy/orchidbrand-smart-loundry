@@ -158,6 +158,34 @@ export default function App() {
     );
   };
 
+  // Subscription Paywall Dismissal State (Toleransi Operasional 24 Jam)
+  const [isPaywallDismissed, setIsPaywallDismissed] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      const storageKey = `cleanique_paywall_dismissed_${currentUser.id}`;
+      const dismissedUntil = localStorage.getItem(storageKey);
+      if (dismissedUntil && Date.now() < Number(dismissedUntil)) {
+        setIsPaywallDismissed(true);
+      } else {
+        setIsPaywallDismissed(false);
+      }
+    }
+  }, [currentUser?.id]);
+
+  const handleDismissPaywall = () => {
+    if (currentUser?.id) {
+      const storageKey = `cleanique_paywall_dismissed_${currentUser.id}`;
+      const expireTime = Date.now() + 24 * 60 * 60 * 1000; // Sembunyikan 24 jam
+      localStorage.setItem(storageKey, String(expireTime));
+    }
+    setIsPaywallDismissed(true);
+    toast.info(
+      "Pengingat Disembunyikan (24 Jam)",
+      "Anda dapat terus menggunakan aplikasi kasir hari ini. Untuk perpanjangan langganan, buka menu 'Status Langganan' kapan saja."
+    );
+  };
+
   // Route Guard berdasarkan Role:
   // 1. Super Admin: Laundry Cleanique & Troubleshooting Hub
   // 2. Marketing: Khusus Dashboard Marketing & Kode Referral
@@ -578,18 +606,21 @@ export default function App() {
             onLogout={handleLogout}
           />
         ) : (
-          <SubscriptionPaywallModal
-            isOpen={true}
-            user={currentUser}
-            onRefreshStatus={async () => {
-              const isNowActive = await refreshUserSession();
-              if (isNowActive) {
-                fetchData();
-              }
-              return isNowActive;
-            }}
-            onLogout={handleLogout}
-          />
+          !isPaywallDismissed && (
+            <SubscriptionPaywallModal
+              isOpen={true}
+              user={currentUser}
+              onClose={handleDismissPaywall}
+              onRefreshStatus={async () => {
+                const isNowActive = await refreshUserSession();
+                if (isNowActive) {
+                  fetchData();
+                }
+                return isNowActive;
+              }}
+              onLogout={handleLogout}
+            />
+          )
         )
       )}
 
