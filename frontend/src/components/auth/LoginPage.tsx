@@ -432,7 +432,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {/* BOTTOM SECURITY NOTE */}
           <div className="mt-4 text-center gsap-login-form-elem">
             <p className="text-[11px] leading-relaxed text-slate-400">
-              Aman & terenkripsi • Multi-cabang • Akses dari HP, tablet, & PC
+              Akses dari HP, tablet, & PC
             </p>
           </div>
         </div>

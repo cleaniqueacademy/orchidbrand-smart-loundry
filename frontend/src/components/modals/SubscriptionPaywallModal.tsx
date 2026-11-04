@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Check,
   CreditCard,
+  Building2,
+  Smartphone,
+  Copy,
   MessageCircle,
   RefreshCw,
   LogOut,
@@ -22,7 +25,7 @@ import {
 } from "lucide-react";
 import { User, AccountTier } from "../../types";
 import { useToast } from "../common/ToastContext";
-import { authHeaders } from "../../utils/api";
+import { api, authHeaders } from "../../utils/api";
 import { QrisPreviewModal } from "./QrisPreviewModal";
 
 interface SubscriptionPaywallModalProps {
@@ -57,10 +60,48 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
   const [isQrisModalOpen, setIsQrisModalOpen] = useState<boolean>(false);
   const [downloadingQris, setDownloadingQris] = useState<boolean>(false);
 
+  const [activePaymentMethod, setActivePaymentMethod] = useState<"qris" | "bank" | "ewallet">("qris");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<{
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountName?: string;
+    qrisInfo?: string;
+    ewalletName?: string;
+    ewalletNumber?: string;
+    ewalletAccountName?: string;
+    supportPhone?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: any }>("/api/platform-settings/public");
+        if (res.success && res.data) {
+          setPlatformSettings(res.data);
+        }
+      } catch (err) {
+        console.warn("Gagal memuat pengaturan platform:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleCopy = (text: string, key: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success("Tersalin", `${label} berhasil disalin ke clipboard.`);
+    setTimeout(() => {
+      setCopiedKey((prev) => (prev === key ? null : prev));
+    }, 2000);
+  };
+
   const handleDownloadQris = async () => {
     setDownloadingQris(true);
+    const targetQrisUrl = platformSettings?.qrisInfo || "/qris.png";
     try {
-      const response = await fetch("/qris.png");
+      const response = await fetch(targetQrisUrl);
       if (!response.ok) throw new Error("Gagal mengambil file gambar");
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -74,7 +115,7 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
       toast.success("Gambar QRIS berhasil diunduh.");
     } catch {
       const link = document.createElement("a");
-      link.href = "/qris.png";
+      link.href = targetQrisUrl;
       link.download = "QRIS-Laundry-Cleanique.png";
       link.target = "_blank";
       document.body.appendChild(link);
@@ -95,9 +136,17 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
   const totalAmount = effectiveMonthly * durationMonths;
 
   // Clean WhatsApp Number
-  const cleanPhone = DEFAULT_SUPPORT_PHONE.replace(/[^0-9]/g, "").replace(/^0/, "62");
+  const rawPhone = platformSettings?.supportPhone || DEFAULT_SUPPORT_PHONE;
+  const cleanPhone = rawPhone.replace(/[^0-9]/g, "").replace(/^0/, "62");
 
   const planName = selectedPlan === "premium" ? "Paket Premium (Rp 100.000/bln)" : "Paket Pro (Rp 60.000/bln)";
+  const paymentMethodText =
+    activePaymentMethod === "bank"
+      ? `Transfer Bank (${platformSettings?.bankName || "BCA"})`
+      : activePaymentMethod === "ewallet"
+      ? `E-Wallet (${platformSettings?.ewalletName || "DANA / GoPay / OVO"})`
+      : "QRIS GPN (Semua Bank & Dompet Digital)";
+
   const waText = encodeURIComponent(
     `Halo Admin Laundry Cleanique,\n` +
       `Saya baru saja login ke sistem dengan akun:\n` +
@@ -107,6 +156,7 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
       `Saya ingin mengaktifkan langganan:\n` +
       `• Pilihan Paket: *${planName}*\n` +
       `• Durasi: *${durationMonths} Bulan*\n` +
+      `• Metode Pembayaran: *${paymentMethodText}*\n` +
       `${appliedReferral ? `• Kode Referral: *${appliedReferral}* (Diskon Rp 5.000/bln)\n` : ""}` +
       `• Total Tagihan: *Rp ${totalAmount.toLocaleString("id-ID")}*\n\n` +
       `Berikut saya lampirkan bukti transfer pembayaran saya. Mohon dibantu aktivasi akun outlet saya agar modal tertutup dan saya dapat mulai beroperasi. Terima kasih!`
@@ -405,69 +455,284 @@ export const SubscriptionPaywallModal: React.FC<SubscriptionPaywallModalProps> =
           </div>
 
           {/* Payment Account Details */}
-          <div className="bg-gradient-to-br from-zinc-50 to-zinc-100/60 rounded-2xl border border-zinc-200 p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-200/70 text-xs">
+          <div className="bg-zinc-50/70 rounded-2xl border border-zinc-200 p-4 space-y-3.5">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80 text-xs flex-wrap gap-2">
               <div className="flex items-center gap-2 text-zinc-800 font-bold">
-                <QrCode className="w-4 h-4 text-emerald-600" />
-                <span>Metode Pembayaran Resmi (QRIS Statis)</span>
+                <CreditCard className="w-4 h-4 text-blue-600" />
+                <span>Pilih Metode Pembayaran Resmi</span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                GoPay Merchant / GPN
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                Aktivasi Instan
               </span>
             </div>
 
-            <div className="bg-white rounded-xl p-4 border border-zinc-200/80 text-center space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] pb-1 border-b border-zinc-100">
-                <span className="font-bold text-zinc-800">LAUNDRY CLEANIQUE</span>
-                <span className="font-mono text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">NMID: ID1026618371243</span>
-              </div>
-
-              <div
-                onClick={() => setIsQrisModalOpen(true)}
-                className="w-48 sm:w-52 mx-auto bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 flex flex-col items-center justify-center cursor-pointer group relative hover:border-emerald-500 transition-colors"
-                title="Klik untuk membuka QRIS layar penuh"
+            {/* Segmented Channel Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-200/70 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActivePaymentMethod("qris")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activePaymentMethod === "qris"
+                    ? "bg-white text-emerald-800 shadow-2xs font-extrabold"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
               >
-                <img
-                  src="/qris.png"
-                  alt="QRIS Pembayaran Laundry Cleanique"
-                  className="w-full h-auto object-contain rounded-xl"
-                />
-                <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 text-center p-2">
-                  <QrCode className="w-5 h-5 text-emerald-300" />
-                  <span>Perbesar QRIS</span>
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                <span>QRIS</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaymentMethod("bank")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activePaymentMethod === "bank"
+                    ? "bg-white text-blue-800 shadow-2xs font-extrabold"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Transfer Bank</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaymentMethod("ewallet")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activePaymentMethod === "ewallet"
+                    ? "bg-white text-purple-800 shadow-2xs font-extrabold"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5 text-purple-600" />
+                <span>E-Wallet</span>
+              </button>
+            </div>
+
+            {/* Content: QRIS */}
+            {activePaymentMethod === "qris" && (
+              <div className="bg-white rounded-xl p-4 border border-zinc-200 text-center space-y-3">
+                <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-zinc-100">
+                  <span className="font-bold text-zinc-800">LAUNDRY CLEANIQUE</span>
+                  <span className="font-mono text-zinc-600 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">
+                    NMID: ID1026618371243
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => setIsQrisModalOpen(true)}
+                  className="w-44 sm:w-48 mx-auto bg-white p-2 rounded-2xl shadow-2xs border border-zinc-200 flex flex-col items-center justify-center cursor-pointer group relative hover:border-emerald-500 transition-colors"
+                  title="Klik untuk membuka QRIS layar penuh"
+                >
+                  <img
+                    src={platformSettings?.qrisInfo || "/qris.png"}
+                    alt="QRIS Pembayaran Laundry Cleanique"
+                    className="w-full h-auto object-contain rounded-xl"
+                  />
+                  <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 text-center p-2">
+                    <QrCode className="w-5 h-5 text-emerald-300" />
+                    <span>Perbesar QRIS</span>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-xs">
+                  <span className="text-[11px] text-zinc-600 block">Total Tagihan Pembayaran:</span>
+                  <div className="flex items-center justify-center gap-2 mt-0.5">
+                    <span className="text-lg font-black text-emerald-700 font-mono">
+                      Rp {totalAmount.toLocaleString("id-ID")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(String(totalAmount), "total-qris", "Nominal")}
+                      className="p-1 hover:bg-emerald-100 rounded text-emerald-800 transition"
+                      title="Salin nominal"
+                    >
+                      {copiedKey === "total-qris" ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Bisa di-scan dari BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay &amp; Semua Mobile Banking
+                  </p>
+                </div>
+
+                <div className="flex justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDownloadQris}
+                    disabled={downloadingQris}
+                    className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs disabled:opacity-60"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{downloadingQris ? "Mengunduh..." : "Unduh QRIS"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsQrisModalOpen(true)}
+                    className="px-3 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Buka Layar Penuh</span>
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 text-xs">
-                <span className="text-[11px] text-zinc-600 block">Total Pembayaran QRIS:</span>
-                <span className="text-lg font-black text-emerald-600 font-mono">
-                  Rp {totalAmount.toLocaleString("id-ID")}
-                </span>
-                <p className="text-[10px] text-zinc-500 mt-1">
-                  Bisa di-scan dari BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay & Semua Mobile Banking
-                </p>
-              </div>
+            {/* Content: Transfer Bank */}
+            {activePaymentMethod === "bank" && (
+              <div className="bg-white rounded-xl p-4 border border-zinc-200 space-y-3">
+                <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white space-y-3 shadow-sm border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-300" />
+                      <span className="text-xs font-extrabold text-white">
+                        {platformSettings?.bankName || "BCA (Bank Central Asia)"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                      Rekening Resmi
+                    </span>
+                  </div>
 
-              <div className="flex justify-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleDownloadQris}
-                  disabled={downloadingQris}
-                  className="px-3.5 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs disabled:opacity-60"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{downloadingQris ? "Mengunduh..." : "Unduh QRIS"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsQrisModalOpen(true)}
-                  className="px-3.5 py-1.5 text-[11px] font-bold bg-zinc-50 border border-zinc-200 rounded-lg text-blue-600 flex items-center gap-1 hover:bg-zinc-100 cursor-pointer shadow-2xs"
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Buka Layar Penuh</span>
-                </button>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">
+                      Nomor Rekening Tujuan:
+                    </span>
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/10">
+                      <span className="font-mono text-base sm:text-lg font-black tracking-widest text-white">
+                        {platformSettings?.bankAccountNumber || "8830-1928-3341"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            platformSettings?.bankAccountNumber || "8830-1928-3341",
+                            "paywall-bank",
+                            "Nomor rekening"
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                      >
+                        {copiedKey === "paywall-bank" ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-300 stroke-[3]" />
+                            <span>Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Salin No. Rek</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-medium">Atas Nama Pemilik:</span>
+                      <span className="font-bold text-slate-200">
+                        {platformSettings?.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
+                      </span>
+                    </div>
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-xs text-center">
+                  <span className="text-[11px] text-zinc-600 block">Total Tagihan Transfer Bank:</span>
+                  <div className="flex items-center justify-center gap-2 mt-0.5">
+                    <span className="text-lg font-black text-blue-700 font-mono">
+                      Rp {totalAmount.toLocaleString("id-ID")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(String(totalAmount), "total-bank", "Nominal transfer")}
+                      className="p-1 hover:bg-blue-100 rounded text-blue-800 transition"
+                      title="Salin nominal"
+                    >
+                      {copiedKey === "total-bank" ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Content: E-Wallet */}
+            {activePaymentMethod === "ewallet" && (
+              <div className="bg-white rounded-xl p-4 border border-zinc-200 space-y-3">
+                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 text-white space-y-3 shadow-sm border border-emerald-900/60">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-emerald-300" />
+                      <span className="text-xs font-extrabold text-white">
+                        {platformSettings?.ewalletName || "DANA / GoPay / OVO"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                      Akun Resmi
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-emerald-300/80 uppercase tracking-wider block font-semibold">
+                      Nomor Akun / Handphone Tujuan:
+                    </span>
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/10">
+                      <span className="font-mono text-base sm:text-lg font-black tracking-widest text-white">
+                        {platformSettings?.ewalletNumber || "0812-2340-6368"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            platformSettings?.ewalletNumber || "0812-2340-6368",
+                            "paywall-ewallet",
+                            "Nomor e-wallet"
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                      >
+                        {copiedKey === "paywall-ewallet" ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-200 stroke-[3]" />
+                            <span>Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Salin No. HP</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-[10px] text-emerald-300/80 block font-medium">Atas Nama Pemilik:</span>
+                      <span className="font-bold text-emerald-100">
+                        {platformSettings?.ewalletAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
+                      </span>
+                    </div>
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-xs text-center">
+                  <span className="text-[11px] text-zinc-600 block">Total Tagihan Transfer E-Wallet:</span>
+                  <div className="flex items-center justify-center gap-2 mt-0.5">
+                    <span className="text-lg font-black text-purple-700 font-mono">
+                      Rp {totalAmount.toLocaleString("id-ID")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(String(totalAmount), "total-ewallet", "Nominal e-wallet")}
+                      className="p-1 hover:bg-purple-100 rounded text-purple-800 transition"
+                      title="Salin nominal"
+                    >
+                      {copiedKey === "total-ewallet" ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

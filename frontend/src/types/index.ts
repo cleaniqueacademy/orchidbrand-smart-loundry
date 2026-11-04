@@ -455,6 +455,9 @@ export interface SubscriptionSummary {
     bankAccountNumber: string | null;
     bankAccountName: string | null;
     qrisInfo: string | null;
+    ewalletName?: string | null;
+    ewalletNumber?: string | null;
+    ewalletAccountName?: string | null;
   };
 }
 
