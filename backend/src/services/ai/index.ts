@@ -206,34 +206,7 @@ GAYA MENJAWAB & PRINSIP KEHEMATAN KATA (SANGAT PENTING):
 
   let lastError: Error | null = null;
 
-  // 1. Provider Utama: Google Gemini Resmi (@google/genai Interactions API & generateContent)
-  if (geminiApiKey) {
-    try {
-      const { text, modelName } = await callGoogleGemini(
-        geminiApiKey,
-        systemPrompt,
-        message,
-        history
-      );
-      const sanitizedReply = sanitizeResponseForRole(text, userRole);
-      return {
-        reply: sanitizedReply,
-        model: modelName,
-        contextSummary: {
-          outletName: context.outletName,
-          ordersToday: context.ordersTodayCount,
-          revenueToday: context.revenueToday,
-          pendingOrders: context.processCount,
-          readyOrders: context.readyCount,
-        },
-      };
-    } catch (geminiErr: any) {
-      lastError = geminiErr;
-      console.warn(`[AI Assistant] Google Gemini gagal, mengalihkan ke fallback Aivene:`, geminiErr.message);
-    }
-  }
-
-  // 2. Fallback 1: Aivene AI Gateway (DeepSeek & GLM models chain)
+  // 1. Provider Utama: Aivene AI Gateway (Hosted DeepSeek v4.1 Flash & GLM 5.3 Flash chain)
   if (aiveneApiKey) {
     try {
       const { text, modelName } = await callAiveneWithFallback(
@@ -256,7 +229,34 @@ GAYA MENJAWAB & PRINSIP KEHEMATAN KATA (SANGAT PENTING):
       };
     } catch (aiveneErr: any) {
       lastError = aiveneErr;
-      console.warn(`[AI Assistant] Aivene Gateway gagal:`, aiveneErr.message);
+      console.warn(`[AI Assistant] Aivene Gateway gagal, mengalihkan ke fallback Gemini:`, aiveneErr.message);
+    }
+  }
+
+  // 2. Fallback 1: Google Gemini Resmi (@google/genai Interactions API & generateContent)
+  if (geminiApiKey) {
+    try {
+      const { text, modelName } = await callGoogleGemini(
+        geminiApiKey,
+        systemPrompt,
+        message,
+        history
+      );
+      const sanitizedReply = sanitizeResponseForRole(text, userRole);
+      return {
+        reply: sanitizedReply,
+        model: modelName,
+        contextSummary: {
+          outletName: context.outletName,
+          ordersToday: context.ordersTodayCount,
+          revenueToday: context.revenueToday,
+          pendingOrders: context.processCount,
+          readyOrders: context.readyCount,
+        },
+      };
+    } catch (geminiErr: any) {
+      lastError = geminiErr;
+      console.warn(`[AI Assistant] Google Gemini gagal:`, geminiErr.message);
     }
   }
 

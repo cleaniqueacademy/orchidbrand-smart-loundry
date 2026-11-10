@@ -1,12 +1,9 @@
 import { ChatMessage } from "./types";
 
 export const AIVENE_MODELS = [
-  "deepseek-v4.1-flash",
+  "hosted/deepseek-v4.1-flash-1017",
   "hosted/deepseek-v4.1-flash",
-  "hosted/deepseek-v4-pro-0813",
   "hosted/glm-5.3-flash",
-  "glm-5.3-flashx",
-  "glm-5.3-flash",
   "hosted/glm-5.3",
 ];
 
@@ -35,7 +32,7 @@ export async function callAiveneAPI(
     model: modelName,
     messages,
     temperature: 0.7,
-    max_tokens: 1500,
+    max_tokens: 2048,
   };
 
   const res = await fetch(url, {
@@ -54,8 +51,10 @@ export async function callAiveneAPI(
   }
 
   const json: any = await res.json();
+  const choiceMessage = json?.choices?.[0]?.message;
   const text =
-    json?.choices?.[0]?.message?.content ||
+    choiceMessage?.content ||
+    choiceMessage?.reasoning ||
     "Maaf, tidak ada respon dari model AI Aivene.";
   return text;
 }
