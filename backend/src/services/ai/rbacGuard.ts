@@ -29,6 +29,46 @@ export function checkRoleAccessViolation(
 ): RBACCheckResult | null {
   const lower = message.toLowerCase().trim();
   const normalizedRole = (role || "staff").toLowerCase();
+
+  // Superadmin memiliki hak akses penuh ke seluruh database & ekosistem platform
+  if (normalizedRole === "superadmin") {
+    return null;
+  }
+
+  // =========================================================================
+  // HARDENING PROMPT INJECTION & PRIVILEGE ESCALATION GUARD (NON-SUPERADMIN)
+  // =========================================================================
+  const isAttemptingRoleSpoofing =
+    /\b(saya admin|aku admin|saya superadmin|aku superadmin|i am admin|i am superadmin|act as admin|act as superadmin|pretend to be admin|pretend you are admin|pretend you're superadmin|role:\s*superadmin|role:\s*admin|kamu sekarang superadmin|you are now superadmin|sebagai admin|jadikan saya admin|berikan akses admin|mode admin|admin mode|bypass role)\b/i.test(
+      lower
+    );
+
+  const isAttemptingJailbreak =
+    /\b(ignore previous instructions|ignore all instructions|forget your instructions|bypass rules|override instructions|developer mode|dan mode|jailbreak|bocorkan prompt|system prompt|reveal system prompt|show instructions|tampilkan prompt|tampilkan rule|show hidden prompt|override system)\b/i.test(
+      lower
+    );
+
+  const isAttemptingDbIntrospection =
+    /\b(select\s+\*\s+from|drop\s+table|dump database|dump db|isi database|tampilkan semua user|tampilkan semua pengguna|tampilkan semua outlet|tampilkan semua cabang|list all users|show all users|list all tenants|show all tenants|data cabang lain|omset cabang lain|password user|hash password|kredensial|api key|env file|\.env|berapa banyak user saat ini|berapa banyak outlet yang kita kelola|total user saat ini|total cabang yang kita kelola|daftar seluruh user|semua user terdaftar)\b/i.test(
+      lower
+    );
+
+  if (isAttemptingRoleSpoofing || isAttemptingJailbreak || isAttemptingDbIntrospection) {
+    return {
+      isForbidden: true,
+      reason:
+        "Percobaan manipulasi prompt, eskalasi peran, atau akses database platform yang tidak diotorisasi.",
+      reply:
+        `⛔ **Akses Ditolak (Pelanggaran Protokol Keamanan & Otorisasi)**\n\n` +
+        `Sistem mendeteksi upaya manipulasi peran, *prompt injection*, atau permintaan akses data database platform di luar wewenang akun Anda.\n\n` +
+        `🔒 **Status Otorisasi Akun Anda:**\n` +
+        `• Peran Terverifikasi: **${normalizedRole.toUpperCase()}** (Autentikasi Kriptografis JWT Backend)\n` +
+        `• Batasan Hak Akses: Anda hanya diizinkan mengakses data operasional yang terkait langsung dengan akun dan outlet Anda.\n\n` +
+        `⚠️ Akses ke data global platform, database pusat, dan fungsi eksekutif **hanya dapat dilakukan oleh Super Admin Platform Pusat** yang telah terotentikasi secara sah.\n\n` +
+        `Silakan tanyakan hal-hal yang sesuai dengan peran dan wewenang operasional Anda.`,
+    };
+  }
+
   const isStaff =
     normalizedRole === "staff" ||
     normalizedRole === "kasir" ||
@@ -300,6 +340,18 @@ export function checkRoleAccessViolation(
  */
 export function sanitizeResponseForRole(reply: string, role: string): string {
   const normalizedRole = (role || "staff").toLowerCase();
+  if (normalizedRole === "superadmin") {
+    return reply;
+  }
+
+  // Hapus action tag superadmin dari pengguna non-superadmin
+  let cleaned = reply
+    .replace(
+      /\[ACTION:NAVIGATE:(tenants|users|signups|plans|invoices|marketing|referral_codes|settings_platform|logs)\]/g,
+      ""
+    )
+    .trim();
+
   const isStaff =
     normalizedRole === "staff" ||
     normalizedRole === "kasir" ||
@@ -307,7 +359,7 @@ export function sanitizeResponseForRole(reply: string, role: string): string {
 
   if (isStaff) {
     // 1. Hapus action tags terlarang untuk staf kasir
-    let cleaned = reply
+    cleaned = cleaned
       .replace(
         /\[ACTION:(NAVIGATE|OPEN_MODAL):(settings|cashflow|subscription|reports|whatsapp|expense)\]/g,
         ""

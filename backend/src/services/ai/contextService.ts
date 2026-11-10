@@ -1,8 +1,153 @@
 import { db } from "../../db/index";
-import { orders, tenants, expenses, customers, services } from "../../db/schema";
+import {
+  orders,
+  tenants,
+  expenses,
+  customers,
+  services,
+  users,
+  subscriptionInvoices,
+  signupRequests,
+  marketingProfiles,
+  referralCodes,
+} from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { OperationalContext } from "./types";
+import { OperationalContext, SuperadminDatabaseStats } from "./types";
 import { calculateBusinessHealth, SopRatios } from "../../utils/businessHealth";
+
+/**
+ * Mengambil ringkasan data statistik database platform khusus untuk Super Admin
+ */
+async function fetchSuperadminStats(): Promise<SuperadminDatabaseStats | undefined> {
+  try {
+    const [
+      allUsers,
+      allTenants,
+      allInvoices,
+      allSignups,
+      allPlatformOrders,
+      allMarketing,
+      allReferralCodes,
+    ] = await Promise.all([
+      db.select().from(users),
+      db.select().from(tenants),
+      db.select().from(subscriptionInvoices),
+      db.select().from(signupRequests),
+      db
+        .select({
+          id: orders.id,
+          totalAmount: orders.totalAmount,
+          status: orders.status,
+          paymentStatus: orders.paymentStatus,
+          tenantId: orders.tenantId,
+          createdAt: orders.createdAt,
+        })
+        .from(orders),
+      db.select().from(marketingProfiles),
+      db.select().from(referralCodes),
+    ]);
+
+    const usersByRole = {
+      superadmin: allUsers.filter((u) => u.role === "superadmin").length,
+      tenant_owner: allUsers.filter((u) => u.role === "tenant_owner" || u.role === "owner").length,
+      staff: allUsers.filter((u) => u.role === "staff" || u.role === "kasir" || u.role === "cashier").length,
+      marketing: allUsers.filter((u) => u.role === "marketing").length,
+    };
+
+    const tenantMap = new Map(allTenants.map((t) => [t.id, t.outletName]));
+    const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
+
+    const nowIso = new Date().toISOString();
+    const trialTenants = allTenants.filter((t) => t.isTrial === "true").length;
+    const expiredTenants = allTenants.filter((t) => {
+      if (!t.subscriptionUntil) return false;
+      return t.subscriptionUntil < nowIso;
+    }).length;
+    const activeTenants = allTenants.filter((t) => t.status === "active").length;
+
+    const paidInvoices = allInvoices.filter((i) => i.status === "paid");
+    const pendingInvoices = allInvoices.filter(
+      (i) => i.status === "pending_verification" || i.status === "unpaid"
+    );
+    const totalPaidRevenue = paidInvoices.reduce(
+      (sum, i) => sum + (Number(i.finalAmount) || 0),
+      0
+    );
+
+    const totalVolumeAllPlatform = allPlatformOrders
+      .filter((o) => o.paymentStatus === "paid" || o.status === "completed")
+      .reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+
+    const activeOrdersAllPlatform = allPlatformOrders.filter((o) =>
+      ["process", "diproses", "washing", "drying_ironing", "ready"].includes(o.status)
+    ).length;
+
+    return {
+      totalUsers: allUsers.length,
+      activeUsers: allUsers.filter((u) => u.status === "active").length,
+      usersByRole,
+      usersList: allUsers.slice(0, 60).map((u) => ({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        outletName: u.tenantId ? tenantMap.get(u.tenantId) : undefined,
+      })),
+      totalTenants: allTenants.length,
+      activeTenants,
+      trialTenants,
+      expiredTenants,
+      tenantsList: allTenants.map((t) => ({
+        id: t.id,
+        outletName: t.outletName,
+        city: t.city,
+        tier: t.tier,
+        status: t.status,
+        isTrial: t.isTrial === "true",
+        subscriptionUntil: t.subscriptionUntil,
+        ownerName: userMap.get(t.userId),
+        phone: t.phone,
+      })),
+      totalOrdersAllPlatform: allPlatformOrders.length,
+      totalVolumeAllPlatform,
+      activeOrdersAllPlatform,
+      invoices: {
+        total: allInvoices.length,
+        pendingVerification: allInvoices.filter((i) => i.status === "pending_verification").length,
+        paid: paidInvoices.length,
+        rejected: allInvoices.filter((i) => i.status === "rejected").length,
+        totalPaidRevenue,
+        pendingList: pendingInvoices.slice(0, 15).map((i) => ({
+          invoiceNo: i.invoiceNo,
+          outletName: tenantMap.get(i.tenantId),
+          finalAmount: Number(i.finalAmount) || 0,
+          durationMonths: Number(i.durationMonths) || 1,
+          createdAt: i.createdAt,
+        })),
+      },
+      signups: {
+        total: allSignups.length,
+        pending: allSignups.filter((s) => s.status === "pending").length,
+        activated: allSignups.filter((s) => s.status === "activated").length,
+        recentList: allSignups.slice(0, 15).map((s) => ({
+          outletName: s.outletName,
+          ownerName: s.ownerName,
+          phone: s.phone,
+          status: s.status,
+          createdAt: s.createdAt,
+        })),
+      },
+      marketing: {
+        totalProfiles: allMarketing.length,
+        totalReferralCodes: allReferralCodes.length,
+        activeReferralCodes: allReferralCodes.filter((r) => r.isActive === "true").length,
+      },
+    };
+  } catch (err: any) {
+    console.warn("[getOperationalContext] Failed to fetch superadminStats:", err?.message);
+    return undefined;
+  }
+}
 
 /**
  * Mengumpulkan data operasional outlet secara realtime untuk konteks AI
@@ -11,20 +156,31 @@ export async function getOperationalContext(
   tenantId: string | null,
   userRole: string = "staff"
 ): Promise<OperationalContext> {
+  const isSuperadmin = userRole === "superadmin";
+
   if (!tenantId) {
+    let superadminStats: SuperadminDatabaseStats | undefined = undefined;
+    if (isSuperadmin) {
+      superadminStats = await fetchSuperadminStats();
+    }
     return {
-      outletName: "Pusat / Superadmin",
+      outletName: isSuperadmin ? "Pusat Platform Laundry Cleanique (Super Admin HQ)" : "Pusat / Superadmin",
       todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
       ordersTodayCount: 0,
       revenueToday: 0,
-      processCount: 0,
+      processCount: superadminStats ? superadminStats.activeOrdersAllPlatform : 0,
       readyCount: 0,
       completedCount: 0,
       unpaidCount: 0,
+      superadminStats,
     };
   }
 
   try {
+    let superadminStats: SuperadminDatabaseStats | undefined = undefined;
+    if (isSuperadmin) {
+      superadminStats = await fetchSuperadminStats();
+    }
     const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     const tenant = tenantRows[0];
     const outletName = tenant ? tenant.outletName : "Cleanique Laundry";
@@ -202,6 +358,7 @@ export async function getOperationalContext(
       unpaidCount,
       businessHealth,
       marketingMetrics,
+      superadminStats,
     };
   }
 
@@ -215,6 +372,7 @@ export async function getOperationalContext(
       completedCount,
       unpaidCount,
       businessHealth,
+      superadminStats,
     };
   } catch (err: any) {
     console.warn("[getOperationalContext] Failed to fetch DB context, using fallback:", err?.message);

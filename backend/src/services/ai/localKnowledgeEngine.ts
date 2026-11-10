@@ -101,6 +101,42 @@ export function generateLocalFallbackReply(
   }
 
   // =========================================================================
+  // 0D. QUERY DATABASE PLATFORM HQ (Khusus Superadmin)
+  // =========================================================================
+  if (role === "superadmin" && context.superadminStats) {
+    const stats = context.superadminStats;
+    if (
+      lower.includes("user") ||
+      lower.includes("pengguna") ||
+      lower.includes("outlet") ||
+      lower.includes("cabang") ||
+      lower.includes("tenant") ||
+      lower.includes("signup") ||
+      lower.includes("pendaftar") ||
+      lower.includes("invoice") ||
+      lower.includes("tagihan") ||
+      lower.includes("marketing") ||
+      lower.includes("database")
+    ) {
+      return (
+        `📊 **Ringkasan Data Database Platform Cleanique (Super Admin HQ):**\n\n` +
+        `👥 **Data Pengguna (Users):**\n` +
+        `• **Total Pengguna Terdaftar:** ${stats.totalUsers} akun (${stats.activeUsers} aktif)\n` +
+        `• **Rincian Peran:** Super Admin: ${stats.usersByRole.superadmin} | Owner: ${stats.usersByRole.tenant_owner} | Kasir: ${stats.usersByRole.staff} | Marketing: ${stats.usersByRole.marketing}\n\n` +
+        `🏪 **Data Cabang / Outlet:**\n` +
+        `• **Total Outlet Dikelola:** ${stats.totalTenants} cabang outlet\n` +
+        `• **Status Lisensi:** ${stats.activeTenants} aktif, ${stats.trialTenants} masa trial, ${stats.expiredTenants} expired\n` +
+        `• **Daftar Cabang:** ${stats.tenantsList.map((t) => `${t.outletName} (${t.city || "Kota belum diset"})`).join(", ") || "Belum ada cabang"}\n\n` +
+        `💳 **Tagihan & Pendaftaran:**\n` +
+        `• **Tagihan Lisensi:** ${stats.invoices.total} total invoice (${stats.invoices.pendingVerification} menunggu verifikasi, pendapatan lisensi: Rp ${stats.invoices.totalPaidRevenue.toLocaleString("id-ID")})\n` +
+        `• **Pendaftar Mandiri (Signups):** ${stats.signups.total} pendaftar (${stats.signups.pending} pending verifikasi)\n` +
+        `• **Tim Marketing:** ${stats.marketing.totalProfiles} anggota (${stats.marketing.activeReferralCodes} kode referral aktif)\n\n` +
+        `[ACTION:NAVIGATE:tenants]`
+      );
+    }
+  }
+
+  // =========================================================================
   // 1. PANDUAN PENGATURAN & SETTINGS (Owner & Superadmin only)
   // =========================================================================
   if (
