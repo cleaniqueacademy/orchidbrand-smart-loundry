@@ -1,3 +1,4 @@
+import { businessDateKey } from "../../../utils/businessDate";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
@@ -70,7 +71,7 @@ export const PlatformFinanceTab: React.FC = () => {
     category: "server",
     amount: "",
     description: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: businessDateKey(new Date()),
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -136,7 +137,7 @@ export const PlatformFinanceTab: React.FC = () => {
           category: "server",
           amount: "",
           description: "",
-          date: new Date().toISOString().slice(0, 10),
+          date: businessDateKey(new Date()),
           notes: "",
         });
         fetchCashflow();

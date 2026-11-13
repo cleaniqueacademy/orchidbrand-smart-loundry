@@ -253,6 +253,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">(printerConfig.paperWidth || "58mm");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   // Sync paper width with configured setting
@@ -315,6 +316,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handlePrint = () => {
+    if (tenant?.tier !== "premium") { toast.error("Cetak thermal memerlukan Premium", "Hubungi admin untuk perubahan paket."); return; }
 
     try {
       const doc = generateReceiptPdf(order, activeTenant, paperWidth, qrDataUrl);
@@ -411,7 +413,6 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
     });
   };
 
-  const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
 
   const getReceiptText = () => {
     const formatReceiptPaymentMethod = (method?: string) => {
@@ -569,7 +570,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
             </button>
           </div>
 
-          <p className="text-xs text-zinc-400 mb-3">Pilih printer melalui dialog cetak browser. Sesuaikan ukuran kertas 58 mm atau 80 mm.</p>
+          <p className="text-xs text-zinc-400 mb-3">Cetak thermal tersedia pada Premium melalui dialog browser. Pilih ukuran kertas 58 mm atau 80 mm.</p>
 
           {/* Paper Width Selector */}
           <div className="flex items-center justify-between bg-zinc-800/80 p-2 rounded-xl mb-4 text-xs">
@@ -867,6 +868,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
               <button
                 type="button"
                 onClick={handlePrint}
+                disabled={tenant?.tier !== "premium"}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer ${
                   "bg-blue-600 hover:bg-blue-500 text-white"
                 }`}

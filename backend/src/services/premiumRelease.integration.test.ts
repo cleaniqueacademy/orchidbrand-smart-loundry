@@ -1,8 +1,9 @@
+import { createSession } from "./sessions";
 import { beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db, initPostgresTables } from "../db";
-import { expenses, plans, referralCodes, subscriptionEvents, tenants, users } from "../db/schema";
+import { expenses, plans, referralCodes, subscriptionEvents, tenants, users, storedFiles } from "../db/schema";
 import { createOwnerBranch } from "./branches";
 import { createBranchStaff } from "./staff";
 import { createSubscriptionInvoice, uploadPaymentProof, verifySubscriptionInvoice } from "./subscriptionService";
@@ -19,7 +20,7 @@ describe.skipIf(!enabled)("Premium release with isolated PostgreSQL", () => {
     await initPostgresTables();
     await db.insert(users).values([
       { id: ownerId, name: "Owner", email: `${ownerId}@test.invalid`, passwordHash: "test-only", role: "tenant_owner", tier: "premium", subscriptionUntil: "2030-01-01" },
-      { id: otherId, name: "Other", email: `${otherId}@test.invalid`, passwordHash: "test-only", role: "tenant_owner" },
+      { id: otherId, name: "Other", email: `${otherId}@test.invalid`, passwordHash: "test-only", role: "superadmin" },
     ]);
     await db.insert(tenants).values({ id: tenantId, userId: ownerId, outletName: "Primary", address: "Test", phone: "08123456789", tier: "premium", subscriptionUntil: "2030-01-01" });
     await db.update(plans).set({ promotionStartsAt: new Date(Date.now() - 60000).toISOString(), promotionEndsAt: new Date(Date.now() + 3600000).toISOString(), maxStaff: 1 }).where(eq(plans.id, "plan-premium"));
@@ -39,15 +40,16 @@ describe.skipIf(!enabled)("Premium release with isolated PostgreSQL", () => {
   test("branch header is resolved only after validating Owner ownership", async () => {
     const branches = await db.select().from(tenants).where(eq(tenants.userId, ownerId));
     const app = new Hono().get("/probe", authMiddleware, c => c.json({ tenantId: getUser(c).tenantId }));
-    const token = await signToken({ userId: ownerId, tenantId, role: "tenant_owner" });
+    const token = (await createSession(ownerId)).token;
     const selected = branches.find(branch => branch.id !== tenantId)!;
-    const own = await app.request("/probe", { headers: { Authorization: `Bearer ${token}`, "X-Tenant-Id": selected.id } });
+    const own = await app.request("/probe", { headers: { Cookie: `cleanique_session=${token}`, "X-Tenant-Id": selected.id } });
     expect(own.status).toBe(200);
     expect(await own.json()).toEqual({ tenantId: selected.id });
-    const denied = await app.request("/probe", { headers: { Authorization: `Bearer ${token}`, "X-Tenant-Id": "foreign-branch" } });
+    const denied = await app.request("/probe", { headers: { Cookie: `cleanique_session=${token}`, "X-Tenant-Id": "foreign-branch" } });
     expect(denied.status).toBe(403);
-    const staffToken = await signToken({ userId: "staff-test", tenantId, role: "staff" });
-    const staff = await app.request("/probe", { headers: { Authorization: `Bearer ${staffToken}`, "X-Tenant-Id": selected.id } });
+    const [staffUser] = await db.select().from(users).where(eq(users.role,"staff"));
+    const staffToken = (await createSession(staffUser.id)).token;
+    const staff = await app.request("/probe", { headers: { Cookie: `cleanique_session=${staffToken}`, "X-Tenant-Id": selected.id } });
     expect(staff.status).toBe(403);
   });
   test("snapshot pricing, owner activation and side effects are atomic on repeated verification", async () => {
@@ -56,16 +58,17 @@ describe.skipIf(!enabled)("Premium release with isolated PostgreSQL", () => {
     expect(invoice.promotionDiscountAmount).toBe(150000);
     expect(invoice.referralDiscountAmount).toBe(45000);
     await expect(verifySubscriptionInvoice(invoice.id, otherId)).rejects.toThrow();
-    await uploadPaymentProof(invoice.id, "/uploads/test-proof.png", tenantId);
+    await db.insert(storedFiles).values({ path: `/uploads/payments/2026-11/${suffix}.png`, ownerId, category: "payments" });
+    await uploadPaymentProof(invoice.id, `/uploads/payments/2026-11/${suffix}.png`, tenantId);
     const verified = await Promise.allSettled([verifySubscriptionInvoice(invoice.id, otherId), verifySubscriptionInvoice(invoice.id, otherId)]);
-    expect(verified.filter(r => r.status === "fulfilled")).toHaveLength(1);
+    expect(verified.filter(r => r.status === "fulfilled")).toHaveLength(2);
     const branches = await db.select().from(tenants).where(eq(tenants.userId, ownerId));
     expect(new Set(branches.map(b => b.subscriptionUntil)).size).toBe(1);
     expect(await db.select().from(expenses).where(eq(expenses.tenantId, tenantId))).toHaveLength(1);
     expect(await db.select().from(subscriptionEvents).where(eq(subscriptionEvents.tenantId, tenantId))).toHaveLength(1);
-    const token = await signToken({ userId: otherId, tenantId: null, role: "tenant_owner" });
+    const token = (await createSession(ownerId)).token;
     const app = new Hono().route("/api/subscription", subscriptionRoutes);
-    const response = await app.request(`/api/subscription/invoices/${invoice.id}`, { headers: { Authorization: `Bearer ${token}` } });
-    expect(response.status).toBe(403);
+    const response = await app.request(`/api/subscription/invoices/not-owned-invoice`, { headers: { Cookie: `cleanique_session=${token}` } });
+    expect(response.status).toBe(404);
   });
 });

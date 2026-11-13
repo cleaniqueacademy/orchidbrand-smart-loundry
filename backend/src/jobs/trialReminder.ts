@@ -48,13 +48,13 @@ export async function runTrialReminderCheck(): Promise<TrialReminderResult> {
 
       if (existing.length === 0) {
         await db.insert(subscriptionEvents).values({
-          id: newId("subevt"),
+          id: `trial:${tenant.id}:${remaining}:${tenant.subscriptionUntil}`,
           tenantId: tenant.id,
           eventType: "trial_reminder_h3",
           eventDate: todayStr,
           messageSent: `Halo ${tenant.outletName}, masa trial gratis Anda tersisa 3 hari lagi (hingga ${tenant.subscriptionUntil}). Perpanjang sekarang agar operasional laundry tidak terhenti!`,
           createdAt: nowIso,
-        });
+        }).onConflictDoNothing();
         h3RemindersSent++;
       }
     }
@@ -73,19 +73,19 @@ export async function runTrialReminderCheck(): Promise<TrialReminderResult> {
 
       if (existing.length === 0) {
         await db.insert(subscriptionEvents).values({
-          id: newId("subevt"),
+          id: `trial:${tenant.id}:${remaining}:${tenant.subscriptionUntil}`,
           tenantId: tenant.id,
           eventType: "trial_reminder_h1",
           eventDate: todayStr,
           messageSent: `PERHATIAN: Masa trial ${tenant.outletName} berakhir BESOK (${tenant.subscriptionUntil}). Segera pilih paket langganan untuk terus menggunakan aplikasi!`,
           createdAt: nowIso,
-        });
+        }).onConflictDoNothing();
         h1RemindersSent++;
       }
     }
 
     // 3. Kasus Expired (<= 0)
-    else if (remaining <= 0 && tenant.status === "active") {
+    else if (remaining < 0 && tenant.status === "active") {
       const existing = await db
         .select()
         .from(subscriptionEvents)
@@ -97,25 +97,14 @@ export async function runTrialReminderCheck(): Promise<TrialReminderResult> {
         );
 
       if (existing.length === 0) {
-        // Nonaktifkan outlet & user owner
-        await db
-          .update(tenants)
-          .set({ status: "inactive" })
-          .where(eq(tenants.id, tenant.id));
-
-        await db
-          .update(users)
-          .set({ status: "inactive" })
-          .where(eq(users.id, tenant.userId));
-
         await db.insert(subscriptionEvents).values({
-          id: newId("subevt"),
+          id: `trial:${tenant.id}:${remaining}:${tenant.subscriptionUntil}`,
           tenantId: tenant.id,
           eventType: "trial_expired",
           eventDate: todayStr,
-          messageSent: `Masa trial ${tenant.outletName} telah berakhir pada ${tenant.subscriptionUntil}. Akun telah dinonaktifkan sementara hingga perpanjangan dilakukan.`,
+          messageSent: `Masa trial ${tenant.outletName} telah berakhir pada ${tenant.subscriptionUntil}. Operasional dibatasi; Owner tetap dapat memperpanjang.`,
           createdAt: nowIso,
-        });
+        }).onConflictDoNothing();
         expiredMarked++;
       }
     }

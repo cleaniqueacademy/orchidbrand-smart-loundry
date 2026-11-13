@@ -13,8 +13,8 @@ export interface PricingInput {
 /** One authoritative calculation; discounts are rounded per month before multiplication. */
 export function calculateSubscriptionPrice(input: PricingInput) {
   const months = input.durationMonths ?? 1;
-  if (!Number.isInteger(months) || months < 1 || months > 120) {
-    throw new Error("Durasi langganan harus bilangan bulat 1–120 bulan");
+  if (![1, 3, 6, 12].includes(months)) {
+    throw new Error("Durasi langganan hanya 1/3/6/12 periode 30 hari");
   }
   const base = input.pricePerMonth;
   const promotion = input.promotionAmount ?? 0;

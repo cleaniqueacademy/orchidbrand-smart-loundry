@@ -1,12 +1,14 @@
-import { describe, it, expect, afterAll } from "bun:test";
+import { describe, it, expect, afterAll, beforeAll } from "bun:test";
 import { runTrialReminderCheck } from "./trialReminder";
-import { db } from "../db/index";
+import { db, initPostgresTables } from "../db/index";
 import { tenants, users, subscriptionEvents } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { newId } from "../utils/id";
 import { addDays } from "../utils/date";
 
+if(process.env.PREMIUM_TEST_DATABASE!=="isolated" || !new URL(process.env.DATABASE_URL!).pathname.endsWith("/cleanique_test"))throw new Error("Dedicated test DB required");
 describe("trialReminder job integration tests", () => {
+  beforeAll(initPostgresTables);
   const testTenantIds: string[] = [];
   const testUserIds: string[] = [];
 
@@ -85,7 +87,7 @@ describe("trialReminder job integration tests", () => {
 
     // Verifikasi status tenant yang expired diubah ke inactive
     const [expiredTenant] = await db.select().from(tenants).where(eq(tenants.id, tExp));
-    expect(expiredTenant.status).toBe("inactive");
+    expect(expiredTenant.status).toBe("active");
 
     // Jalankan pemeriksaan kedua di hari yang sama: TIDAK BOLEH MENGIRIM DUPLIKASI
     const res2 = await runTrialReminderCheck();

@@ -2,7 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: cleanique_postgres
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
@@ -22,7 +27,12 @@ services:
       context: .
       dockerfile: backend/Dockerfile.prod
     container_name: cleanique_backend
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       - PORT=5000
       - NODE_ENV=production
@@ -31,6 +41,9 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET required}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - AIVENE_API_KEY=${AIVENE_API_KEY:-}
+      - TRUST_PROXY=true
+      - UPLOADS_DIR=/app/backend/data/uploads
+      - WA_SESSIONS_DIR=/app/backend/data/wa_sessions
       - MIDTRANS_ENABLED=${MIDTRANS_ENABLED:-false}
       - MIDTRANS_IS_PRODUCTION=${MIDTRANS_IS_PRODUCTION:-false}
       - MIDTRANS_SERVER_KEY=${MIDTRANS_SERVER_KEY:-}
@@ -42,7 +55,7 @@ services:
       retries: 3
     volumes:
       # Sesi WhatsApp Baileys & Uploads wajib persisten agar tidak hilang saat restart
-      - cleanique_wa_sessions:/app/backend/auth_info_baileys
+      - cleanique_wa_sessions:/app/backend/data/wa_sessions
       - cleanique_uploads_data:/app/backend/data/uploads
     depends_on:
       postgres:
@@ -55,7 +68,12 @@ services:
       context: .
       dockerfile: frontend/Dockerfile.prod
     container_name: cleanique_frontend
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       # Port aplikasi web di VPS (default port 8081, diproxy oleh Nginx reverse proxy host)
       - "127.0.0.1:${APP_PORT:-8081}:80"

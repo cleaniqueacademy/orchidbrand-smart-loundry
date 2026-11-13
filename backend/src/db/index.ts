@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { migrateProductionV1 } from "./productionMigration";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -11,6 +12,7 @@ export const client = postgres(connectionString, {
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,
+  onnotice: () => {},
 });
 
 export const db = drizzle(client, { schema });
@@ -535,8 +537,7 @@ export async function initPostgresTables() {
       const applied = await tx`INSERT INTO schema_migrations(name) VALUES ('20261113_premium_pricing') ON CONFLICT DO NOTHING RETURNING name;`;
       if (applied.length) {
         await tx`UPDATE plans SET price_per_month = 200000, promotion_amount = 50000, max_branches = 5 WHERE code = 'premium';`;
-        await tx`UPDATE tenants SET tier = users.tier, subscription_until = COALESCE(users.subscription_until, tenants.subscription_until)
-          FROM users WHERE tenants.user_id = users.id AND users.role = 'tenant_owner';`;
+        // Preserve existing branch dates; divergent legacy entitlements require operator review.
       }
     });
 
@@ -566,6 +567,7 @@ export async function initPostgresTables() {
     await client`CREATE INDEX IF NOT EXISTS idx_wa_messages_tenant ON wa_messages(tenant_id);`;
     await client`CREATE INDEX IF NOT EXISTS idx_ai_messages_conv ON ai_messages(conversation_id);`;
 
+    await migrateProductionV1(client);
     console.log("✅ PostgreSQL tables verified/initialized successfully (including v2.0 modules)");
   } catch (err: any) {
     console.error("PostgreSQL initialization failed");

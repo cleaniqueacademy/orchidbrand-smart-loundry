@@ -1,4 +1,4 @@
-import { pgTable, text, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 
 // ==========================================
 // 1. Core Users & Tenants
@@ -18,6 +18,9 @@ export const users = pgTable("users", {
   signupRequestId: text("signup_request_id"), // Link ke signup_requests jika daftar mandiri
   marketingUserId: text("marketing_user_id"), // Link ke marketing user jika akun ini dibuat marketing
   tutorialCompleted: text("tutorial_completed").notNull().default("false"), // 'true' | 'false'
+  archivedAt: text("archived_at"),
+  suspendedAt: text("suspended_at"),
+  authVersion: integer("auth_version").notNull().default(1),
   metadata: text("metadata"), // JSON metadata opsional
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
@@ -30,6 +33,8 @@ export const tenants = pgTable("tenants", {
   address: text("address").notNull(),
   city: text("city"), // Kota/Kecamatan cabang
   status: text("status").notNull().default("active"), // 'active' | 'inactive'
+  archivedAt: text("archived_at"),
+  suspendedAt: text("suspended_at"),
   tier: text("tier").notNull().default("pro"), // 'free' | 'pro' | 'premium'
   subscriptionUntil: text("subscription_until"),
   waMode: text("wa_mode").notNull().default("manual"), // 'manual' | 'baileys'
@@ -272,6 +277,18 @@ export const subscriptionInvoices = pgTable("subscription_invoices", {
   userId: text("user_id").notNull().references(() => users.id),
   planId: text("plan_id").references(() => plans.id),
   referralCodeId: text("referral_code_id").references(() => referralCodes.id),
+  expiresAt: text("expires_at"),
+  entitlementTier: text("entitlement_tier"),
+  paymentSource: text("payment_source"),
+  activationReviewedBy: text("activation_reviewed_by").references(() => users.id),
+  activationReviewedAt: text("activation_reviewed_at"),
+  activationReviewNotes: text("activation_review_notes"),
+  activationStatus: text("activation_status").notNull().default("not_requested"),
+  activationReason: text("activation_reason"),
+  commissionType: text("commission_type"),
+  commissionValue: doublePrecision("commission_value"),
+  commissionProfileId: text("commission_profile_id").references(() => marketingProfiles.id),
+  idempotencyKey: text("idempotency_key"),
   durationMonths: doublePrecision("duration_months").notNull().default(1),
   originalAmount: doublePrecision("original_amount").notNull(),
   discountAmount: doublePrecision("discount_amount").notNull().default(0),
@@ -435,4 +452,23 @@ export const paymentEvents = pgTable("payment_events", {
   attemptId: text("attempt_id").notNull().references(() => paymentAttempts.id),
   providerStatus: text("provider_status").notNull(),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const authSessions = pgTable("auth_sessions", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull().references(() => users.id),
+  authVersion: integer("auth_version").notNull(), csrfHash: text("csrf_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+export const storedFiles = pgTable("stored_files", {
+  path: text("path").primaryKey(), ownerId: text("owner_id").references(() => users.id),
+  category: text("category").notNull(), mimeType: text("mime_type"), quarantined: boolean("quarantined").notNull().default(false),
+});
+export const referralAssignments = pgTable("referral_assignments", {
+  id: text("id").primaryKey(), ownerId: text("owner_id").notNull().references(() => users.id),
+  referralCodeId: text("referral_code_id").notNull().references(() => referralCodes.id), active: boolean("active").notNull().default(true),
+});
+export const paymentAdjustments = pgTable("payment_adjustments", {
+  id: text("id").primaryKey(), invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id), requestKey: text("request_key").notNull().unique(),
+  type: text("type").notNull(), amount: doublePrecision("amount").notNull(), commissionAmount: doublePrecision("commission_amount").notNull().default(0),
+  notes: text("notes").notNull(), createdBy: text("created_by").notNull().references(() => users.id),
 });

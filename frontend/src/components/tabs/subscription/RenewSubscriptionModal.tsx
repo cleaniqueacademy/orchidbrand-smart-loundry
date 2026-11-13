@@ -8,6 +8,7 @@ interface RenewSubscriptionModalProps {
   onClose: () => void;
   onSuccess: () => void;
   tenantId: string;
+  allowPlanChange?: boolean;
 }
 
 export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
@@ -15,9 +16,11 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   onClose,
   onSuccess,
   tenantId,
+  allowPlanChange = false,
 }) => {
   const [plansList, setPlansList] = useState<Plan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [referralCode, setReferralCode] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -31,10 +34,11 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     promotionDiscountPerMonth?: number;
     referralDiscountPerMonth?: number;
     finalPrice: number;
-  }>({ basePrice: 60000, discountAmount: 0, finalPrice: 60000 });
+  }>({ basePrice: 0, discountAmount: 0, finalPrice: 0 });
 
   useEffect(() => {
     if (isOpen) {
+      setRequestKey(crypto.randomUUID());
       fetchPlans();
     }
   }, [isOpen]);
@@ -45,7 +49,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     setPriceLoading(true);
     setErrorMsg(null);
     api.get<{ success: boolean; message?: string; data: typeof priceData }>(
-      `/api/subscription/pricing?planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`,
+      `/api/subscription/pricing?tenantId=${encodeURIComponent(tenantId)}&planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`,
       { signal: controller.signal },
     ).then(res => {
       if (controller.signal.aborted) return;
@@ -60,11 +64,15 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const res = await api.get<{ success: boolean; data: Plan[] }>("/api/plans/public");
-      if (res.success && res.data.length > 0) {
-        setPlansList(res.data);
-        setSelectedPlanId(res.data[0].id);
-      }
+      const [res, quote] = await Promise.all([
+        api.get<{success:boolean;data:Plan[]}>("/api/plans/public"),
+        api.get<{success:boolean;data:{plan:Plan}}>(`/api/subscription/pricing?tenantId=${encodeURIComponent(tenantId)}`),
+      ]);
+      if (!res.success || !quote.success) throw new Error("Paket tidak tersedia");
+      const eligible=allowPlanChange?res.data:res.data.filter(plan=>plan.id===quote.data.plan.id);
+      setPlansList(eligible);
+      setSelectedPlanId(quote.data.plan.id);
+
     } catch (err) {
       console.error("Gagal mengambil paket:", err);
     } finally {
@@ -87,6 +95,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
       const res = await api.post<{ success: boolean; message?: string }>("/api/subscription/invoices", {
         planId: selectedPlanId,
         durationMonths,
+        idempotencyKey: requestKey,
         referralCode: referralCode.trim() || undefined,
       });
 
@@ -114,7 +123,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
               <span>Perpanjang Masa Aktif Langganan</span>
             </h3>
             <span className="text-xs text-zinc-500 block mt-0.5">
-              Pilih paket dan durasi langganan untuk outlet Anda
+              Perpanjang paket saat ini. Perubahan Pro/Premium melalui admin; satu periode = 30 hari.
             </span>
           </div>
           <button
@@ -190,10 +199,10 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { months: 1, label: "1 Bulan" },
-                { months: 3, label: "3 Bulan" },
-                { months: 6, label: "6 Bulan" },
-                { months: 12, label: "1 Tahun" },
+                { months: 1, label: "1 periode (30 hari)" },
+                { months: 3, label: "3 periode (30 hari)" },
+                { months: 6, label: "6 periode (30 hari)" },
+                { months: 12, label: "12 periode (360 hari)" },
               ].map((item) => (
                 <button
                   key={item.months}
@@ -231,7 +240,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
           {/* Ringkasan Biaya Tagihan */}
           <div className="p-3.5 sm:p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2 text-xs">
             <div className="flex justify-between text-zinc-600">
-              <span>Subtotal ({durationMonths} Bulan)</span>
+              <span>Subtotal ({durationMonths} periode (30 hari))</span>
               <span className="font-semibold text-zinc-900">
                 Rp {originalTotal.toLocaleString("id-ID")}
               </span>

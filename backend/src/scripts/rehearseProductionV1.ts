@@ -1,0 +1,38 @@
+import postgres from "postgres";
+import { migrateProductionV1 } from "../db/productionMigration";
+import assert from "node:assert/strict";
+const url=process.env.REHEARSAL_DATABASE_URL;
+if (!url || new URL(url).pathname!=="/cleanique_test_legacy" || process.env.PREMIUM_TEST_DATABASE!=="isolated") throw new Error("Only dedicated cleanique_test_legacy is allowed");
+const client=postgres(url,{onnotice:()=>{}});
+try {
+  const existing=await client`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+  assert.equal(existing.length,0,"Rehearsal requires an empty disposable database");
+  await client`CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at TIMESTAMPTZ DEFAULT now())`;
+  await client`CREATE TABLE users(id TEXT PRIMARY KEY,password_hash TEXT,role TEXT,status TEXT,tenant_id TEXT)`;
+  await client`CREATE TABLE referral_codes(id TEXT PRIMARY KEY)`;
+  await client`CREATE TABLE tenants(id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id),status TEXT,referral_code_id TEXT REFERENCES referral_codes(id),created_at TEXT,subscription_until TEXT)`;
+  await client`CREATE TABLE marketing_profiles(id TEXT PRIMARY KEY)`;
+  await client`CREATE TABLE wa_logs(id TEXT PRIMARY KEY)`;
+  await client`CREATE TABLE subscription_invoices(id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id),tenant_id TEXT REFERENCES tenants(id),status TEXT,payment_proof_url TEXT,final_amount NUMERIC)`;
+  await client`CREATE TABLE marketing_commissions(id TEXT PRIMARY KEY,subscription_invoice_id TEXT REFERENCES subscription_invoices(id),marketing_profile_id TEXT REFERENCES marketing_profiles(id))`;
+  await client`INSERT INTO marketing_profiles VALUES ('legacy-profile')`;
+  await client`INSERT INTO referral_codes VALUES ('legacy-ref')`;
+  await client`INSERT INTO users VALUES ('legacy-owner','old-plaintext','tenant_owner','inactive','legacy-branch'),('other-owner','hash','tenant_owner','active','other-branch')`;
+  await client`INSERT INTO tenants VALUES ('legacy-branch','legacy-owner','inactive','legacy-ref','2025-01-01','2027-01-15'),('other-branch','other-owner','active',NULL,'2025-01-01','2027-03-20')`;
+  await client`INSERT INTO subscription_invoices VALUES ('old-paid','legacy-owner','legacy-branch','paid','/uploads/payments/2025-01/00000000-0000-0000-0000-000000000001.png',55000),('old-unpaid','legacy-owner','legacy-branch','unpaid',NULL,55000),('ambiguous-1','legacy-owner','legacy-branch','paid','/uploads/payments/2025-01/shared.png',60000),('ambiguous-2','other-owner','other-branch','paid','/uploads/payments/2025-01/shared.png',60000)`;
+  const metrics=()=>client`SELECT (SELECT count(*) FROM users) users,(SELECT count(*) FROM tenants) tenants,(SELECT count(*) FROM subscription_invoices) invoices,(SELECT sum(final_amount) FROM subscription_invoices WHERE status='paid') paid_total,(SELECT json_agg(subscription_until ORDER BY id) FROM tenants)::text dates`;
+  await client`INSERT INTO marketing_commissions VALUES ('old-commission','old-paid','legacy-profile')`;
+  const before=await metrics();
+  await migrateProductionV1(client);await migrateProductionV1(client);
+  assert.deepEqual(await metrics(),before);
+  const [blocked]=await client`SELECT suspended_at FROM users WHERE id='legacy-owner'`;assert.ok(blocked.suspended_at);
+  const [paid]=await client`SELECT activation_status FROM subscription_invoices WHERE id='old-paid'`;assert.equal(paid.activation_status,"active");
+  const [unpaid]=await client`SELECT expires_at FROM subscription_invoices WHERE id='old-unpaid'`;assert.equal(unpaid.expires_at,null);
+  const [linked]=await client`SELECT commission_profile_id FROM subscription_invoices WHERE id='old-paid'`;assert.equal(linked.commission_profile_id,"legacy-profile");
+  const files=await client`SELECT owner_id FROM stored_files`;assert.equal(files.length,1);assert.equal(files[0].owner_id,"legacy-owner");
+  const assignments=await client`SELECT owner_id FROM referral_assignments`;assert.equal(assignments.length,1);
+  const [version]=await client`SELECT auth_version FROM users WHERE id='legacy-owner'`;
+  await client`UPDATE users SET status='active' WHERE id='legacy-owner'`;
+  const [after]=await client`SELECT auth_version FROM users WHERE id='legacy-owner'`;assert.equal(after.auth_version,version.auth_version+1);
+  console.info(JSON.stringify({result:"pass",migrationRuns:2,metrics:before[0],proofsBound:1,ambiguousProofsPublic:0}));
+} finally {await client.end();}

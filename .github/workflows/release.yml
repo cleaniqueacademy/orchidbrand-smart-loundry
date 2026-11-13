@@ -2,7 +2,7 @@ name: Release checks
 on:
   pull_request:
   push:
-    branches: [main, feature/coming-soon, feature/coming-soon-midtrans]
+    branches: [main, feature/coming-soon, feature/coming-soon-midtrans, production-v1]
 permissions:
   contents: read
 jobs:
@@ -22,6 +22,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://cleanique_test:isolated-ci-only@127.0.0.1:5432/cleanique_test
       PREMIUM_TEST_DATABASE: isolated
+      NODE_ENV: test
+      UPLOADS_DIR: /tmp/cleanique-ci-uploads
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -30,7 +32,11 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bash -n scripts/ops/backup.sh
       - run: bun audit --audit-level high
+      - run: docker exec ${{ job.services.postgres.id }} createdb -U cleanique_test cleanique_test_legacy
+      - run: bun backend/src/scripts/rehearseProductionV1.ts
+        env:
+          REHEARSAL_DATABASE_URL: postgresql://cleanique_test:isolated-ci-only@127.0.0.1:5432/cleanique_test_legacy
       - run: bun run --cwd frontend build
       - run: bun run --cwd backend typecheck
       - run: bun run --cwd backend build
-      - run: bun test backend/src/utils backend/src/middleware/auth.test.ts backend/src/services/subscriptionPricing.test.ts backend/src/services/planConfiguration.test.ts backend/src/services/premiumRelease.integration.test.ts backend/src/services/subscriptionPayments.integration.test.ts
+      - run: bun test backend/src/utils backend/src/middleware/auth.test.ts backend/src/services/subscriptionPricing.test.ts backend/src/services/planConfiguration.test.ts backend/src/services/premiumRelease.integration.test.ts backend/src/services/subscriptionPayments.integration.test.ts backend/src/services/productionV1.integration.test.ts backend/src/services/storageService.test.ts backend/src/routes/upload.test.ts backend/src/jobs/trialReminder.test.ts

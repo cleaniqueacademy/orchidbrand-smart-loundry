@@ -1,3 +1,4 @@
+import { authHeaders } from "../../utils/api";
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -43,10 +44,10 @@ interface SubscriptionRenewalModalProps {
 }
 
 const DURATIONS = [
-  { months: 1, label: "1 Bulan" },
-  { months: 3, label: "3 Bulan", badge: "Hemat 0%" },
-  { months: 6, label: "6 Bulan", badge: "Populer" },
-  { months: 12, label: "12 Bulan", badge: "Terbaik" },
+  { months: 1, label: "1 periode (30 hari)" },
+  { months: 3, label: "3 periode (30 hari)", badge: "Hemat 0%" },
+  { months: 6, label: "6 periode (30 hari)", badge: "Populer" },
+  { months: 12, label: "12 periode (30 hari)", badge: "Terbaik" },
 ];
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:3000";
@@ -62,6 +63,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
   onSuccess,
 }) => {
   const [step, setStep] = useState<"select" | "invoice">("select");
+  const [requestKey] = useState(() => crypto.randomUUID());
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [referralCode, setReferralCode] = useState("");
   const [referralValidation, setReferralValidation] = useState<null | { valid: boolean; message?: string }>(null);
@@ -119,14 +121,14 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
     }
   };
 
-  const token = localStorage.getItem("cleanique_token") || sessionStorage.getItem("cleanique_token") || "";
+
 
   const fetchPricing = useCallback(async (months: number, code?: string) => {
     setLoadingPricing(true);
     try {
       const codeParam = code ? `&referralCode=${encodeURIComponent(code)}` : "";
       const res = await fetch(`${API_BASE}/api/subscription/pricing?tenantId=${tenantId}${codeParam}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
       });
       const data = await res.json();
       if (data.success) {
@@ -141,7 +143,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
       }
     } catch {}
     setLoadingPricing(false);
-  }, [tenantId, token]);
+  }, [tenantId]);
 
   useEffect(() => {
     if (isOpen) fetchPricing(selectedMonths, referralCode || undefined);
@@ -166,11 +168,11 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
   const handleCreateInvoice = async () => {
     setSubmitting(true);
     try {
-      const body: any = { durationMonths: selectedMonths };
+      const body: any = { durationMonths: selectedMonths, idempotencyKey: requestKey };
       if (referralValidation?.valid && referralCode.trim()) body.referralCode = referralCode.trim();
       const res = await fetch(`${API_BASE}/api/subscription/invoices`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -193,7 +195,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
     try {
       const res = await fetch(`${API_BASE}/api/subscription/invoices/${invoice.id}/proof`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
         body: JSON.stringify({ proofUrl: proofUrl.trim() }),
       });
       const data = await res.json();
@@ -223,7 +225,7 @@ export const SubscriptionRenewalModal: React.FC<SubscriptionRenewalModalProps> =
 
     const invNo = invoice?.invoiceNo || "-";
     const amount = invoice?.finalAmount ? formatRp(invoice.finalAmount) : "-";
-    const duration = invoice?.durationMonths ? `${invoice.durationMonths} Bulan` : `${selectedMonths} Bulan`;
+    const duration = invoice?.durationMonths ? `${invoice.durationMonths} periode (30 hari)` : `${selectedMonths} periode (30 hari)`;
 
     const text = `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan outlet:\n• No. Invoice: *#${invNo}*\n• Total Tagihan: *${amount}*\n• Paket: *${duration}*\n\nBukti transfer pembayaran sudah kami unggah di sistem. Tolong bantu aktivasi cepat (Booster) ya. Terima kasih!`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;

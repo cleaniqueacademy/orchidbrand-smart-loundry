@@ -13,22 +13,15 @@ import { MarketingCommission } from "../../../types";
 
 interface CommissionPayoutTableProps {
   commissions: MarketingCommission[];
-  onUpdateStatus?: (
-    id: string,
-    status: "approved" | "paid" | "rejected" | "pending",
-    notes?: string
-  ) => Promise<{ success: boolean; message?: string }>;
   isSuperadmin?: boolean;
 }
 
 export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
   commissions,
-  onUpdateStatus,
   isSuperadmin = false,
 }) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const filtered = commissions.filter((c) => {
     if (statusFilter !== "all" && c.status !== statusFilter) return false;
@@ -39,30 +32,6 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
       (c.notes && c.notes.toLowerCase().includes(q))
     );
   });
-
-  const handleAction = async (
-    id: string,
-    status: "approved" | "paid" | "rejected",
-    actionLabel: string
-  ) => {
-    if (!onUpdateStatus) return;
-
-    let notes: string | undefined;
-    if (status === "rejected") {
-      const input = prompt("Alasan penolakan komisi (opsional):");
-      if (input === null) return; // cancel
-      notes = input || undefined;
-    } else {
-      if (!confirm(`Konfirmasi ${actionLabel} untuk data komisi ini?`)) return;
-    }
-
-    setUpdatingId(id);
-    try {
-      await onUpdateStatus(id, status, notes);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -156,7 +125,6 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
                 </tr>
               ) : (
                 filtered.map((comm) => {
-                  const isUpdating = updatingId === comm.id;
                   const dateStr = comm.createdAt
                     ? new Date(comm.createdAt).toLocaleDateString("id-ID", {
                         day: "numeric",
@@ -210,37 +178,7 @@ export const CommissionPayoutTable: React.FC<CommissionPayoutTableProps> = ({
                       {/* Aksi Superadmin */}
                       {isSuperadmin && (
                         <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {comm.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() => handleAction(comm.id, "approved", "Setujui Komisi")}
-                                  disabled={isUpdating}
-                                  className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-[11px] transition cursor-pointer"
-                                >
-                                  Setujui
-                                </button>
-                                <button
-                                  onClick={() => handleAction(comm.id, "rejected", "Tolak Komisi")}
-                                  disabled={isUpdating}
-                                  className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-[11px] transition cursor-pointer"
-                                >
-                                  Tolak
-                                </button>
-                              </>
-                            )}
-
-                            {comm.status === "approved" && (
-                              <button
-                                onClick={() => handleAction(comm.id, "paid", "Tandai Sudah Ditransfer")}
-                                disabled={isUpdating}
-                                className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
-                              >
-                                <CreditCard className="w-3 h-3" />
-                                Tandai Ditransfer
-                              </button>
-                            )}
-                          </div>
+                          <p className="text-[11px] text-zinc-500">{comm.status === "pending" ? "Review pembayaran pada invoice asal" : "Pencairan melalui permohonan penarikan; koreksi melalui jurnal invoice"}</p>
                         </td>
                       )}
                     </tr>

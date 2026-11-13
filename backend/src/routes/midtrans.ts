@@ -12,7 +12,10 @@ routes.post("/notifications", bodyLimit({ maxSize: 65536 }), async c => {
   const payload: unknown = await c.req.json().catch(() => null);
   if (!verifyMidtransSignature(payload, midtransSettings.serverKey)) return c.json({ success: false, message: "Signature tidak valid" }, 403);
   try {
-    await applyGatewayEvent(payload);
+    // Signature does not bind transaction_status; confirm the current provider state over authenticated TLS.
+    const status = await midtransClient.status((payload as { order_id: string }).order_id);
+    if (!status || status.order_id !== (payload as { order_id: string }).order_id) throw new Error("Status provider belum tersedia");
+    await applyGatewayEvent(status);
     return c.json({ success: true });
   } catch {
     console.warn("[payments] notification could not be applied", { orderId: (payload as { order_id: string }).order_id });

@@ -2,24 +2,15 @@
  * Utility untuk komunikasi API dan autentikasi token Bearer
  */
 
-export function getAuthToken(): string | null {
-  return localStorage.getItem("cleanique_token");
-}
-
-export function setAuthToken(token: string): void {
-  localStorage.setItem("cleanique_token", token);
-}
-
-export function removeAuthToken(): void {
-  localStorage.removeItem("cleanique_token");
-}
-
+/** Legacy credentials are removed during the server-session cutover. */
+export function getAuthToken(): null { return null; }
+export function setAuthToken(_token: string): void { localStorage.removeItem("cleanique_token"); }
+export function removeAuthToken(): void { localStorage.removeItem("cleanique_token"); }
 export function authHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
+  const csrf = document.cookie.match(/(?:^|;\s*)(?:__Host-)?cleanique_csrf=([^;]+)/)?.[1];
+  return { "Content-Type": "application/json",
+    ...(csrf ? { "X-CSRF-Token": decodeURIComponent(csrf) } : {}),
     ...(localStorage.getItem("cleanique_active_branch") ? { "X-Tenant-Id": localStorage.getItem("cleanique_active_branch")! } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extraHeaders,
   };
 }

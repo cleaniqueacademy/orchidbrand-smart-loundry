@@ -1,3 +1,4 @@
+import { setOwnerReferralTx } from "./ownerReferral";
 import { db } from "../db/index";
 import {
   users,
@@ -13,7 +14,7 @@ import { eq, sql } from "drizzle-orm";
 import { newId } from "../utils/id";
 import { addDays, today } from "../utils/date";
 import { DEFAULT_PRESET_SERVICES } from "../constants/services";
-import { validateCode, recordSignup } from "./referralService";
+import { validateCode } from "./referralService";
 
 export interface SignupInput {
   outletName: string;
@@ -140,14 +141,15 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
   const nowIso = new Date().toISOString();
 
   // 4. Hash password
-  const passwordHash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 10 });
+  const passwordHash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 12 });
 
   const userId = newId("usr");
   const tenantId = newId("tenant");
   const signupRequestId = newId("sgn");
 
+  await db.transaction(async tx => {
   // 5. Buat User dahulu (karena tenants.user_id mereferensikan users.id)
-  await db.insert(users).values({
+  await tx.insert(users).values({
     id: userId,
     name: ownerName.trim(),
     email: cleanEmail,
@@ -163,7 +165,7 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
   });
 
   // 6. Buat Tenant (karena signup_requests.created_tenant_id mereferensikan tenants.id)
-  await db.insert(tenants).values({
+  await tx.insert(tenants).values({
     id: tenantId,
     userId,
     outletName: outletName.trim(),
@@ -176,13 +178,13 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
     enableCashierShift: "true",
     isTrial: "true",
     source: validReferralCodeId ? "referral" : "signup",
-    referralCodeId: validReferralCodeId,
+    referralCodeId: null,
     acquiredAt: nowIso,
     createdAt: nowIso,
   });
 
   // 7. Simpan signup request (setelah user dan tenant ada di DB)
-  await db.insert(signupRequests).values({
+  await tx.insert(signupRequests).values({
     id: signupRequestId,
     outletName: outletName.trim(),
     ownerName: ownerName.trim(),
@@ -216,11 +218,11 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
   }));
 
   if (servicesToInsert.length > 0) {
-    await db.insert(services).values(servicesToInsert);
+    await tx.insert(services).values(servicesToInsert);
   }
 
   // 9. Inisialisasi wa_numbers Primer
-  await db.insert(waNumbers).values({
+  await tx.insert(waNumbers).values({
     id: newId("wanum"),
     tenantId,
     sessionKey: tenantId, // Primary session key = tenantId untuk kompatibilitas
@@ -235,16 +237,11 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
 
   // 10. Catat referral signup jika menggunakan kode promo
   if (validReferralCodeId) {
-    await recordSignup(validReferralCodeId, tenantId, {
-      outletName,
-      ownerName,
-      email: cleanEmail,
-      phone: cleanPhone,
-    });
+    await setOwnerReferralTx(tx, tenantId, userId, false, referralCode!.trim());
   }
 
   // 11. Catat subscription event (trial_started)
-  await db.insert(subscriptionEvents).values({
+  await tx.insert(subscriptionEvents).values({
     id: newId("subevt"),
     tenantId,
     eventType: "trial_started",
@@ -258,6 +255,7 @@ export async function registerNewTenant(input: SignupInput): Promise<SignupResul
     createdAt: nowIso,
   });
 
+  });
   return {
     success: true,
     message: referralNotice

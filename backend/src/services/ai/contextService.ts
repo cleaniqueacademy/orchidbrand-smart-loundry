@@ -1,3 +1,4 @@
+import { today, toDateOnly } from "../../utils/date";
 import { db } from "../../db/index";
 import {
   orders,
@@ -57,7 +58,7 @@ async function fetchSuperadminStats(): Promise<SuperadminDatabaseStats | undefin
     const tenantMap = new Map(allTenants.map((t) => [t.id, t.outletName]));
     const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
 
-    const nowIso = new Date().toISOString();
+    const nowIso = today();
     const trialTenants = allTenants.filter((t) => t.isTrial === "true").length;
     const expiredTenants = allTenants.filter((t) => {
       if (!t.subscriptionUntil) return false;
@@ -165,7 +166,7 @@ export async function getOperationalContext(
     }
     return {
       outletName: isSuperadmin ? "Pusat Platform Laundry Cleanique (Super Admin HQ)" : "Pusat / Superadmin",
-      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }),
       ordersTodayCount: 0,
       revenueToday: 0,
       processCount: superadminStats ? superadminStats.activeOrdersAllPlatform : 0,
@@ -185,11 +186,11 @@ export async function getOperationalContext(
     const tenant = tenantRows[0];
     const outletName = tenant ? tenant.outletName : "Cleanique Laundry";
 
-    const todayIsoPrefix = new Date().toISOString().slice(0, 10);
+    const todayIsoPrefix = today();
     const allOrders = await db.select().from(orders).where(eq(orders.tenantId, tenantId));
 
     const ordersToday = allOrders.filter(
-      (o) => o.createdAt && o.createdAt.startsWith(todayIsoPrefix)
+      (o) => o.createdAt && toDateOnly(new Date(o.createdAt)) === todayIsoPrefix
     );
 
   const revenueToday = ordersToday
@@ -349,7 +350,7 @@ export async function getOperationalContext(
 
     return {
       outletName,
-      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }),
       ordersTodayCount: ordersToday.length,
       revenueToday,
       processCount,
@@ -364,7 +365,7 @@ export async function getOperationalContext(
 
     return {
       outletName,
-      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }),
       ordersTodayCount: ordersToday.length,
       revenueToday,
       processCount,
@@ -378,7 +379,7 @@ export async function getOperationalContext(
     console.warn("[getOperationalContext] Failed to fetch DB context, using fallback:", err?.message);
     return {
       outletName: "Cleanique Laundry",
-      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full" }),
+      todayStr: new Date().toLocaleDateString("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }),
       ordersTodayCount: 0,
       revenueToday: 0,
       processCount: 0,

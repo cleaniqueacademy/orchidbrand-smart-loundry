@@ -25,23 +25,18 @@ platformSettingsRoutes.get("/public", async (c) => {
       });
     }
 
-    const defaultQris = "/qris.png";
-    const currentQris = settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")
-      ? settings.qrisInfo
-      : defaultQris;
-
     return c.json({
       success: true,
       data: {
         platformName: settings.platformName,
         platformLogo: settings.platformLogo,
-        bankName: settings.bankName || "BCA (Bank Central Asia)",
-        bankAccountNumber: settings.bankAccountNumber || "8830-1928-3341",
-        bankAccountName: settings.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL",
-        qrisInfo: currentQris,
-        ewalletName: settings.ewalletName || "DANA / GoPay / OVO",
-        ewalletNumber: settings.ewalletNumber || "0812-2340-6368",
-        ewalletAccountName: settings.ewalletAccountName || "PT CLEANIQUE SISTEM DIGITAL",
+        bankName: settings.bankName,
+        bankAccountNumber: settings.bankAccountNumber,
+        bankAccountName: settings.bankAccountName,
+        qrisInfo: settings.qrisInfo,
+        ewalletName: settings.ewalletName,
+        ewalletNumber: settings.ewalletNumber,
+        ewalletAccountName: settings.ewalletAccountName,
         defaultTrialDays: settings.defaultTrialDays,
         supportPhone: settings.supportPhone,
         supportEmail: settings.supportEmail,
@@ -82,11 +77,6 @@ platformSettingsRoutes.get("/", requireRole(["superadmin"]), async (c) => {
       settings = created;
     }
 
-    if (settings) {
-      if (!settings.qrisInfo || settings.qrisInfo.includes("qris-official.png")) {
-        settings.qrisInfo = "/qris.png";
-      }
-    }
 
     return c.json({ success: true, data: settings });
   } catch (err: any) {

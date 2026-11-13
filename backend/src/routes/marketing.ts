@@ -1,3 +1,5 @@
+import { changeLifecycle } from "../services/accountLifecycle";
+import { commissionAdjustments, requestWithdrawal, processWithdrawal } from "../services/financialReview";
 import { Hono } from "hono";
 import { db } from "../db/index";
 import {
@@ -114,7 +116,7 @@ marketingRoutes.get("/me", requireRole(["marketing", "superadmin"]), async (c) =
       if (w.status === "paid") paidWithdrawals += w.amount;
     }
 
-    const effectiveTotalEarned = Math.max(profile.totalEarned, approvedCommission + paidCommission);
+    const effectiveTotalEarned = Math.max(profile.totalEarned, approvedCommission + paidCommission) - await commissionAdjustments(profile.id);
     const effectiveTotalWithdrawn = Math.max(profile.totalWithdrawn, paidWithdrawals);
     const availableBalance = Math.max(0, effectiveTotalEarned - effectiveTotalWithdrawn - pendingWithdrawals);
 
@@ -467,61 +469,9 @@ marketingRoutes.get("/commissions", requireRole(["superadmin", "marketing"]), as
  * 6. PUT /api/marketing/commissions/:id/status
  * Ubah status komisi (Superadmin: approved, paid, rejected)
  */
-marketingRoutes.put(
-  "/commissions/:id/status",
-  requireRole(["superadmin"]),
-  async (c) => {
-    try {
-      const id = c.req.param("id");
-      if (!id) return c.json({ success: false, message: "ID komisi diperlukan" }, 400);
-      const body = await c.req.json();
-      const { status, notes } = body;
-
-      if (!["pending", "approved", "paid", "rejected"].includes(status)) {
-        return c.json({ success: false, message: "Status tidak valid" }, 400);
-      }
-
-      const [comm] = await db
-        .select()
-        .from(marketingCommissions)
-        .where(eq(marketingCommissions.id, id));
-
-      if (!comm) {
-        return c.json({ success: false, message: "Data komisi tidak ditemukan" }, 404);
-      }
-
-      const updates: Partial<typeof marketingCommissions.$inferInsert> = {
-        status,
-        notes: notes !== undefined ? notes : comm.notes,
-      };
-
-      if (status === "paid" && comm.status !== "paid") {
-        updates.paidAt = new Date().toISOString();
-        // Update totalWithdrawn di marketing_profile
-        await db
-          .update(marketingProfiles)
-          .set({
-            totalWithdrawn: sql`${marketingProfiles.totalWithdrawn} + ${comm.commissionAmount}`,
-          })
-          .where(eq(marketingProfiles.id, comm.marketingProfileId));
-      }
-
-      const [updated] = await db
-        .update(marketingCommissions)
-        .set(updates)
-        .where(eq(marketingCommissions.id, id))
-        .returning();
-
-      return c.json({
-        success: true,
-        message: `Status komisi berhasil diubah ke '${status}'`,
-        data: updated,
-      });
-    } catch (err: any) {
-      return c.json({ success: false, message: err.message }, 500);
-    }
-  }
-);
+marketingRoutes.put("/commissions/:id/status", requireRole(["superadmin"]), async c => {
+  return c.json({ success: false, message: "Komisi disetujui melalui pembayaran invoice. Pencairan melalui penarikan; koreksi melalui jurnal refund." }, 409);
+});
 
 /**
  * 7. PATCH /api/marketing/profiles/:id/status
@@ -549,7 +499,7 @@ marketingRoutes.patch("/profiles/:id/status", requireRole(["superadmin"]), async
     const newStatus: "active" | "inactive" =
       currentUser?.status === "active" ? "inactive" : "active";
 
-    await db.update(users).set({ status: newStatus }).where(eq(users.id, profile.userId));
+    await changeLifecycle("user", profile.userId, newStatus, getUser(c).userId);
 
     return c.json({
       success: true,
@@ -580,19 +530,8 @@ marketingRoutes.delete("/profiles/:id", requireRole(["superadmin"]), async (c) =
       return c.json({ success: false, message: "Profil marketing tidak ditemukan" }, 404);
     }
 
-    // Lepas relasi referral codes → profil (agar tenant yang pakai tidak rusak)
-    await db
-      .update(referralCodes)
-      .set({ marketingProfileId: null as unknown as string })
-      .where(eq(referralCodes.marketingProfileId, id));
-
-    // Bersihkan histori komisi terkait profil ini agar tidak kena foreign key constraint
-    await db.delete(marketingCommissions).where(eq(marketingCommissions.marketingProfileId, id));
-
-    await db.delete(marketingProfiles).where(eq(marketingProfiles.id, id));
-    await db.delete(users).where(eq(users.id, profile.userId));
-
-    return c.json({ success: true, message: "Akun marketing berhasil dihapus dari sistem" });
+    await changeLifecycle("user", profile.userId, "archive", getUser(c).userId);
+    return c.json({ success: true, message: "Akun marketing diarsipkan; histori dipertahankan" });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }
@@ -650,251 +589,15 @@ marketingRoutes.get("/withdrawals", requireRole(["superadmin", "marketing"]), as
  * 10. POST /api/marketing/withdrawals
  * Ajukan penarikan saldo oleh tim marketing
  */
-marketingRoutes.post("/withdrawals", requireRole(["marketing"]), async (c) => {
-  try {
-    const user = getUser(c);
-    const body = await c.req.json();
-    const { amount, bankName, bankAccountNumber, bankAccountName, notes } = body;
-
-    const withdrawAmount = Number(amount);
-    if (!withdrawAmount || withdrawAmount <= 0) {
-      return c.json({ success: false, message: "Nominal penarikan harus lebih dari 0" }, 400);
-    }
-
-    const [profile] = await db
-      .select()
-      .from(marketingProfiles)
-      .where(eq(marketingProfiles.userId, user.userId));
-
-    if (!profile) {
-      return c.json({ success: false, message: "Profil marketing tidak ditemukan" }, 404);
-    }
-
-    // Ambil semua komisi approved/paid
-    const comms = await db
-      .select()
-      .from(marketingCommissions)
-      .where(eq(marketingCommissions.marketingProfileId, profile.id));
-
-    let sumEarned = 0;
-    for (const cm of comms) {
-      if (cm.status === "approved" || cm.status === "paid") {
-        sumEarned += cm.commissionAmount;
-      }
-    }
-    const realTotalEarned = Math.max(profile.totalEarned, sumEarned);
-
-    // Ambil penarikan pending & paid
-    const withdrawals = await db
-      .select()
-      .from(marketingWithdrawals)
-      .where(eq(marketingWithdrawals.marketingProfileId, profile.id));
-
-    let pendingAmount = 0;
-    let paidAmount = 0;
-    for (const w of withdrawals) {
-      if (w.status === "pending") pendingAmount += w.amount;
-      if (w.status === "paid") paidAmount += w.amount;
-    }
-    const realTotalWithdrawn = Math.max(profile.totalWithdrawn, paidAmount);
-    const availableBalance = Math.max(0, realTotalEarned - realTotalWithdrawn - pendingAmount);
-
-    if (withdrawAmount > availableBalance) {
-      return c.json({
-        success: false,
-        message: `Saldo tidak mencukupi. Saldo tersedia saat ini: Rp ${availableBalance.toLocaleString("id-ID")}`,
-      }, 400);
-    }
-
-    const withdrawalId = newId("wth");
-    const newRecord = {
-      id: withdrawalId,
-      marketingProfileId: profile.id,
-      amount: withdrawAmount,
-      bankName: bankName ? String(bankName).trim() : profile.bankName,
-      bankAccountNumber: bankAccountNumber ? String(bankAccountNumber).trim() : profile.bankAccountNumber,
-      bankAccountName: bankAccountName ? String(bankAccountName).trim() : profile.bankAccountName,
-      status: "pending" as const,
-      proofUrl: null,
-      notes: notes ? String(notes).trim() : null,
-      processedByUserId: null,
-      processedAt: null,
-      createdAt: new Date().toISOString(),
-    };
-
-    await db.insert(marketingWithdrawals).values(newRecord);
-
-    return c.json({
-      success: true,
-      message: "Permohonan penarikan saldo berhasil diajukan dan sedang menunggu proses transfer admin",
-      data: newRecord,
-    });
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
-  }
+marketingRoutes.post("/withdrawals", requireRole(["marketing"]), async c => {
+  try { return c.json({ success: true, data: await requestWithdrawal(getUser(c).userId, await c.req.json()) }); }
+  catch (error) { return c.json({ success: false, message: error instanceof Error ? error.message : "Penarikan gagal" }, 409); }
 });
-
-/**
- * 11. PUT /api/marketing/withdrawals/:id/status
- * Superadmin memproses penarikan saldo ('paid' atau 'rejected')
- */
-marketingRoutes.put(
-  "/withdrawals/:id/status",
-  requireRole(["superadmin"]),
-  async (c) => {
-    try {
-      const user = getUser(c);
-      const id = c.req.param("id");
-      if (!id) return c.json({ success: false, message: "ID penarikan diperlukan" }, 400);
-
-      const body = await c.req.json();
-      const { status, notes, proofUrl } = body;
-
-      if (!["paid", "rejected"].includes(status)) {
-        return c.json({ success: false, message: "Status tidak valid. Pilih 'paid' atau 'rejected'" }, 400);
-      }
-
-      const [withdrawal] = await db
-        .select()
-        .from(marketingWithdrawals)
-        .where(eq(marketingWithdrawals.id, id));
-
-      if (!withdrawal) {
-        return c.json({ success: false, message: "Data penarikan tidak ditemukan" }, 404);
-      }
-
-      if (withdrawal.status !== "pending") {
-        return c.json({ success: false, message: `Penarikan ini sudah diproses dengan status '${withdrawal.status}'` }, 400);
-      }
-
-      const nowIso = new Date().toISOString();
-
-      if (status === "paid") {
-        // Ambil info marketing user untuk deskripsi kas
-        const [profile] = await db
-          .select()
-          .from(marketingProfiles)
-          .where(eq(marketingProfiles.id, withdrawal.marketingProfileId));
-
-        let marketingName = "Tim Marketing";
-        if (profile) {
-          const [u] = await db.select().from(users).where(eq(users.id, profile.userId));
-          if (u) marketingName = u.name;
-
-          // Tambah totalWithdrawn di marketingProfiles
-          await db
-            .update(marketingProfiles)
-            .set({
-              totalWithdrawn: sql`${marketingProfiles.totalWithdrawn} + ${withdrawal.amount}`,
-              updatedAt: nowIso,
-            })
-            .where(eq(marketingProfiles.id, profile.id));
-        }
-
-        // Catat pengeluaran kas di platformCashflow
-        await db.insert(platformCashflow).values({
-          id: newId("pcf"),
-          type: "expense",
-          category: "marketing_commission",
-          amount: withdrawal.amount,
-          date: today(),
-          tenantId: null,
-          referralCode: null,
-          durationMonths: null,
-          description: `Pencairan insentif komisi marketing - ${marketingName} (ID: ${withdrawal.id})`,
-          proofUrl: proofUrl ? String(proofUrl).trim() : null,
-          notes: notes ? String(notes).trim() : null,
-          createdByUserId: user.userId,
-          createdAt: nowIso,
-        });
-      }
-
-      const [updated] = await db
-        .update(marketingWithdrawals)
-        .set({
-          status,
-          notes: notes !== undefined ? notes : withdrawal.notes,
-          proofUrl: proofUrl !== undefined ? proofUrl : withdrawal.proofUrl,
-          processedByUserId: user.userId,
-          processedAt: nowIso,
-        })
-        .where(eq(marketingWithdrawals.id, id))
-        .returning();
-
-      return c.json({
-        success: true,
-        message: status === "paid"
-          ? "Penarikan berhasil dikonfirmasi telah ditransfer dan tercatat di kas platform"
-          : "Permohonan penarikan ditolak dan saldo telah dikembalikan",
-        data: updated,
-      });
-    } catch (err: any) {
-      return c.json({ success: false, message: err.message }, 500);
-    }
-  }
-);
-
-/**
- * 12. POST /api/marketing/sync-balances
- * Sinkronisasi data lama: ubah komisi pending -> approved dan sinkronkan totalEarned & totalWithdrawn (Superadmin)
- */
-marketingRoutes.post("/sync-balances", requireRole(["superadmin"]), async (c) => {
-  try {
-    // 1. Ubah seluruh komisi yang statusnya 'pending' menjadi 'approved'
-    await db
-      .update(marketingCommissions)
-      .set({ status: "approved" })
-      .where(eq(marketingCommissions.status, "pending"));
-
-    // 2. Ambil seluruh profil marketing
-    const profiles = await db.select().from(marketingProfiles);
-
-    for (const prof of profiles) {
-      // Hitung komisi yang didapat
-      const comms = await db
-        .select()
-        .from(marketingCommissions)
-        .where(eq(marketingCommissions.marketingProfileId, prof.id));
-
-      let totalEarned = 0;
-      for (const cm of comms) {
-        if (cm.status === "approved" || cm.status === "paid") {
-          totalEarned += cm.commissionAmount;
-        }
-      }
-
-      // Hitung total ditarik dari withdrawals
-      const withdrawals = await db
-        .select()
-        .from(marketingWithdrawals)
-        .where(eq(marketingWithdrawals.marketingProfileId, prof.id));
-
-      let totalWithdrawn = 0;
-      for (const w of withdrawals) {
-        if (w.status === "paid") {
-          totalWithdrawn += w.amount;
-        }
-      }
-
-      const finalWithdrawn = Math.max(prof.totalWithdrawn || 0, totalWithdrawn);
-
-      await db
-        .update(marketingProfiles)
-        .set({
-          totalEarned,
-          totalWithdrawn: finalWithdrawn,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(marketingProfiles.id, prof.id));
-    }
-
-    return c.json({
-      success: true,
-      message: "Data komisi dan saldo seluruh tim marketing berhasil disinkronkan",
-    });
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
-  }
+marketingRoutes.put("/withdrawals/:id/status", requireRole(["superadmin"]), async c => {
+  const body = await c.req.json();
+  if (!["paid","rejected"].includes(body.status)) return c.json({ success: false, message: "Status tidak valid" },400);
+  try { return c.json({ success: true, data: await processWithdrawal(c.req.param("id")!, getUser(c).userId, body.status, body.notes, body.proofUrl) }); }
+  catch (error) { return c.json({ success: false, message: error instanceof Error ? error.message : "Penarikan gagal diproses" },409); }
 });
-
+marketingRoutes.post("/sync-balances", requireRole(["superadmin"]), c => c.json({ success:false, message:"Sinkronisasi massal dihentikan. Review invoice dan jurnal sebelum koreksi komisi." },409));
 export default marketingRoutes;

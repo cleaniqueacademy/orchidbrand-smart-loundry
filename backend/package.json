@@ -11,7 +11,9 @@
     "db:push-users": "bun src/scripts/pushUsersFromLocalTxt.ts",
     "db:studio": "bunx drizzle-kit studio",
     "build": "bun build src/index.ts --target=bun --packages=external --outdir dist",
-    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "db:bootstrap-admin": "bun src/scripts/bootstrapAdmin.ts",
+    "db:hash-legacy": "bun src/scripts/hashLegacyPasswords.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

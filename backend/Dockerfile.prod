@@ -6,7 +6,8 @@ COPY frontend/package.json frontend/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY backend backend
 WORKDIR /app/backend
-RUN mkdir -p data/uploads auth_info_baileys
-ENV NODE_ENV=production PORT=5000
+RUN mkdir -p data/uploads data/wa_sessions && chown -R bun:bun data
+USER bun
+ENV NODE_ENV=production PORT=5000 UPLOADS_DIR=/app/backend/data/uploads WA_SESSIONS_DIR=/app/backend/data/wa_sessions
 EXPOSE 5000
 CMD ["bun", "src/index.ts"]

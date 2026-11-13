@@ -1,3 +1,4 @@
+import { assertActiveQuota } from "./accountLifecycle";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
@@ -17,10 +18,11 @@ export async function createBranchStaff(tenantId: string, actorId: string, isAdm
     if (!branch || (!isAdmin && branch.userId !== actorId)) throw new Error("Akses cabang ditolak");
     const [owner] = await tx.select().from(users).where(eq(users.id, branch.userId)).for("update");
     if (!owner || (!isAdmin && owner.tier !== "premium")) throw new Error("Paket Premium diperlukan");
+    await assertActiveQuota(tx, branch.userId, "staff");
     const [plan] = await tx.select().from(plans).where(eq(plans.code, "premium"));
     const branches = await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.userId, branch.userId));
     const staff = await tx.select({ id: users.id }).from(users).where(and(eq(users.role, "staff"), inArray(users.tenantId, branches.map(b => b.id))));
-    if (!isAdmin && (!plan || staff.length >= plan.maxStaff)) throw new Error("Batas staf paket telah tercapai");
+
     const [created] = await tx.insert(users).values({
       id: newId("staff"), name: input.name, email: input.email, passwordHash,
       role: "staff", status: "active", tenantId,

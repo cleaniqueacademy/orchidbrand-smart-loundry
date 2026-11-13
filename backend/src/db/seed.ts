@@ -27,7 +27,11 @@ import {
   aiUsageDaily,
 } from "./schema";
 
-export async function seedInitialData(force = true) {
+export async function seedInitialData(force = false) {
+  if (process.env.NODE_ENV === "production" || process.env.ALLOW_DEMO_RESET !== "yes-local-only") {
+    throw new Error("Seeder demo dinonaktifkan. Gunakan bootstrap admin non-destruktif; reset lokal memerlukan ALLOW_DEMO_RESET=yes-local-only.");
+  }
+  if (force) throw new Error("Reset melalui seeder dilarang; gunakan database lokal kosong.");
   try {
     await initPostgresTables();
 
@@ -39,37 +43,7 @@ export async function seedInitialData(force = true) {
       }
     }
 
-    console.log("🌱 Menyiapkan Seeding Produksi Laundry Cleanique (Clean State)...");
-
-    // Bersihkan data lama dengan urutan foreign key yang aman
-    try {
-      await db.delete(waMessages);
-      await db.delete(waNumbers);
-      await db.delete(aiMessages);
-      await db.delete(aiConversations);
-      await db.delete(aiUsageDaily);
-      await db.delete(subscriptionEvents);
-      await db.delete(marketingCommissions);
-      await db.delete(subscriptionInvoices);
-      await db.delete(signupRequests);
-      await db.delete(referralEvents);
-      await db.delete(referralCodeTenants);
-      await db.delete(referralCodes);
-      await db.delete(marketingProfiles);
-      await db.delete(plans);
-      await db.delete(platformSettings);
-      await db.delete(waLogs);
-      await db.delete(shifts);
-      await db.delete(expenses);
-      await db.delete(orders);
-      await db.delete(services);
-      await db.delete(customers);
-      await db.delete(tenants);
-      await db.delete(users);
-      console.log("🧹 Pembersihan tabel PostgreSQL selesai (Database Bersih).");
-    } catch (cleanErr: any) {
-      console.warn("Notice saat pembersihan tabel:", cleanErr.message);
-    }
+    console.log("🌱 Menyiapkan Seeding Demo Lokal Laundry Cleanique (Clean State)...");
 
     const now = new Date();
     const today = now.toISOString();
@@ -320,7 +294,7 @@ ${seededMarketing.map((m, i) => `${(i + 1).toString().padStart(2, " ")}. [Kode: 
 }
 
 if (import.meta.main) {
-  seedInitialData(true)
+  seedInitialData(false)
     .then(() => {
       console.log("🎉 Seeding selesai.");
       process.exit(0);

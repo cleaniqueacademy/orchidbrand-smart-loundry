@@ -1,6 +1,8 @@
 import { db } from "../db/index";
 import {
   referralCodes,
+  referralAssignments,
+  tenants,
   referralCodeTenants,
   referralEvents,
   marketingProfiles,
@@ -26,14 +28,15 @@ export interface ReferralValidationResult {
  */
 export async function validateCode(
   rawCode: string,
-  tenantId?: string | null
+  tenantId?: string | null,
+  executor: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
 ): Promise<ReferralValidationResult> {
   if (!rawCode || !rawCode.trim()) {
     return { valid: false, message: "Kode referral tidak boleh kosong" };
   }
 
   const cleanCode = rawCode.trim().toUpperCase();
-  const matchedCodes = await db
+  const matchedCodes = await executor
     .select()
     .from(referralCodes)
     .where(eq(sql`UPPER(${referralCodes.code})`, cleanCode));
@@ -58,13 +61,22 @@ export async function validateCode(
     return { valid: false, message: `Kode referral telah kedaluwarsa pada ${code.validUntil}` };
   }
 
-  if (code.maxUsage && code.maxUsage > 0 && code.currentUsage >= code.maxUsage) {
+  let existingOwner = false;
+  if (tenantId) {
+    const [branch] = await executor.select({ ownerId: tenants.userId }).from(tenants).where(eq(tenants.id, tenantId));
+    if (branch) {
+      const assigned = await executor.select().from(referralAssignments).where(and(eq(referralAssignments.ownerId, branch.ownerId), eq(referralAssignments.referralCodeId, code.id)));
+      existingOwner = assigned.length > 0;
+    }
+  }
+  if (!existingOwner && code.maxUsage && code.maxUsage > 0 && code.currentUsage >= code.maxUsage) {
     return { valid: false, message: "Kuota penggunaan kode referral ini telah habis" };
   }
 
   // Jika kode berlaku spesifik hanya untuk outlet/tenant tertentu
-  if (code.appliesToAllTenants !== "true" && tenantId) {
-    const tenantActivation = await db
+  if (code.appliesToAllTenants !== "true" && !tenantId) return { valid: false, message: "Kode hanya berlaku untuk Owner yang ditentukan" };
+  if (code.appliesToAllTenants !== "true" && tenantId && !existingOwner) {
+    const tenantActivation = await executor
       .select()
       .from(referralCodeTenants)
       .where(
@@ -162,6 +174,7 @@ export async function recordCommission(params: {
   baseAmount: number;
   tenantId?: string | null;
   durationMonths?: number;
+  snapshot?: { type: string; value: number; marketingProfileId: string | null };
 }, executor: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db) {
   const {
     referralCodeId,
@@ -177,7 +190,9 @@ export async function recordCommission(params: {
     .where(eq(referralCodes.id, referralCodeId));
 
   if (foundCodes.length === 0) return null;
-  const code = foundCodes[0];
+  const code = { ...foundCodes[0],
+    ...(params.snapshot ? { commissionType: params.snapshot.type, commissionValue: params.snapshot.value, marketingProfileId: params.snapshot.marketingProfileId } : {}),
+  };
 
   if (!code.marketingProfileId) return null;
 

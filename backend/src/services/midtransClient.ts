@@ -3,7 +3,7 @@ export interface GatewayTransaction {
   gross_amount: string; status_code: string; fraud_status?: string; currency?: string;
 }
 export interface PaymentGateway {
-  create(orderId: string, amount: number): Promise<{ token: string; redirect_url: string }>;
+  create(orderId: string, amount: number, expiresAt?: string): Promise<{ token: string; redirect_url: string }>;
   status(orderId: string): Promise<GatewayTransaction | null>;
 }
 export class GatewayRejectedError extends Error {}
@@ -27,11 +27,13 @@ export class MidtransClient implements PaymentGateway {
       signal: AbortSignal.timeout(10000), redirect: "error",
     });
   }
-  async create(orderId: string, amount: number) {
+  async create(orderId: string, amount: number, expiresAt?: string) {
+    const minutes = expiresAt ? Math.floor((Date.parse(expiresAt) - Date.now()) / 60000) : 1440;
+    if (!Number.isFinite(minutes) || minutes < 1) throw new GatewayRejectedError("Invoice kedaluwarsa");
     const origin = this.production ? "https://app.midtrans.com" : "https://app.sandbox.midtrans.com";
     const response = await this.request(`${origin}/snap/v1/transactions`, {
       transaction_details: { order_id: orderId, gross_amount: amount },
-      expiry: { unit: "hours", duration: 24 },
+      expiry: { start_time: new Date().toISOString().slice(0,19).replace("T", " ") + " +0000", unit: "minutes", duration: Math.min(1440, minutes) },
     });
     if ([400, 401, 403, 422].includes(response.status)) throw new GatewayRejectedError("Midtrans menolak permintaan checkout");
     if (!response.ok) throw new Error("Midtrans tidak dapat membuat checkout");

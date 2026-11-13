@@ -30,7 +30,7 @@ const RATE_LIMIT_MS = 60_000; // 60 detik cooldown per nomor per tenant
 const MAX_RECONNECT_ATTEMPTS = 8;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 15 * 60_000;
 
-const SESSIONS_BASE_DIR = path.resolve(process.cwd(), "data", "wa_sessions");
+const SESSIONS_BASE_DIR = path.resolve(process.env.WA_SESSIONS_DIR || path.join(process.cwd(), "data", "wa_sessions"));
 
 if (!fs.existsSync(SESSIONS_BASE_DIR)) {
   fs.mkdirSync(SESSIONS_BASE_DIR, { recursive: true });
@@ -320,20 +320,15 @@ export async function sendWhatsAppMessage(
   const now = Date.now();
   if (now - lastSent < RATE_LIMIT_MS) {
     const remainSec = Math.ceil((RATE_LIMIT_MS - (now - lastSent)) / 1000);
-    console.warn(`[WA] Rate limit hit for ${cleanPhone} — skip (cooldown ${remainSec}s)`);
+    console.info("[WA] Recipient cooldown", { tenantId });
     return {
-      success: true, // dianggap sukses agar tidak error di UI
+      success: false,
       skipped: true,
       error: `Notifikasi ke nomor ini sudah dikirim baru-baru ini (cooldown ${remainSec}s).`,
     };
   }
 
   try {
-    // FIX #2: Delay acak 3–20 detik sebelum kirim (aman karena ini cuma notifikasi)
-    const delayMs = Math.floor(Math.random() * (20_000 - 3_000 + 1)) + 3_000;
-    console.log(`[WA] Sending to ${cleanPhone} in ${(delayMs / 1000).toFixed(1)}s...`);
-    await randomDelay(3_000, 20_000);
-
     const jid = `${cleanPhone}@s.whatsapp.net`;
     const result = await session.sock.sendMessage(jid, { text });
 
@@ -345,7 +340,7 @@ export async function sendWhatsAppMessage(
       messageId: result?.key?.id || undefined,
     };
   } catch (err: any) {
-    console.error(`[WA] Failed to send message to ${cleanPhone}:`, err);
+    console.error("[WA] Delivery failed", { tenantId });
     return {
       success: false,
       error: err.message || "Gagal mengirim pesan melalui WhatsApp Gateway",

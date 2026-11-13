@@ -97,7 +97,8 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
 
   const handleDownloadQris = async () => {
     setDownloadingQris(true);
-    const targetQrisUrl = summary?.platformBank?.qrisInfo || "/qris.png";
+    const targetQrisUrl = summary?.platformBank?.qrisInfo || "";
+    if (!targetQrisUrl) { setDownloadingQris(false); return; }
     try {
       const response = await fetch(targetQrisUrl);
       if (!response.ok) throw new Error("Gagal mengambil file gambar");
@@ -177,7 +178,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
       if (res.success) {
         toast.success(
           "Kode Referral Berhasil Diterapkan!",
-          res.message || "Tarif perpanjangan outlet kini hemat menjadi Rp 55.000/bulan."
+          res.message || "Referral diterapkan pada perhitungan invoice berikutnya."
         );
         setIsEditingReferral(false);
         setReferralInput("");
@@ -202,7 +203,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         <span>
           Apakah Anda yakin ingin melepas kode referral{" "}
           <strong>{summary.referralCodeUsed}</strong>? Tarif perpanjangan bulanan
-          outlet akan kembali ke tarif normal <strong>Rp 60.000 / bulan</strong>.
+          outlet akan dihitung ulang mengikuti paket dan promo yang masih aktif.
         </span>
       ),
       confirmText: "Ya, Copot Kode",
@@ -218,7 +219,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
       });
 
       if (res.success) {
-        toast.info("Kode Referral Dicopot", res.message || "Tarif outlet kini kembali ke standar Rp 60.000/bulan.");
+        toast.info("Kode Referral Dicopot", res.message || "Harga berikutnya mengikuti paket dan promo aktif.");
         setIsEditingReferral(false);
         await fetchData();
       } else {
@@ -416,8 +417,8 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           </div>
           <p className="text-[11px] text-indigo-700/90 font-medium mt-1 truncate">
             {summary?.referralCodeUsed
-              ? "Diskon perpanjangan aktif (Rp 55.000/bln)"
-              : "Tarif standar Rp 60.000/bln"}
+              ? "Referral diterapkan setelah potongan promo aktif"
+              : "Tarif mengikuti paket dan promo saat invoice dibuat"}
           </p>
 
           {/* Form inline bila edit aktif */}
@@ -556,11 +557,13 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           );
         })()}
 
+        {!summary?.platformBank?.bankAccountNumber && !summary?.platformBank?.qrisInfo && !summary?.platformBank?.ewalletNumber && <p role="status" className="text-sm text-amber-800">Pembayaran manual belum dikonfigurasi. Gunakan Midtrans bila tersedia atau hubungi admin.</p>}
         {/* Tab Channel Selector */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {/* Opsi 1: QRIS GPN */}
           <button
             type="button"
+            disabled={!summary?.platformBank?.qrisInfo}
             onClick={() => setActivePaymentMethod("qris")}
             className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer text-left flex items-start gap-3 ${
               activePaymentMethod === "qris"
@@ -593,6 +596,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           {/* Opsi 2: Transfer Bank */}
           <button
             type="button"
+            disabled={!summary?.platformBank?.bankAccountNumber}
             onClick={() => setActivePaymentMethod("bank")}
             className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer text-left flex items-start gap-3 ${
               activePaymentMethod === "bank"
@@ -617,7 +621,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                 {activePaymentMethod === "bank" && <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />}
               </div>
               <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
-                {summary?.platformBank?.bankName || "BCA (Bank Central Asia)"}
+                {summary?.platformBank?.bankName || "Belum dikonfigurasi"}
               </p>
             </div>
           </button>
@@ -625,6 +629,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           {/* Opsi 3: E-Wallet */}
           <button
             type="button"
+            disabled={!summary?.platformBank?.ewalletNumber}
             onClick={() => setActivePaymentMethod("ewallet")}
             className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer text-left flex items-start gap-3 ${
               activePaymentMethod === "ewallet"
@@ -649,7 +654,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                 {activePaymentMethod === "ewallet" && <Check className="w-3.5 h-3.5 text-purple-600 stroke-[3]" />}
               </div>
               <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
-                {summary?.platformBank?.ewalletName || "DANA / GoPay / OVO"}
+                {summary?.platformBank?.ewalletName || "Belum dikonfigurasi"}
               </p>
             </div>
           </button>
@@ -658,7 +663,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         {/* Content Box Berdasarkan Pilihan Pembayaran */}
         <div className="pt-1">
           {/* 1. KONTEN QRIS */}
-          {activePaymentMethod === "qris" && (
+          {activePaymentMethod === "qris" && summary?.platformBank?.qrisInfo && (
             <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/60 border border-zinc-200 flex flex-col md:flex-row items-center gap-6">
               <div
                 onClick={() => setIsQrisModalOpen(true)}
@@ -667,7 +672,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
               >
                 <div className="p-3 bg-white rounded-2xl border border-emerald-200 shadow-sm group-hover:border-emerald-500 transition-colors">
                   <img
-                    src={summary?.platformBank?.qrisInfo || "/qris.png"}
+                    src={summary?.platformBank?.qrisInfo || ""}
                     alt="QRIS Pembayaran Laundry Cleanique"
                     className="w-40 h-40 object-contain rounded-xl"
                   />
@@ -683,20 +688,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                 <div>
                   <div className="text-[11px] text-emerald-800 font-bold uppercase tracking-wider">Merchant Name</div>
                   <div className="text-base font-black text-zinc-900">LAUNDRY CLEANIQUE</div>
-                  <div className="text-xs font-mono font-bold text-zinc-700 mt-0.5 flex items-center justify-center md:justify-start gap-1.5">
-                    <span>NMID:</span>
-                    <span className="bg-emerald-50 text-emerald-900 px-2 py-0.5 rounded border border-emerald-200/60 font-mono">
-                      ID1026618371243
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy("ID1026618371243", "nmid", "NMID")}
-                      className="p-1 hover:bg-zinc-200/60 rounded text-zinc-500 hover:text-zinc-800 transition"
-                      title="Salin NMID"
-                    >
-                      {copiedKey === "nmid" ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                    </button>
-                  </div>
+
                 </div>
 
                 <p className="text-xs text-zinc-600 leading-relaxed max-w-xl">
@@ -736,7 +728,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           )}
 
           {/* 2. KONTEN TRANSFER BANK */}
-          {activePaymentMethod === "bank" && (
+          {activePaymentMethod === "bank" && summary?.platformBank?.bankAccountNumber && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Virtual Bank Card */}
               <div className="rounded-2xl p-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-slate-800 shadow-md flex flex-col justify-between space-y-4">
@@ -748,7 +740,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 block">Bank Tujuan</span>
                       <span className="text-sm font-extrabold text-white">
-                        {summary?.platformBank?.bankName || "BCA (Bank Central Asia)"}
+                        {summary?.platformBank?.bankName || "Belum dikonfigurasi"}
                       </span>
                     </div>
                   </div>
@@ -761,13 +753,13 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Nomor Rekening</span>
                   <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-xl border border-white/10">
                     <span className="font-mono text-lg sm:text-xl font-black tracking-widest text-white selection:bg-blue-500">
-                      {summary?.platformBank?.bankAccountNumber || "8830-1928-3341"}
+                      {summary?.platformBank?.bankAccountNumber || "Belum dikonfigurasi"}
                     </span>
                     <button
                       type="button"
                       onClick={() =>
                         handleCopy(
-                          summary?.platformBank?.bankAccountNumber || "8830-1928-3341",
+                          summary?.platformBank?.bankAccountNumber || "Belum dikonfigurasi",
                           "bank-account",
                           "Nomor rekening bank"
                         )
@@ -793,7 +785,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                   <div>
                     <span className="text-[10px] text-slate-400 block font-medium">Atas Nama Pemilik:</span>
                     <span className="font-bold text-slate-200">
-                      {summary?.platformBank?.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
+                      {summary?.platformBank?.bankAccountName || "Belum dikonfigurasi"}
                     </span>
                   </div>
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -836,7 +828,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           )}
 
           {/* 3. KONTEN E-WALLET */}
-          {activePaymentMethod === "ewallet" && (
+          {activePaymentMethod === "ewallet" && summary?.platformBank?.ewalletNumber && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Virtual E-Wallet Card */}
               <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 text-white border border-emerald-900/60 shadow-md flex flex-col justify-between space-y-4">
@@ -848,7 +840,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">Penyedia E-Wallet</span>
                       <span className="text-sm font-extrabold text-white">
-                        {summary?.platformBank?.ewalletName || "DANA / GoPay / OVO"}
+                        {summary?.platformBank?.ewalletName || "Belum dikonfigurasi"}
                       </span>
                     </div>
                   </div>
@@ -861,13 +853,13 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                   <span className="text-[10px] text-emerald-300/80 uppercase tracking-wider font-semibold block">Nomor Akun / Handphone</span>
                   <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-xl border border-white/10">
                     <span className="font-mono text-lg sm:text-xl font-black tracking-widest text-white selection:bg-emerald-500">
-                      {summary?.platformBank?.ewalletNumber || "0812-2340-6368"}
+                      {summary?.platformBank?.ewalletNumber || "Belum dikonfigurasi"}
                     </span>
                     <button
                       type="button"
                       onClick={() =>
                         handleCopy(
-                          summary?.platformBank?.ewalletNumber || "0812-2340-6368",
+                          summary?.platformBank?.ewalletNumber || "Belum dikonfigurasi",
                           "ewallet-number",
                           "Nomor e-wallet"
                         )
@@ -893,7 +885,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                   <div>
                     <span className="text-[10px] text-emerald-300/80 block font-medium">Atas Nama Pemilik Akun:</span>
                     <span className="font-bold text-emerald-100">
-                      {summary?.platformBank?.ewalletAccountName || "PT CLEANIQUE SISTEM DIGITAL"}
+                      {summary?.platformBank?.ewalletAccountName || "Belum dikonfigurasi"}
                     </span>
                   </div>
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -1041,7 +1033,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                         })}
                       </td>
                       <td className="py-2.5 px-3.5 font-medium text-zinc-700 whitespace-nowrap">
-                        {inv.durationMonths} Bulan
+                        {inv.durationMonths} periode (30 hari)
                       </td>
                       <td className="py-2.5 px-3.5 font-bold text-zinc-900 font-mono whitespace-nowrap">
                         Rp {inv.finalAmount.toLocaleString("id-ID")}
@@ -1050,10 +1042,12 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                       </td>
                       <td className="py-2.5 px-3.5 min-w-[140px] whitespace-nowrap">
                         {getStatusBadge(inv.status)}
+                        {inv.activationStatus === "pending_review" && <div className="text-[11px] text-amber-800">Pembayaran tercatat; aktivasi menunggu review admin.</div>}
+                        {["unpaid","rejected"].includes(inv.status) && <div className="text-[10px] mt-1 text-zinc-500">{inv.expiresAt ? `Batas bayar: ${new Date(inv.expiresAt).toLocaleString("id-ID",{timeZone:"Asia/Jakarta"})} WIB` : "Invoice lama: hubungi admin untuk review"}</div>}
                       </td>
                       <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
                         {midtransEnabled && <>
-                          {["unpaid", "rejected"].includes(inv.status) && <button type="button" disabled={paymentBusy === inv.id} onClick={() => void checkoutMidtrans(inv)} className="border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Bayar via Midtrans</button>}
+                          {["unpaid", "rejected"].includes(inv.status) && <button type="button" disabled={paymentBusy === inv.id || !inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()} onClick={() => void checkoutMidtrans(inv)} className="border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Bayar via Midtrans</button>}
                           <button type="button" disabled={paymentBusy === inv.id} onClick={() => void reconcileMidtrans(inv)} className="border rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Periksa status</button>
                         </>}
 
@@ -1061,6 +1055,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                           <button
                             type="button"
                             onClick={() => handleOpenUpload(inv)}
+                            disabled={!inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()}
                             className="h-8 px-3 rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                           >
                             <Upload className="w-3.5 h-3.5" />
@@ -1099,6 +1094,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
 
       {/* Modals */}
       <RenewSubscriptionModal
+        allowPlanChange={summary?.isTrial === true}
         isOpen={isRenewModalOpen}
         onClose={() => setIsRenewModalOpen(false)}
         onSuccess={fetchData}

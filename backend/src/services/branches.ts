@@ -1,3 +1,4 @@
+import { assertActiveQuota } from "./accountLifecycle";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
@@ -16,14 +17,15 @@ export async function createOwnerBranch(ownerId: string, input: z.infer<typeof b
   return db.transaction(async tx => {
     const [owner] = await tx.select().from(users).where(and(eq(users.id, ownerId), eq(users.role, "tenant_owner"))).for("update");
     if (!owner || owner.tier !== "premium") throw new Error("Paket Premium diperlukan");
+    await assertActiveQuota(tx, ownerId, "branch");
     const branches = await tx.select().from(tenants).where(eq(tenants.userId, ownerId));
     const [plan] = await tx.select().from(plans).where(eq(plans.code, "premium"));
     if (!plan) throw new Error("Konfigurasi Premium tidak tersedia");
-    if (branches.length >= Math.min(5, plan.maxBranches)) throw new Error("Batas lima cabang telah tercapai");
+
     const [branch] = await tx.insert(tenants).values({
       id: newId("tenant"), userId: ownerId, ...input,
       tier: owner.tier, subscriptionUntil: owner.subscriptionUntil,
-      isTrial: owner.isTrial, status: owner.status, waMode: "manual",
+      isTrial: owner.isTrial, status: "active", referralCodeId: branches.find(b => !b.archivedAt)?.referralCodeId, waMode: "manual",
     }).returning();
     // Only copy non-sensitive service definitions; customers, payments and WA sessions stay isolated.
     if (branches[0]) {

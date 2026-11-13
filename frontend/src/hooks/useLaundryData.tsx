@@ -183,7 +183,9 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
             : `Status berhasil diubah ke ${label}`
         );
         if (data.waData && newStatus === "ready") {
-          if (data.waData.autoSent) {
+          if (data.waData.queued) {
+            toast.info("WhatsApp dalam antrean", "Pengiriman diproses di latar belakang. Status tersedia pada log WhatsApp.");
+          } else if (data.waData.autoSent) {
             toast.success(
               "WA Terkirim Otomatis!",
               `Notifikasi berhasil dikirim via Baileys ke nomor ${data.waData.phone || "pelanggan"}.`
@@ -272,7 +274,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       const data = await res.json();
       if (data.success) {
         fetchData();
-        const waNote = data.waData?.autoSent
+        const waNote = data.waData?.queued ? "Notifikasi WhatsApp masuk antrean." : data.waData?.autoSent
           ? " • Notifikasi WA nota digital otomatis terkirim!"
           : "";
         toast.success(
@@ -729,9 +731,9 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
   // Delete Tenant (Superadmin only)
   const handleDeleteTenant = async (id: string, outletName: string): Promise<boolean> => {
     const confirmed = await confirm({
-      title: "Hapus Cabang Permanen",
-      description: `Tindakan ini akan menghapus cabang "${outletName}" beserta seluruh data terkait secara permanen dan tidak dapat dibatalkan.`,
-      confirmText: "Hapus Permanen",
+      title: "Arsipkan Cabang",
+      description: `Cabang "${outletName}" akan diarsipkan. Histori transaksi tetap tersimpan dan pemulihan mengikuti kuota aktif.`,
+      confirmText: "Arsipkan Cabang",
       variant: "danger" as const,
     });
     if (!confirmed) return false;
@@ -850,12 +852,12 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       description: targetUser ? (
         <span>
           Apakah Anda yakin ingin menghapus akun <strong>{targetUser.name}</strong> (
-          {targetUser.email})? Akses pengguna ke sistem akan dicabut secara permanen.
+          {targetUser.email})? Akun akan diarsipkan. Akses dicabut dan histori tetap tersimpan.
         </span>
       ) : (
-        "Akses pengguna ke sistem akan dicabut secara permanen."
+        "Akun akan diarsipkan. Akses dicabut dan histori tetap tersimpan."
       ),
-      confirmText: "Hapus Pengguna",
+      confirmText: "Arsipkan Pengguna",
       cancelText: "Batal",
       variant: "danger",
     });

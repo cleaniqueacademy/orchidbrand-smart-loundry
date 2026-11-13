@@ -32,6 +32,7 @@ export interface OrderItem {
 }
 
 export interface Order {
+  paidAt?: string | null;
   id: string;
   tenantId: string;
   customerId?: string;
@@ -184,6 +185,8 @@ export interface LaundryService {
 }
 
 export interface Tenant {
+  archivedAt?: string | null;
+  suspendedAt?: string | null;
   id: string;
   userId?: string;
   outletName: string;
@@ -419,6 +422,9 @@ export interface SignupRequest {
 }
 
 export interface SubscriptionInvoice {
+  expiresAt?: string | null;
+  activationStatus?: string;
+  activationReason?: string | null;
   id: string;
   invoiceNo: string;
   tenantId: string;
@@ -447,6 +453,7 @@ export interface SubscriptionInvoice {
 }
 
 export interface SubscriptionSummary {
+  tier?: string;
   tenantId: string;
   outletName: string;
   isTrial: boolean;

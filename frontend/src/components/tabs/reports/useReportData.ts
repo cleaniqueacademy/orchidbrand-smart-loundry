@@ -1,3 +1,4 @@
+import { businessDateKey } from "../../../utils/businessDate";
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { Order, Expense, Tenant } from "../../../types";
@@ -61,9 +62,9 @@ export function useReportData({
 
   // Filters: Rentang Waktu (Date Range)
   const [startDate, setStartDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+    businessDateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   );
-  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(businessDateKey(new Date()));
   const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -455,7 +456,7 @@ export function useReportData({
       XLSX.utils.book_append_sheet(wb, wsExpense, "Beban Operasional");
 
       const outletSlug = activeTenant.outletName.replace(/[^a-zA-Z0-9]/g, "_");
-      const dateSlug = new Date().toISOString().slice(0, 10);
+      const dateSlug = businessDateKey(new Date());
       const filename = `Laporan_Keuangan_${outletSlug}_${dateSlug}.xlsx`;
 
       XLSX.writeFile(wb, filename);
@@ -474,7 +475,7 @@ export function useReportData({
   const downloadCSV = () => {
     const isMultiTenant = activeTenant.id === "all";
     const outletName = activeTenant.outletName.replace(/[^a-zA-Z0-9]/g, "_");
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = businessDateKey(new Date());
     const filename = `Laporan_Keuangan_${outletName}_${dateStr}.csv`;
 
     let csvContent = "\uFEFF"; // UTF-8 BOM for Microsoft Excel

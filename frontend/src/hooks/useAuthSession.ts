@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Role, Tenant } from "../types";
 import { useToast } from "../components/common/ToastContext";
 import { useConfirm } from "../components/common/ConfirmContext";
@@ -13,7 +13,7 @@ function readSavedUser(): User | null {
     if (!saved) return null;
     const u = JSON.parse(saved);
     // Validasi wajib ada id dan role yang benar
-    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff"].includes(u.role)) {
+    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff", "marketing"].includes(u.role)) {
       localStorage.removeItem(AUTH_KEY);
       return null;
     }
@@ -57,6 +57,19 @@ export function useAuthSession() {
     return "tenant-01";
   });
 
+  useEffect(() => {
+    localStorage.removeItem("cleanique_token");
+    const controller = new AbortController();
+    fetch("/api/auth/me", { headers: authHeaders(), signal: controller.signal }).then(async response => {
+      if (controller.signal.aborted) return;
+      if (response.status === 401) { setCurrentUser(null); localStorage.removeItem(AUTH_KEY); return; }
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success && !controller.signal.aborted) { setCurrentUser(result.user); setCurrentUserRole(result.user.role); localStorage.setItem(AUTH_KEY, JSON.stringify(result.user)); }
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   const handleLoginSuccess = (user: User) => {
     try {
       localStorage.setItem(AUTH_KEY, JSON.stringify(user));
@@ -86,13 +99,14 @@ export function useAuthSession() {
 
     if (!confirmed) return;
 
-    toast.info("Mengeluarkan Akun...", "Sesi Anda telah diakhiri.");
+    toast.info("Mengeluarkan Akun...", "Mencabut sesi server.");
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      const response = await fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         headers: authHeaders(),
       });
-    } catch {}
+      if (!response.ok && response.status !== 401) throw new Error("Session revocation failed");
+    } catch { toast.error("Logout belum berhasil", "Koneksi server diperlukan untuk mencabut sesi. Coba kembali."); return; }
     // Clear localStorage
     try {
       localStorage.removeItem(AUTH_KEY);
@@ -124,7 +138,7 @@ export function useAuthSession() {
   const refreshUserSession = async (): Promise<boolean> => {
     if (!currentUser) return false;
     try {
-      const res = await fetch(`${API_BASE}/auth/status?userId=${currentUser.id}`, {
+      const res = await fetch(`${API_BASE}/auth/me`, {
         headers: authHeaders(),
       });
       const data = await res.json();

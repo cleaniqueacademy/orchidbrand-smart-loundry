@@ -31,6 +31,16 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 }) => {
   const toast = useToast();
   const confirm = useConfirm();
+  const [reviewing, setReviewing] = useState<SubscriptionInvoice | null>(null);
+  const [reviewTier, setReviewTier] = useState("pro");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [adjusting, setAdjusting] = useState<SubscriptionInvoice | null>(null);
+  const [adjustmentKey, setAdjustmentKey] = useState(() => crypto.randomUUID());
+  const [adjustmentAmount, setAdjustmentAmount] = useState("");
+  const [commissionCorrection, setCommissionCorrection] = useState("0");
+  const [adjustmentNotes, setAdjustmentNotes] = useState("");
+  const [adjustmentBusy, setAdjustmentBusy] = useState(false);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [gatewayEnabled, setGatewayEnabled] = useState(false);
@@ -94,7 +104,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           <strong className="text-emerald-700">Rp {invoice.finalAmount.toLocaleString("id-ID")}</strong> untuk outlet{" "}
           <strong>{invoice.outletName || "Outlet Laundry"}</strong>?
           <br /><br />
-          Masa aktif akun kasir outlet akan diperpanjang <strong>{invoice.durationMonths} Bulan</strong> dan pemasukan otomatis tercatat di buku kas platform.
+          Penerimaan dicatat di buku kas. Masa aktif diperpanjang <strong>{invoice.durationMonths} periode 30 hari</strong> setelah validasi akun, kepemilikan, dan kuota lolos.
         </span>
       ),
       confirmText: "Ya, Verifikasi & Aktifkan",
@@ -164,6 +174,11 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 
   return (
     <div className="space-y-5">
+      {invoices.filter(inv => inv.status === "paid" && inv.activationStatus !== "active" || ["unpaid","pending_verification","rejected"].includes(inv.status) && (!inv.expiresAt || Date.parse(inv.expiresAt)<Date.now())).map(inv => <div key={inv.id} className="p-4 border border-amber-300 rounded-xl bg-amber-50 space-y-2">
+        <p className="font-semibold">{inv.invoiceNo}: {inv.status === "paid" ? "pembayaran lunas, aktivasi tertahan" : "masa berlaku perlu ditinjau"}</p>
+        <p className="text-sm">{({ownership_changed:"Kepemilikan cabang berubah",owner_suspended_or_archived:"Owner atau cabang diblokir/diarsipkan",expired_or_legacy_invoice:"Masa berlaku atau invoice lama perlu ditinjau",legacy_terms_require_review:"Paket invoice lama perlu dikonfirmasi",quota_requires_review:"Kuota cabang melebihi paket",staff_quota_requires_review:"Kuota staf melebihi paket",plan_unavailable:"Paket tidak tersedia"} as Record<string,string>)[inv.activationReason || ""] || "Aktivasi menunggu proses ulang"}. Periksa status akun, kepemilikan, masa berlaku dan kuota.</p>
+        <button className="underline" onClick={async () => { const result = await api.post<{success:boolean}>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi setelah koreksi</button><button className="underline ml-3" onClick={()=>{setReviewing(inv);setReviewNotes("");}}>Tinjau invoice lama/kedaluwarsa</button>
+      </div>)}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Verifikasi Tagihan Langganan</h2>
@@ -191,6 +206,24 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
         </div>
       </div>
 
+      {reviewing && <form className="border rounded p-4 space-y-2" onSubmit={async e=>{e.preventDefault();setReviewBusy(true);try{const result=await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${reviewing.id}/review-activation`,{tier:reviewTier,notes:reviewNotes});if(!result.success)throw new Error(result.message);setReviewing(null);await fetchInvoices();}catch(error){toast.error("Review gagal",error instanceof Error?error.message:"Coba kembali");}finally{setReviewBusy(false);}}}>
+        <p className="font-semibold">Keputusan aktivasi {reviewing.invoiceNo}</p><p className="text-sm">Konfirmasi pembayaran dan paket yang dijanjikan. Harga invoice tetap. Status blokir, kepemilikan, dan kuota tetap wajib diselesaikan.</p>
+        <label>Paket yang disetujui<select value={reviewTier} onChange={e=>setReviewTier(e.target.value)} className="border p-2 ml-2"><option value="pro">Pro</option><option value="premium">Premium</option></select></label>
+        <label className="block">Alasan dan referensi pemeriksaan<textarea required minLength={10} maxLength={2000} value={reviewNotes} onChange={e=>setReviewNotes(e.target.value)} className="block border p-2 w-full" /></label><button disabled={reviewBusy} className="border p-2" type="submit">Simpan keputusan</button><button type="button" className="p-2" onClick={()=>setReviewing(null)}>Batal</button>
+      </form>}
+      {adjusting && <form className="p-4 border rounded-xl space-y-3" onSubmit={async e => {
+        e.preventDefault(); setAdjustmentBusy(true);
+        try { const result = await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${adjusting.id}/adjustments`, { requestKey:adjustmentKey, amount:Number(adjustmentAmount), commissionAmount:Number(commissionCorrection), type:"refund", notes:adjustmentNotes });
+          if (!result.success) throw new Error(result.message); toast.success("Jurnal refund tersimpan"); setAdjusting(null); await fetchInvoices();
+        } catch(error) { toast.error("Jurnal gagal", error instanceof Error ? error.message : "Coba kembali"); } finally { setAdjustmentBusy(false); }
+      }}>
+        <p className="font-semibold">Jurnal refund {adjusting.invoiceNo}</p><p className="text-sm">Catat setelah transfer refund dilakukan. Sertakan referensi transfer dan keputusan masa aktif dalam catatan.</p>
+        <label className="block">Nominal refund (Rp)<input required type="number" min="1" step="1" value={adjustmentAmount} onChange={e=>setAdjustmentAmount(e.target.value)} className="border p-2 ml-2" /></label>
+        <label className="block">Koreksi komisi (Rp)<input required type="number" min="0" step="1" value={commissionCorrection} onChange={e=>setCommissionCorrection(e.target.value)} className="border p-2 ml-2" /></label>
+        <label className="block">Catatan dan referensi transfer<textarea required minLength={10} maxLength={2000} value={adjustmentNotes} onChange={e=>setAdjustmentNotes(e.target.value)} className="block border p-2 w-full" /></label>
+        <button disabled={adjustmentBusy} type="submit" className="border p-2 rounded">Simpan jurnal refund</button><button type="button" onClick={()=>setAdjusting(null)} className="p-2">Batal</button>
+      </form>}
+      <details><summary>Jurnal refund dan pembayaran ganda</summary><div className="flex flex-wrap gap-2 p-2">{invoices.filter(inv=>inv.status === "paid").map(inv=><button key={inv.id} className="border p-2 rounded text-xs" onClick={()=>{setAdjusting(inv);setAdjustmentKey(crypto.randomUUID());setAdjustmentAmount("");setCommissionCorrection("0");setAdjustmentNotes("");}}>{inv.invoiceNo}</button>)}</div></details>
       {/* Filter Tabs Status */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
@@ -282,7 +315,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                     <td className="py-3.5 px-4">
                       {inv.paymentProofUrl ? (
                         <button
-                          onClick={() => setPreviewImage(inv.paymentProofUrl || null)}
+                          onClick={() => { if(inv.paymentProofUrl?.endsWith(".pdf")) window.open(inv.paymentProofUrl,"_blank","noopener,noreferrer"); else setPreviewImage(inv.paymentProofUrl || null); }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold hover:bg-indigo-100 transition-all text-[11px]"
                         >
                           <Eye className="w-3.5 h-3.5" />
