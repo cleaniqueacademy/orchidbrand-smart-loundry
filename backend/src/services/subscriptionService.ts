@@ -9,6 +9,7 @@ import {
   referralCodes,
   expenses,
   platformCashflow,
+  paymentAttempts,
 } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { newId } from "../utils/id";
@@ -268,16 +269,19 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
     throw new Error("Tenant ID diperlukan untuk mengunggah bukti pembayaran");
   }
 
-  const [existing] = await db
+  return db.transaction(async tx => {
+  const [existing] = await tx
     .select()
     .from(subscriptionInvoices)
-    .where(and(eq(subscriptionInvoices.id, invoiceId), eq(subscriptionInvoices.tenantId, tenantId)));
+    .where(and(eq(subscriptionInvoices.id, invoiceId), eq(subscriptionInvoices.tenantId, tenantId))).for("update");
 
   if (!existing) {
     throw new Error("Invoice tidak ditemukan");
   }
 
-  const [updated] = await db
+  const openAttempts = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.invoiceId, invoiceId), sql`${paymentAttempts.status} IN ('creating', 'pending')`));
+  if (openAttempts.length) throw new Error("Selesaikan atau rekonsiliasi transaksi Midtrans sebelum memakai transfer manual");
+  const [updated] = await tx
     .update(subscriptionInvoices)
     .set({
       paymentProofUrl: proofUrl,
@@ -289,13 +293,20 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
 
   if (!updated) throw new Error("Invoice tidak dapat diubah pada status saat ini");
   return updated;
+  });
 }
 
 /**
  * Verifikasi dan aktivasi invoice langganan (Superadmin)
  */
+type SubscriptionTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: string) {
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(tx => activateSubscriptionInvoice(invoiceId, adminUserId, tx, "manual"));
+  invalidateTenantAuthCache();
+  console.info("[subscription] invoice verified", { invoiceId });
+  return result;
+}
+export async function activateSubscriptionInvoice(invoiceId: string, adminUserId: string | null, tx: SubscriptionTransaction, source: "manual" | "midtrans") {
   const [invoice] = await tx
     .select()
     .from(subscriptionInvoices)
@@ -305,7 +316,8 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
     throw new Error("Invoice tidak ditemukan");
   }
 
-  if (invoice.status !== "pending_verification") {
+  if ((source === "manual" && invoice.status !== "pending_verification") ||
+      (source === "midtrans" && !["unpaid", "rejected"].includes(invoice.status))) {
     throw new Error("Invoice tidak dalam status menunggu verifikasi");
   }
 
@@ -420,7 +432,6 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
     createdAt: nowIso,
   });
 
-  console.info("[subscription] invoice verified", { invoiceId, ownerId: owner.id });
   return {
     invoice: updatedInvoice,
     tenant: {
@@ -431,9 +442,6 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
       status: "active",
     },
   };
-  });
-  invalidateTenantAuthCache();
-  return result;
 }
 /**
  * Tolak invoice pembayaran langganan (Superadmin)

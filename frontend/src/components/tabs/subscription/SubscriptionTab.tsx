@@ -24,6 +24,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
+import { paymentStatusLabel } from "../../../utils/paymentStatus";
 import { api } from "../../../utils/api";
 import { SubscriptionSummary, SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
@@ -42,6 +43,38 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
   const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [midtransEnabled, setMidtransEnabled] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    api.get<{ success: boolean; data: { enabled: boolean } }>("/api/payments/midtrans/config", { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted && result.success) setMidtransEnabled(result.data.enabled); }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const checkoutMidtrans = async (invoice: SubscriptionInvoice) => {
+    setPaymentBusy(invoice.id);
+    try {
+      const response = await api.post<{ success: boolean; message?: string; data?: { redirectUrl?: string } }>(`/api/payments/midtrans/invoices/${encodeURIComponent(invoice.id)}/checkout`);
+      if (!response.success || !response.data?.redirectUrl) throw new Error(response.message || "Checkout tidak tersedia; periksa status transaksi.");
+      const destination = new URL(response.data.redirectUrl);
+      if (!["https://app.midtrans.com", "https://app.sandbox.midtrans.com"].includes(destination.origin)) throw new Error("Alamat checkout tidak valid");
+      window.location.assign(destination.href);
+    } catch (error) { toast.error("Checkout belum dapat dibuka", error instanceof Error ? error.message : "Coba Periksa Status atau hubungi admin."); }
+    finally { setPaymentBusy(null); }
+  };
+  const reconcileMidtrans = async (invoice: SubscriptionInvoice) => {
+    setPaymentBusy(invoice.id);
+    try {
+      const response = await api.get<{ success: boolean; message?: string; data?: { invoice: SubscriptionInvoice; attempts: { status: string; resolution: string | null }[] } }>(`/api/payments/midtrans/invoices/${encodeURIComponent(invoice.id)}/status`);
+      if (!response.success || !response.data) throw new Error(response.message || "Status belum tersedia");
+      const attempt = response.data.attempts[0];
+      if (attempt?.resolution) toast.error("Perlu pemeriksaan admin", "Transaksi memerlukan rekonsiliasi. Hubungi admin dengan nomor invoice ini.");
+      else toast.success("Status diperbarui", response.data.invoice.status === "paid" ? "Pembayaran telah dikonfirmasi." : `Status pembayaran: ${paymentStatusLabel(attempt?.status)}`);
+      await fetchData();
+    } catch (error) { toast.error("Gagal memeriksa status", error instanceof Error ? error.message : "Coba kembali nanti."); }
+    finally { setPaymentBusy(null); }
+  };
+
 
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -1019,6 +1052,11 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                         {getStatusBadge(inv.status)}
                       </td>
                       <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                        {midtransEnabled && <>
+                          {["unpaid", "rejected"].includes(inv.status) && <button type="button" disabled={paymentBusy === inv.id} onClick={() => void checkoutMidtrans(inv)} className="border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Bayar via Midtrans</button>}
+                          <button type="button" disabled={paymentBusy === inv.id} onClick={() => void reconcileMidtrans(inv)} className="border rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Periksa status</button>
+                        </>}
+
                         {inv.status === "unpaid" || inv.status === "rejected" ? (
                           <button
                             type="button"

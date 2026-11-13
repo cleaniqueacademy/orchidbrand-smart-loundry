@@ -415,3 +415,24 @@ export const aiUsageDaily = pgTable("ai_usage_daily", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at"),
 });
+
+// Provider payment attempts are separate from invoice business status.
+export const paymentAttempts = pgTable("payment_attempts", {
+  id: text("id").primaryKey(),
+  invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id),
+  orderId: text("order_id").notNull().unique(),
+  currency: text("currency").notNull().default("IDR"),
+  transactionId: text("transaction_id").unique(),
+  amount: doublePrecision("amount").notNull(),
+  status: text("status").notNull().default("creating"),
+  redirectUrl: text("redirect_url"),
+  resolution: text("resolution"),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+export const paymentEvents = pgTable("payment_events", {
+  id: text("id").primaryKey(),
+  attemptId: text("attempt_id").notNull().references(() => paymentAttempts.id),
+  providerStatus: text("provider_status").notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});

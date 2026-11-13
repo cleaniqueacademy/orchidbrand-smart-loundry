@@ -12,7 +12,7 @@ Deployment ini memiliki satu titik kegagalan VPS. Backup di luar VPS dan pemulih
 
 ## Backup dan pemulihan
 
-- Jalankan `scripts/ops/backup.sh` dari scheduler dengan `BACKUP_ROOT` absolut, `BACKUP_REMOTE` lokasi rsync SSH di luar VPS, `POSTGRES_USER`, dan `POSTGRES_DB`. Gunakan SSH key khusus backup dan penyimpanan eksternal terenkripsi.
+- Jalankan `bash scripts/ops/backup.sh` dari scheduler dengan `BACKUP_ROOT` absolut, `BACKUP_REMOTE` lokasi rsync SSH di luar VPS, `POSTGRES_USER`, dan `POSTGRES_DB`. Gunakan SSH key khusus backup dan penyimpanan eksternal terenkripsi.
 - Backup menyertakan dump PostgreSQL, upload, dan sesi WhatsApp. Batasi izin direktori backup; data ini mengandung informasi pelanggan dan kredensial sesi.
 - Jadwalkan backup harian, simpan minimal 14 backup harian, dan pantau umur backup terakhir serta kapasitas disk. Atur retensi di penyimpanan eksternal agar backup tidak memenuhi disk VPS.
 - Sebelum go-live, salin satu backup ke host staging yang terpisah. Validasi `sha256sum -c SHA256SUMS` dari dalam direktori backup.
@@ -27,3 +27,15 @@ Deployment ini memiliki satu titik kegagalan VPS. Backup di luar VPS dan pemulih
 - Migrasi penambahan kolom menjaga invoice lama. Sebelum deploy, buat backup dan simpan image sebelumnya.
 - Jika verifikasi gagal, hentikan akses publik sementara, kembalikan image commit sebelumnya, dan verifikasi kompatibilitas skema. Jangan menghapus kolom atau memulihkan database production tanpa review dampak transaksi sejak backup.
 - Publikasi memerlukan bukti CI lulus, hasil smoke test staging, uji cetak perangkat, backup eksternal sukses, dan latihan restore. Penyediaan domain, TLS, kredensial, serta akses VPS dikerjakan operator deployment.
+
+## Midtrans — branch turunan
+
+- Aktifkan akun merchant dan siapkan Server Key sandbox di environment VPS; jangan masukkan ke browser atau Git.
+- Isi `MIDTRANS_ENABLED=true` dan `MIDTRANS_IS_PRODUCTION=false` untuk uji sandbox. Restart backend setelah konfigurasi berubah.
+- Daftarkan notification URL HTTPS: `APP_ORIGIN/api/payments/midtrans/notifications` pada dashboard Midtrans. URL harus dapat dicapai provider tanpa autentikasi browser.
+- Checkout menggunakan Snap redirect; Client Key atau Snap JS tidak dibutuhkan pada alur redirect ini. Server memvalidasi origin redirect ke host Midtrans yang sesuai mode.
+- Lakukan transaksi sandbox sukses, pending, ditolak, kedaluwarsa, dan notifikasi ulang. Cocokkan nominal dengan invoice serta perpanjangan seluruh cabang Owner.
+- Timeout create tidak otomatis menghasilkan percobaan baru. Gunakan Periksa Status; transaksi tanpa Core status baru dapat dicoba lagi setelah expiry Snap 24 jam ditambah toleransi jam lima menit.
+- Refund dan pembayaran kedua untuk invoice yang sudah lunas ditandai untuk review manual; sistem tidak mengembalikan uang atau memotong masa aktif secara otomatis.
+- Setelah sandbox lolos, ganti Server Key production dan isi `MIDTRANS_IS_PRODUCTION=true` secara eksplisit, lalu periksa notification URL pada mode production dashboard. Lakukan transaksi bernilai nyata hanya setelah otorisasi operator.
+- [Panduan Snap resmi](https://docs.midtrans.com/docs/snap-snap-integration-guide), [notifikasi](https://docs.midtrans.com/reference/handle-notifications), dan [status transaksi](https://docs.midtrans.com/reference/get-transaction-status) menjadi referensi operasional.

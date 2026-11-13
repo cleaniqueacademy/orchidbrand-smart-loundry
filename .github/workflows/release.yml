@@ -28,8 +28,9 @@ jobs:
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bash -n scripts/ops/backup.sh
       - run: bun audit --audit-level high
       - run: bun run --cwd frontend build
       - run: bun run --cwd backend typecheck
       - run: bun run --cwd backend build
-      - run: bun test backend/src/utils backend/src/middleware/auth.test.ts backend/src/services/subscriptionPricing.test.ts backend/src/services/planConfiguration.test.ts backend/src/services/premiumRelease.integration.test.ts
+      - run: bun test backend/src/utils backend/src/middleware/auth.test.ts backend/src/services/subscriptionPricing.test.ts backend/src/services/planConfiguration.test.ts backend/src/services/premiumRelease.integration.test.ts backend/src/services/subscriptionPayments.integration.test.ts

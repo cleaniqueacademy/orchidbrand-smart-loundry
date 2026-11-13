@@ -30,6 +30,7 @@ import signupRoutes from "./routes/signup";
 import planRoutes from "./routes/plans";
 import platformSettingsRoutes from "./routes/platformSettings";
 import subscriptionRoutes from "./routes/subscription";
+import midtransRoutes from "./routes/midtrans";
 import platformCashflowRoutes from "./routes/platformCashflow";
 import uploadRoutes from "./routes/upload";
 import { getUploadsBaseDir } from "./services/storageService";
@@ -92,6 +93,7 @@ app.route("/api/plans", planRoutes);
 app.route("/api/platform-settings", platformSettingsRoutes);
 // Subscription & Invoices Routes
 app.route("/api/subscription", subscriptionRoutes);
+app.route("/api/payments/midtrans", midtransRoutes);
 // Platform Cashflow & Operations Routes
 app.route("/api/platform/cashflow", platformCashflowRoutes);
 // Local File Storage Upload Routes

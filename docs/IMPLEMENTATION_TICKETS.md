@@ -1,7 +1,7 @@
 # Laundry Cleanique — Implementation Tickets
 
-**Status:** Draft siap dikerjakan, menunggu pemecahan ke issue tracker jika digunakan  
-**Scope:** Rilis Coming Soon dan integrasi Midtrans untuk langganan SaaS  
+**Status:** Implementasi dua branch tersedia; validasi lingkungan live masih diperlukan
+**Scope:** Rilis Coming Soon dan integrasi Midtrans untuk langganan SaaS
 **Tanggal keputusan:** 12 November 2026
 
 ## Status implementasi — 13 November 2026
@@ -10,7 +10,9 @@
 - PUB-01: validasi secret production, origin HTTPS, dan header keamanan diterapkan. Audit dependency tidak lagi menemukan high/critical; advisory moderate dan penilaiannya ada di `DEPENDENCY_AUDIT.md`.
 - PUB-02: image backend/frontend berhasil dibangun dan dijalankan bersama pada Docker lokal; health upstream dan frontend HTTP 200. Dump PostgreSQL berhasil dipulihkan ke database staging lokal. Backup SSH eksternal, TLS domain dan smoke test VPS masih memerlukan lingkungan deployment.
 - PUB-03: workflow CI dan runbook tersedia. Build frontend dan typecheck backend lulus; 50 test terpilih lulus. Workflow remote, cetak pada printer fisik, dan latihan restore VPS belum dijalankan.
-- MID-01 sampai MID-04: menunggu snapshot branch Coming Soon, kemudian dikerjakan pada branch turunan.
+- MID-01 sampai MID-04: implementasi tersedia pada branch `feature/coming-soon-midtrans`, diturunkan dari snapshot Coming Soon `d80d8ef`. Snap redirect, percobaan pembayaran, verifikasi signature, idempotensi, rekonsiliasi, dan pemeriksaan admin tersedia.
+- Pemeriksaan gabungan branch Midtrans: 57 test terpilih lulus, typecheck backend/build frontend lulus. HTTP notification pada image Docker lokal menerima signature valid, menerima ulang notifikasi dengan aman, dan menolak nominal yang diubah (403).
+- Adapter gateway diuji dengan mock; belum ada kredensial merchant yang diberikan, sehingga transaksi sandbox merchant nyata dan transaksi production belum dijalankan. Gateway nonaktif secara default sampai environment dikonfigurasi.
 
 ## Keputusan dan ruang lingkup
 

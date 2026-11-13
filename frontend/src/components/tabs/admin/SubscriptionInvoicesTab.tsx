@@ -16,6 +16,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import { paymentStatusLabel } from "../../../utils/paymentStatus";
 import { api } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
@@ -32,6 +33,27 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
   const confirm = useConfirm();
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gatewayEnabled, setGatewayEnabled] = useState(false);
+  const [checkingGateway, setCheckingGateway] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    api.get<{ success: boolean; data: { enabled: boolean } }>("/api/payments/midtrans/config", { signal: controller.signal })
+      .then(res => { if (!controller.signal.aborted && res.success) setGatewayEnabled(res.data.enabled); }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const checkGateway = async (invoice: SubscriptionInvoice) => {
+    setCheckingGateway(invoice.id);
+    try {
+      const res = await api.get<{ success: boolean; message?: string; data: { attempts: { status: string; resolution: string | null }[] } }>(`/api/payments/midtrans/invoices/${encodeURIComponent(invoice.id)}/status`);
+      if (!res.success) throw new Error(res.message || "Status tidak tersedia");
+      const pendingReview = res.data.attempts.find(attempt => attempt.resolution);
+      if (pendingReview) toast.error("Perlu review pembayaran", pendingReview.resolution === "refund_requires_review" ? "Ada pengembalian dana; tinjau transaksi di dashboard Midtrans." : "Invoice menerima pembayaran tambahan; tinjau transaksi di dashboard Midtrans.");
+      else toast.success("Status gateway", paymentStatusLabel(res.data.attempts[0]?.status));
+      await fetchInvoices();
+    } catch (error) { toast.error("Status gagal diperbarui", error instanceof Error ? error.message : "Coba kembali nanti"); }
+    finally { setCheckingGateway(null); }
+  };
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -250,6 +272,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       <div className="font-bold text-indigo-600 dark:text-indigo-400">
                         Rp {inv.finalAmount.toLocaleString("id-ID")}
                       </div>
+                      {gatewayEnabled && <button type="button" disabled={checkingGateway === inv.id} onClick={() => void checkGateway(inv)} className="block border rounded-lg px-2 py-1 my-1 text-xs font-normal disabled:opacity-50">Periksa gateway</button>}
                       {inv.discountAmount > 0 && (
                         <div className="text-[11px] text-emerald-600">
                           Diskon: -Rp {inv.discountAmount.toLocaleString("id-ID")}

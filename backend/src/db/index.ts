@@ -540,6 +540,20 @@ export async function initPostgresTables() {
       }
     });
 
+    await client`CREATE TABLE IF NOT EXISTS payment_attempts (
+      id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES subscription_invoices(id),
+      order_id TEXT NOT NULL UNIQUE, transaction_id TEXT UNIQUE, amount DOUBLE PRECISION NOT NULL,
+      status TEXT NOT NULL DEFAULT 'creating', redirect_url TEXT, resolution TEXT,
+      expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+    );`;
+    await client`ALTER TABLE payment_attempts ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IDR';`;
+    await client`CREATE UNIQUE INDEX IF NOT EXISTS one_open_payment_per_invoice ON payment_attempts(invoice_id) WHERE status IN ('creating', 'pending');`;
+    await client`CREATE INDEX IF NOT EXISTS payment_attempts_invoice ON payment_attempts(invoice_id);`;
+    await client`CREATE TABLE IF NOT EXISTS payment_events (
+      id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES payment_attempts(id),
+      provider_status TEXT NOT NULL, created_at TEXT NOT NULL
+    );`;
+
     // Indexes (Idempotent)
     // ----------------------------------------------------
     await client`CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code);`;
