@@ -6,6 +6,8 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
 import { newId } from "../utils/id";
 
+import { planConfiguration } from "../services/planConfiguration";
+
 const planRoutes = new Hono();
 
 /**
@@ -70,6 +72,8 @@ planRoutes.post("/", requireRole(["superadmin"]), async (c) => {
       return c.json({ success: false, message: "Kode, nama, dan harga paket wajib diisi" }, 400);
     }
 
+    const config = planConfiguration.safeParse(body);
+    if (!config.success) return c.json({ success: false, message: config.error.issues[0].message }, 400);
     const cleanCode = String(code).trim().toLowerCase();
 
     // Cek duplikasi kode
@@ -89,10 +93,10 @@ planRoutes.post("/", requireRole(["superadmin"]), async (c) => {
         name: String(name).trim(),
         description: description ? String(description).trim() : null,
         durationMonths: Number(durationMonths) || 1,
-        pricePerMonth: Number(pricePerMonth) || 0,
+        ...config.data,
         features: features ? JSON.stringify(features) : null,
         maxWaNumbers: Number(maxWaNumbers) || 1,
-        maxStaff: Number(maxStaff) || 3,
+
         aiTokenQuotaDaily: Number(aiTokenQuotaDaily) || 100,
         isTrialAllowed: String(isTrialAllowed) === "false" ? "false" : "true",
         isActive: String(isActive) === "false" ? "false" : "true",
@@ -144,6 +148,8 @@ planRoutes.put("/:id", requireRole(["superadmin"]), async (c) => {
       return c.json({ success: false, message: "Paket tidak ditemukan" }, 404);
     }
 
+    const config = planConfiguration.safeParse({ ...existing, ...body });
+    if (!config.success) return c.json({ success: false, message: config.error.issues[0].message }, 400);
     const updates: Partial<typeof plans.$inferInsert> = {
       name: body.name !== undefined ? String(body.name).trim() : existing.name,
       description: body.description !== undefined ? body.description : existing.description,
@@ -171,6 +177,7 @@ planRoutes.put("/:id", requireRole(["superadmin"]), async (c) => {
       updatedAt: new Date().toISOString(),
     };
 
+    Object.assign(updates, config.data);
     const [updated] = await db.update(plans).set(updates).where(eq(plans.id, id)).returning();
 
     return c.json({ success: true, message: "Paket berhasil diperbarui", data: updated });

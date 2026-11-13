@@ -298,6 +298,11 @@ export default function App() {
     ? (tenantId === "all" ? (tenants[0]?.id || "tenant-01") : tenantId)
     : "";
   const currentActiveTenant = tenants.find((t) => t.id === effectiveTenantId) || tenants[0];
+  useEffect(() => {
+    if (currentUser?.role === "tenant_owner" && tenantId !== "all") {
+      localStorage.setItem("cleanique_active_branch", tenantId);
+    }
+  }, [tenantId, currentUser?.role]);
   const isShiftEnabled =
     currentActiveTenant?.enableCashierShift !== "false" &&
     currentActiveTenant?.enableCashierShift !== false;
@@ -888,6 +893,7 @@ export default function App() {
 
               {activeTab === "settings" && (
                 <SettingsTab
+                  onSelectBranch={id => handleSelectTenant(id, tenants)}
                   tenant={currentActiveTenant}
                   currentUser={currentUser}
                   onUpdateTenant={handleUpdateTenant}

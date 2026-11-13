@@ -47,7 +47,7 @@ export function useAuthSession() {
       if (saved) {
         const u = JSON.parse(saved);
         if (u && (u.role === "tenant_owner" || u.role === "staff") && u.tenantId) {
-          return u.tenantId;
+          return u.role === "tenant_owner" ? localStorage.getItem("cleanique_active_branch") || u.tenantId : u.tenantId;
         }
         if (u && u.role === "superadmin") {
           return "all";
@@ -64,6 +64,7 @@ export function useAuthSession() {
       console.error(e);
     }
     toast.success("Login Berhasil", `Selamat datang kembali, ${user.name}!`);
+    localStorage.removeItem("cleanique_active_branch");
     setCurrentUser(user);
     setCurrentUserRole(user.role);
     if ((user.role === "tenant_owner" || user.role === "staff") && user.tenantId) {
@@ -116,6 +117,7 @@ export function useAuthSession() {
       // Staff locked to assigned branch
       return;
     }
+    localStorage.setItem("cleanique_active_branch", id);
     setTenantId(id);
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   CashflowStats,
   Order,
@@ -45,8 +45,11 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
+  const requestGeneration = useRef(0);
+
   // Fetch all initial data
   const fetchData = useCallback(async () => {
+    const generation = ++requestGeneration.current;
     try {
       setLoading(true);
 
@@ -57,7 +60,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         });
         if (statsRes.ok) {
           const json = await statsRes.json();
-          if (json.success) setStats(json.data);
+          if (generation === requestGeneration.current && json.success) setStats(json.data);
         }
       }
 
@@ -67,7 +70,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       });
       if (ordersRes.ok) {
         const json = await ordersRes.json();
-        if (json.success) setOrders(json.data);
+        if (generation === requestGeneration.current && json.success) setOrders(json.data);
       }
 
       // 3. Customers
@@ -76,7 +79,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
       });
       if (custRes.ok) {
         const json = await custRes.json();
-        if (json.success) setCustomers(json.data);
+        if (generation === requestGeneration.current && json.success) setCustomers(json.data);
       }
 
       // 4. Expenses (Only for superadmin & tenant_owner)
@@ -86,7 +89,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         });
         if (expRes.ok) {
           const json = await expRes.json();
-          if (json.success) setExpenses(json.data);
+          if (generation === requestGeneration.current && json.success) setExpenses(json.data);
         }
       }
 
@@ -97,7 +100,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         });
         if (tenantsRes.ok) {
           const json = await tenantsRes.json();
-          if (json.success) setTenants(json.data);
+          if (generation === requestGeneration.current && json.success) setTenants(json.data);
         }
       } else {
         const targetTenantId = tenantId && tenantId !== "all" ? tenantId : currentUser?.tenantId;
@@ -108,7 +111,7 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
             });
             if (tenantRes.ok) {
               const json = await tenantRes.json();
-              if (json.success && json.data) {
+              if (generation === requestGeneration.current && json.success && json.data) {
                 setTenants([json.data]);
               }
             }
@@ -125,18 +128,19 @@ export function useLaundryData({ tenantId, currentUser }: UseLaundryDataProps) {
         });
         if (usersRes.ok) {
           const json = await usersRes.json();
-          if (json.success) setUsers(json.data);
+          if (generation === requestGeneration.current && json.success) setUsers(json.data);
         }
       }
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
   }, [tenantId, currentUser?.role]);
 
   useEffect(() => {
     if (currentUser) {
+      setOrders([]); setCustomers([]); setExpenses([]); setTenants([]);
       fetchData();
     }
   }, [fetchData, currentUser]);

@@ -144,5 +144,14 @@ scratch/
 # --- Documentation & Internal Notes ---
 docs/
 docs/**
+!docs/
+!docs/IMPLEMENTATION_TICKETS.md
+!docs/adr/
+docs/adr/**
+!docs/adr/0001-owner-level-subscription.md
+!docs/adr/0002-stacked-subscription-discounts.md
 
 
+
+!docs/VPS_RELEASE_RUNBOOK.md
+!docs/DEPENDENCY_AUDIT.md

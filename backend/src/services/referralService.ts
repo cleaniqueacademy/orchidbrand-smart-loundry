@@ -162,7 +162,7 @@ export async function recordCommission(params: {
   baseAmount: number;
   tenantId?: string | null;
   durationMonths?: number;
-}) {
+}, executor: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db) {
   const {
     referralCodeId,
     subscriptionInvoiceId,
@@ -171,7 +171,7 @@ export async function recordCommission(params: {
     durationMonths = 1,
   } = params;
 
-  const foundCodes = await db
+  const foundCodes = await executor
     .select()
     .from(referralCodes)
     .where(eq(referralCodes.id, referralCodeId));
@@ -194,10 +194,11 @@ export async function recordCommission(params: {
     );
   }
 
+  commissionAmount = Math.min(roundRupiah(baseAmount), commissionAmount);
   if (commissionAmount <= 0) return null;
 
   const commissionId = newId("comm");
-  await db.insert(marketingCommissions).values({
+  await executor.insert(marketingCommissions).values({
     id: commissionId,
     marketingProfileId: code.marketingProfileId,
     referralCodeId: code.id,
@@ -210,7 +211,7 @@ export async function recordCommission(params: {
   });
 
   // Perbarui totalEarned pada profil marketing agar saldo siap ditarik bertambah
-  await db
+  await executor
     .update(marketingProfiles)
     .set({
       totalEarned: sql`${marketingProfiles.totalEarned} + ${commissionAmount}`,
@@ -219,7 +220,7 @@ export async function recordCommission(params: {
     .where(eq(marketingProfiles.id, code.marketingProfileId));
 
   // Catat event pembayaran referral
-  await db.insert(referralEvents).values({
+  await executor.insert(referralEvents).values({
     id: newId("refevt"),
     referralCodeId: code.id,
     tenantId: tenantId ?? null,

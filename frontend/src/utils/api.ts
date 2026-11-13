@@ -18,6 +18,7 @@ export function authHeaders(extraHeaders: Record<string, string> = {}): Record<s
   const token = getAuthToken();
   return {
     "Content-Type": "application/json",
+    ...(localStorage.getItem("cleanique_active_branch") ? { "X-Tenant-Id": localStorage.getItem("cleanique_active_branch")! } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extraHeaders,
   };

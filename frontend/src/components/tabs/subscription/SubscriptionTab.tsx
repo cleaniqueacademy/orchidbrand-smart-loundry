@@ -1012,6 +1012,8 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                       </td>
                       <td className="py-2.5 px-3.5 font-bold text-zinc-900 font-mono whitespace-nowrap">
                         Rp {inv.finalAmount.toLocaleString("id-ID")}
+                        {(inv.promotionDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Promo: -Rp {inv.promotionDiscountAmount?.toLocaleString("id-ID")}</div>}
+                        {(inv.referralDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Referral: -Rp {inv.referralDiscountAmount?.toLocaleString("id-ID")}</div>}
                       </td>
                       <td className="py-2.5 px-3.5 min-w-[140px] whitespace-nowrap">
                         {getStatusBadge(inv.status)}

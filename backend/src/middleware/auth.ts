@@ -13,7 +13,8 @@ export interface TokenPayload {
   exp: number; // Unix ms
 }
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "cleanique_laundry_super_secret_jwt_key_2026";
+import { config } from "../config";
+const JWT_SECRET = config.jwtSecret;
 
 // ─── Cache status tenant & user ringan (20 detik) ───────────────────────────────
 interface TenantStatusCache {
@@ -52,8 +53,8 @@ async function hmacSign(data: string): Promise<string> {
 }
 
 async function hmacVerify(data: string, sig: string): Promise<boolean> {
-  const expected = await hmacSign(data);
-  return expected === sig;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(JWT_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+  return crypto.subtle.verify("HMAC", key, Buffer.from(sig, "base64url"), new TextEncoder().encode(data));
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -117,6 +118,19 @@ export async function authMiddleware(c: Context, next: Next) {
     return c.json({ success: false, message: "Token tidak valid atau telah kedaluwarsa" }, 401);
   }
 
+  // A branch selector is untrusted input; verify ownership before changing token context.
+  const selectedTenant = c.req.header("X-Tenant-Id");
+  if (selectedTenant && selectedTenant !== payload.tenantId && payload.role !== "superadmin") {
+    if (payload.role !== "tenant_owner") return c.json({ success: false, message: "Akses cabang ditolak" }, 403);
+    try {
+      const [branch] = await db.select({ userId: tenants.userId }).from(tenants).where(eq(tenants.id, selectedTenant));
+      if (!branch || branch.userId !== payload.userId) return c.json({ success: false, message: "Akses cabang ditolak" }, 403);
+      payload.tenantId = selectedTenant;
+    } catch (error) {
+      console.error("[auth] branch resolution failed");
+      return c.json({ success: false, message: "Validasi cabang tidak tersedia" }, 503);
+    }
+  }
   const path = c.req.path;
   const isExemptRoute =
     path.startsWith("/api/subscription") ||

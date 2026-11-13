@@ -99,7 +99,7 @@ subscriptionRoutes.get("/summary", async (c) => {
  * 3. POST /api/subscription/invoices
  * Buat invoice perpanjangan langganan
  */
-subscriptionRoutes.post("/invoices", async (c) => {
+subscriptionRoutes.post("/invoices", requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
     const body = await c.req.json();
@@ -113,7 +113,7 @@ subscriptionRoutes.post("/invoices", async (c) => {
       tenantId,
       userId: user.userId,
       planId: body.planId,
-      durationMonths: Number(body.durationMonths) || 1,
+      durationMonths: body.durationMonths === undefined ? 1 : Number(body.durationMonths),
       referralCode: body.referralCode,
     });
 
@@ -131,7 +131,7 @@ subscriptionRoutes.post("/invoices", async (c) => {
  * 4. POST /api/subscription/invoices/:id/proof
  * Unggah bukti pembayaran
  */
-subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
+subscriptionRoutes.post("/invoices/:id/proof", requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
     const id = c.req.param("id");
@@ -151,13 +151,13 @@ subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
     }
 
     const [invoice] = await db
-      .select({ tenantId: subscriptionInvoices.tenantId })
+      .select({ tenantId: subscriptionInvoices.tenantId, userId: subscriptionInvoices.userId })
       .from(subscriptionInvoices)
       .where(eq(subscriptionInvoices.id, id));
     if (!invoice) {
       return c.json({ success: false, message: "Invoice tidak ditemukan" }, 404);
     }
-    if (user.role !== "superadmin" && invoice.tenantId !== user.tenantId) {
+    if (user.role !== "superadmin" && invoice.userId !== user.userId) {
       return c.json({ success: false, message: "Akses ditolak: invoice bukan milik outlet Anda" }, 403);
     }
 
@@ -192,6 +192,8 @@ subscriptionRoutes.get("/invoices", async (c) => {
         durationMonths: subscriptionInvoices.durationMonths,
         originalAmount: subscriptionInvoices.originalAmount,
         discountAmount: subscriptionInvoices.discountAmount,
+        promotionDiscountAmount: subscriptionInvoices.promotionDiscountAmount,
+        referralDiscountAmount: subscriptionInvoices.referralDiscountAmount,
         finalAmount: subscriptionInvoices.finalAmount,
         status: subscriptionInvoices.status,
         paymentProofUrl: subscriptionInvoices.paymentProofUrl,
@@ -219,7 +221,7 @@ subscriptionRoutes.get("/invoices", async (c) => {
 
     // Jika bukan superadmin, hanya lihat invoice milik tenant-nya sendiri
     if (user.role !== "superadmin") {
-      filtered = filtered.filter((r) => r.tenantId === user.tenantId);
+      filtered = filtered.filter((r) => r.userId === user.userId);
     }
 
     if (status) {
@@ -250,6 +252,8 @@ subscriptionRoutes.get("/invoices/:id", async (c) => {
       return c.json({ success: false, message: "Invoice tidak ditemukan" }, 404);
     }
 
+    const actor = getUser(c);
+    if (actor.role !== "superadmin" && found.userId !== actor.userId) return c.json({ success: false, message: "Akses invoice ditolak" }, 403);
     return c.json({ success: true, data: found });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
@@ -329,135 +333,28 @@ subscriptionRoutes.post(
     }
   }
 );
-/**
- * 10. POST /api/subscription/admin-extend
- * Superadmin langsung memperpanjang masa aktif tenant setelah menerima transfer:
- * - Mendeteksi apakah tenant memiliki kode referral (Rp 55.000 / bln) atau tidak (Rp 60.000 / bln)
- * - Memperpanjang subscriptionUntil outlet
- * - Mengubah isTrial = 'false' dan status = 'active'
- * - Otomatis mencatat kas masuk platform (platformCashflow)
- */
-subscriptionRoutes.post(
-  "/admin-extend",
-  requireRole(["superadmin"]),
-  async (c) => {
-    try {
-      const user = getUser(c);
-      const body = await c.req.json();
-      const {
-        tenantId,
-        durationMonths = 1,
-        notes = "",
-        paymentProofUrl = "",
-      } = body;
-
-      if (!tenantId) {
-        return c.json({ success: false, message: "Tenant ID wajib diisi" }, 400);
-      }
-
-      const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-      const targetTenant = tenantRows[0];
-      if (!targetTenant) {
-        return c.json({ success: false, message: "Tenant tidak ditemukan" }, 404);
-      }
-
-      const months = Math.max(1, Number(durationMonths) || 1);
-
-      // Cek apakah tenant punya referral code
-      let hasReferral = false;
-      let refCodeName: string | null = null;
-      let refCodeId: string | null = null;
-      if (targetTenant.referralCodeId) {
-        hasReferral = true;
-        const refRows = await db.select().from(referralCodes).where(eq(referralCodes.id, targetTenant.referralCodeId)).limit(1);
-        if (refRows[0]) {
-          refCodeName = refRows[0].code;
-          refCodeId = refRows[0].id;
-        }
-      }
-
-      // Harga: 55.000 jika referral, 60.000 jika normal
-      const pricePerMonth = hasReferral ? 55000 : 60000;
-      const totalAmount = pricePerMonth * months;
-
-      // Hitung perpanjangan tanggal
-      const nowStr = today();
-      const currentExpiry = targetTenant.subscriptionUntil || nowStr;
-      const baseDate = currentExpiry > nowStr ? new Date(`${currentExpiry}T00:00:00`) : new Date();
-      const newExpiry = addDays(months * 30, baseDate);
-
-      // Update tenant
-      await db
-        .update(tenants)
-        .set({
-          subscriptionUntil: newExpiry,
-          isTrial: "false",
-          status: "active",
-        })
-        .where(eq(tenants.id, tenantId));
-
-      // Update owner user jika ada
-      if (targetTenant.userId) {
-        await db
-          .update(users)
-          .set({
-            subscriptionUntil: newExpiry,
-            isTrial: "false",
-            status: "active",
-          })
-          .where(eq(users.id, targetTenant.userId));
-      }
-
-      invalidateTenantAuthCache(tenantId);
-
-      // Catat komisi marketing jika tenant terhubung referral code
-      if (refCodeId) {
-        await recordCommission({
-          referralCodeId: refCodeId,
-          subscriptionInvoiceId: null,
-          baseAmount: totalAmount,
-          tenantId: targetTenant.id,
-          durationMonths: months,
-        });
-      }
-
-      // Catat Kas Masuk Platform
-      const cashflowEntry = {
-        id: newId("pcf"),
-        type: "income",
-        category: "subscription",
-        amount: totalAmount,
-        date: today(),
-        tenantId: targetTenant.id,
-        referralCode: refCodeName,
-        durationMonths: months,
-        description: `Perpanjangan ${targetTenant.outletName} (${months} bln${hasReferral ? ` - Ref: ${refCodeName}` : ""})`,
-        proofUrl: paymentProofUrl ? String(paymentProofUrl).trim() : null,
-        notes: notes ? String(notes).trim() : null,
-        createdByUserId: user.userId,
-        createdAt: new Date().toISOString(),
-      };
-      await db.insert(platformCashflow).values(cashflowEntry);
-
-      return c.json({
-        success: true,
-        message: `Masa aktif ${targetTenant.outletName} berhasil diperpanjang hingga ${newExpiry}. Kas masuk tercatat Rp ${totalAmount.toLocaleString("id-ID")}.`,
-        data: {
-          tenantId,
-          outletName: targetTenant.outletName,
-          hasReferral,
-          referralCode: refCodeName,
-          durationMonths: months,
-          totalAmount,
-          newExpiry,
-          cashflowId: cashflowEntry.id,
-        },
-      });
-    } catch (err: any) {
-      return c.json({ success: false, message: err.message }, 500);
-    }
+/** Administrative payment confirmation shares pricing and atomic activation with invoices. */
+subscriptionRoutes.post("/admin-extend", requireRole(["superadmin"]), async c => {
+  try {
+    const actor = getUser(c);
+    const body = await c.req.json();
+    if (typeof body.tenantId !== "string") return c.json({ success: false, message: "Tenant ID diperlukan" }, 400);
+    const [branch] = await db.select().from(tenants).where(eq(tenants.id, body.tenantId));
+    if (!branch) return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
+    const [owner] = await db.select().from(users).where(eq(users.id, branch.userId));
+    const { invoice } = await createSubscriptionInvoice({ tenantId: branch.id, userId: actor.userId,
+      planId: body.planId || (owner?.tier === "premium" ? "premium" : "pro"), durationMonths: body.durationMonths ?? 1 });
+    await db.update(subscriptionInvoices).set({ status: "pending_verification",
+      paymentProofUrl: typeof body.paymentProofUrl === "string" ? body.paymentProofUrl : null,
+      notes: typeof body.notes === "string" ? body.notes : "Verifikasi langsung oleh admin",
+    }).where(eq(subscriptionInvoices.id, invoice.id));
+    const result = await verifySubscriptionInvoice(invoice.id, actor.userId);
+    return c.json({ success: true, data: { tenantId: branch.id, totalAmount: invoice.finalAmount, newExpiry: result.tenant.subscriptionUntil } });
+  } catch (error) {
+    console.error("[subscription] admin confirmation failed", { actorId: getUser(c).userId });
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Perpanjangan gagal" }, 400);
   }
-);
+});
 
 /**
  * 11. POST /api/subscription/apply-referral

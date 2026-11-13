@@ -24,9 +24,12 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [priceLoading, setPriceLoading] = useState(false);
   const [priceData, setPriceData] = useState<{
     basePrice: number;
     discountAmount: number;
+    promotionDiscountPerMonth?: number;
+    referralDiscountPerMonth?: number;
     finalPrice: number;
   }>({ basePrice: 60000, discountAmount: 0, finalPrice: 60000 });
 
@@ -37,9 +40,21 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && tenantId) {
-      calculatePrice();
-    }
+    if (!isOpen || !tenantId || !selectedPlanId) return;
+    const controller = new AbortController();
+    setPriceLoading(true);
+    setErrorMsg(null);
+    api.get<{ success: boolean; message?: string; data: typeof priceData }>(
+      `/api/subscription/pricing?planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`,
+      { signal: controller.signal },
+    ).then(res => {
+      if (controller.signal.aborted) return;
+      if (!res.success) throw new Error(res.message || "Harga tidak tersedia");
+      setPriceData(res.data);
+    }).catch(err => {
+      if (!controller.signal.aborted) setErrorMsg(err.message || "Gagal menghitung harga");
+    }).finally(() => { if (!controller.signal.aborted) setPriceLoading(false); });
+    return () => controller.abort();
   }, [isOpen, selectedPlanId, referralCode, tenantId]);
 
   const fetchPlans = async () => {
@@ -57,30 +72,10 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     }
   };
 
-  const calculatePrice = async () => {
-    try {
-      const url = `/api/subscription/pricing?planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`;
-      const res = await api.get<{
-        success: boolean;
-        data: {
-          basePrice: number;
-          discountAmount: number;
-          finalPrice: number;
-        };
-      }>(url);
-
-      if (res.success && res.data) {
-        setPriceData(res.data);
-      }
-    } catch (err) {
-      console.error("Gagal menghitung harga:", err);
-    }
-  };
 
   if (!isOpen) return null;
 
   const originalTotal = priceData.basePrice * durationMonths;
-  const discountTotal = priceData.discountAmount * durationMonths;
   const finalTotal = priceData.finalPrice * durationMonths;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,12 +237,8 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
               </span>
             </div>
 
-            {discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-700 font-semibold">
-                <span>Diskon Promo</span>
-                <span>- Rp {discountTotal.toLocaleString("id-ID")}</span>
-              </div>
-            )}
+            {(priceData.promotionDiscountPerMonth ?? 0) > 0 && <div className="flex justify-between text-emerald-700"><span>Potongan promo</span><span>- Rp {((priceData.promotionDiscountPerMonth ?? 0) * durationMonths).toLocaleString("id-ID")}</span></div>}
+            {(priceData.referralDiscountPerMonth ?? 0) > 0 && <div className="flex justify-between text-emerald-700"><span>Potongan referral (setelah promo)</span><span>- Rp {((priceData.referralDiscountPerMonth ?? 0) * durationMonths).toLocaleString("id-ID")}</span></div>}
 
             <div className="pt-2 border-t border-zinc-200 flex justify-between items-baseline font-bold text-sm text-zinc-900">
               <span>Total Tagihan</span>
@@ -268,7 +259,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || priceLoading || !!errorMsg || !selectedPlanId}
               className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

@@ -27,7 +27,7 @@ upload.post("/", authMiddleware, async (c) => {
     const file = body["file"];
     const category = typeof body["category"] === "string" ? body["category"] : "general";
 
-    if (!file || !(file instanceof File || file instanceof Blob)) {
+    if (!file || !(file instanceof File)) {
       return c.json(
         {
           success: false,

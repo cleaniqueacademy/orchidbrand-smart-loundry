@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   CreditCard,
@@ -34,10 +34,20 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
   const [proofUrl, setProofUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [quote, setQuote] = useState<{ finalPrice: number; referralDiscountPerMonth: number } | null>(null);
+  useEffect(() => {
+    if (!isOpen || !tenant) return;
+    const controller = new AbortController(); setQuote(null);
+    fetch(`/api/subscription/pricing?tenantId=${encodeURIComponent(tenant.id)}&planId=${tenant.tier === "premium" ? "premium" : "pro"}`, { headers: authHeaders(), signal: controller.signal })
+      .then(res => res.json()).then(res => { if (res.success && !controller.signal.aborted) setQuote(res.data); })
+      .catch(() => { if (!controller.signal.aborted) toast.error("Harga tidak tersedia", "Coba buka kembali form perpanjangan."); });
+    return () => controller.abort();
+  }, [isOpen, tenant?.id, tenant?.tier]);
+
   if (!isOpen || !tenant) return null;
 
-  const hasReferral = Boolean(tenant.referralCodeId || tenant.source === "referral");
-  const pricePerMonth = hasReferral ? 55000 : 60000;
+  const hasReferral = (quote?.referralDiscountPerMonth ?? 0) > 0;
+  const pricePerMonth = quote?.finalPrice ?? 0;
   const totalAmount = pricePerMonth * durationMonths;
 
   const currentExpiry = tenant.subscriptionUntil || new Date().toISOString().slice(0, 10);
@@ -66,7 +76,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
       if (json.success) {
         toast.success(
           "Perpanjangan Berhasil!",
-          `Masa aktif ${tenant.outletName} diperpanjang hingga ${json.data?.newExpiry || estimatedNewExpiry}. Kas masuk tercatat Rp ${totalAmount.toLocaleString("id-ID")}.`
+          `Masa aktif ${tenant.outletName} diperpanjang hingga ${json.data?.newExpiry || estimatedNewExpiry}. Kas masuk tercatat Rp ${Number(json.data?.totalAmount || 0).toLocaleString("id-ID")}.`
         );
         onSuccess();
         onClose();
@@ -219,7 +229,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !quote}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
             >
               {loading ? (

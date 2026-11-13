@@ -1,9 +1,13 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { secureHeaders } from "hono/secure-headers";
+import { config } from "./config";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
 import {
   users,
+  plans,
   tenants,
   customers,
   orders,
@@ -18,7 +22,7 @@ import {
   referralCodeTenants,
   referralEvents,
 } from "./db/schema";
-import { eq, desc, and, gte, lte, like } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import referralRoutes from "./routes/referralCodes";
 import marketingRoutes from "./routes/marketing";
@@ -38,26 +42,41 @@ import { signToken, authMiddleware, getUser, invalidateTenantAuthCache } from ".
 import { requireRole, requireTenantAccess } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
 
+import { staffInput, createBranchStaff } from "./services/staff";
+import { branchInput, createOwnerBranch } from "./services/branches";
+
+function routeParam(c: Context, name: string): string {
+  const value = c.req.param(name);
+  if (!value) throw new HTTPException(400, { message: "Parameter route diperlukan" });
+  return value;
+}
 const app = new Hono();
+app.use("*", secureHeaders());
 
 // Middlewares
 app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: config.origin,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Tenant-Id"],
   })
 );
 
 // Auto-initialize PostgreSQL tables on startup, then auto-restore active Baileys sessions
+let initialized = false;
 initPostgresTables()
   .then(async () => {
+    initialized = true;
     await autoRestoreSavedSessions();
   })
-  .catch(console.error);
+  .catch(() => { console.error("[startup] initialization failed"); if (config.production) process.exit(1); });
 
+app.use("/api/*", async (c, next) => {
+  if (!initialized && c.req.path !== "/api/health") return c.json({ success: false, message: "Aplikasi sedang diinisialisasi" }, 503);
+  await next();
+});
 // WhatsApp Gateway Routes
 app.route("/api/whatsapp", whatsappRoutes);
 // Referral & Marketing Routes
@@ -96,21 +115,18 @@ app.get("/uploads/*", async (c) => {
 });
 
 // 1. Health check
-app.get("/api/health", (c) => {
-  return c.json({
-    status: "ok",
-    runtime: "Bun",
-    framework: "Hono",
-    database: "PostgreSQL",
-    timestamp: new Date().toISOString(),
-    message: "Laundry Cleanique API is running smoothly on PostgreSQL!",
-  });
+app.get("/api/health", async c => {
+  try {
+    if (!initialized) return c.json({ status: "starting" }, 503);
+    await db.execute(sql`SELECT 1`);
+    return c.json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch { return c.json({ status: "unavailable" }, 503); }
 });
 
 // 2. Public Tracking Endpoint (No Auth Required)
 app.get("/api/track/:invoiceNo", async (c) => {
   try {
-    const rawInvoiceNo = c.req.param("invoiceNo")?.trim();
+    const rawInvoiceNo = routeParam(c, "invoiceNo")?.trim();
     if (!rawInvoiceNo) {
       return c.json({ success: false, message: "Nomor nota wajib diisi" }, 400);
     }
@@ -277,7 +293,7 @@ app.post("/api/services", authMiddleware, requireRole(["superadmin", "tenant_own
 app.put("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(services).where(eq(services.id, id));
     if (!existing) {
       return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
@@ -305,7 +321,7 @@ app.put("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_
 app.delete("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(services).where(eq(services.id, id));
     if (!existing) {
       return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
@@ -380,33 +396,23 @@ app.get("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_o
   try {
     const user = getUser(c);
     const branches = await db.select().from(tenants).where(eq(tenants.userId, user.userId));
-    return c.json({ success: true, data: branches });
+    const [owner] = await db.select({ tier: users.tier }).from(users).where(eq(users.id, user.userId));
+    const [plan] = await db.select().from(plans).where(eq(plans.code, "premium"));
+    return c.json({ success: true, data: branches, maxBranches: owner?.tier === "premium" ? Math.min(5, plan?.maxBranches ?? 0) : 1 });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
 });
 
-// 2c. Add New Branch (Gated to Premium tier)
-app.post("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+app.post("/api/my-branches", authMiddleware, requireRole(["tenant_owner"]), async (c) => {
+  const parsed = branchInput.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Nama, telepon dan alamat cabang wajib valid" }, 400);
   try {
-    const user = getUser(c);
-    const [foundUser] = await db.select().from(users).where(eq(users.id, user.userId));
-    const isPremium = foundUser?.tier === "premium" || foundUser?.metadata?.includes('"tier":"premium"');
-
-    if (!isPremium && user.role !== "superadmin") {
-      return c.json({
-        success: false,
-        code: "FEATURE_LOCKED_PREMIUM",
-        message: "Fitur penambahan cabang baru hanya tersedia pada Paket Premium (Coming Soon).",
-      }, 403);
-    }
-
-    return c.json({
-      success: false,
-      message: "Fitur pembuatan multi-cabang akan segera hadir pada rilis Paket Premium.",
-    }, 403);
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
+    const branch = await createOwnerBranch(getUser(c).userId, parsed.data);
+    return c.json({ success: true, data: branch }, 201);
+  } catch (err) {
+    console.warn("[branches] creation refused", { ownerId: getUser(c).userId, error: String(err) });
+    return c.json({ success: false, message: err instanceof Error ? err.message : "Cabang tidak dapat dibuat" }, 409);
   }
 });
 
@@ -414,7 +420,7 @@ app.post("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_
 app.get("/api/tenants/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
     if (!tenant) {
@@ -516,7 +522,7 @@ app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) 
 app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== id) {
       const [tRow] = await db.select().from(tenants).where(eq(tenants.id, id));
@@ -593,7 +599,7 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
 
 app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { status, subscriptionUntil } = body;
 
@@ -611,7 +617,7 @@ app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"])
 
 app.delete("/api/tenants/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     // Hapus child records terlebih dahulu agar tidak terkena constraint foreign key
     await db.delete(waLogs).where(eq(waLogs.tenantId, id));
     await db.delete(subscriptionEvents).where(eq(subscriptionEvents.tenantId, id));
@@ -884,7 +890,8 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
         userId: newUserId,
         status: status || "active",
         subscriptionUntil: subscriptionUntil || null,
-        phone: phone || null,
+        phone: phone || "",
+        address: "",
       });
     }
 
@@ -939,7 +946,7 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
 app.put("/api/users/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { name, email, role, password, tenantId, status, subscriptionUntil, tutorialCompleted, metadata } = body;
 
@@ -993,7 +1000,7 @@ app.post("/api/users/tutorial-complete", authMiddleware, async (c) => {
 
 app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { status, subscriptionUntil } = body;
 
@@ -1022,7 +1029,7 @@ app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), 
 // Perpanjang masa aktif pengguna (+X hari atau tanggal tertentu) - Khusus Superadmin
 app.post("/api/users/:id/extend", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { days, newDate, activate = true } = body;
 
@@ -1093,7 +1100,7 @@ app.post("/api/users/:id/extend", authMiddleware, requireRole(["superadmin"]), a
 
 app.delete("/api/users/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     await db.delete(users).where(eq(users.id, id));
     return c.json({ success: true, message: "Pengguna berhasil dihapus" });
   } catch (error: any) {
@@ -1105,7 +1112,7 @@ app.delete("/api/users/:id", authMiddleware, requireRole(["superadmin"]), async 
 app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { newPassword } = body;
 
@@ -1156,10 +1163,18 @@ app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
 // ==========================================
 // 2B. Staff Kasir Management per Outlet (Tenant Owner & Superadmin)
 // ==========================================
+app.use("/api/staff/*", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c, next) => {
+  const actor = getUser(c);
+  if (actor.role !== "superadmin") {
+    const [owner] = await db.select({ tier: users.tier }).from(users).where(eq(users.id, actor.userId));
+    if (owner?.tier !== "premium") return c.json({ success: false, message: "Paket Premium diperlukan" }, 403);
+  }
+  await next();
+});
 app.get("/api/tenants/:id/staff", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const tenantId = c.req.param("id");
+    const tenantId = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== tenantId) {
       return c.json({ success: false, message: "Akses ditolak untuk data cabang ini" }, 403);
@@ -1184,51 +1199,22 @@ app.get("/api/tenants/:id/staff", authMiddleware, async (c) => {
 });
 
 app.post("/api/tenants/:id/staff", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  const parsed = staffInput.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Nama/email harus valid dan sandi minimal 10 karakter" }, 400);
   try {
-    const user = getUser(c);
-    const tenantId = c.req.param("id");
-
-    if (user.role !== "superadmin" && user.tenantId !== tenantId) {
-      return c.json({ success: false, message: "Akses ditolak untuk cabang ini" }, 403);
-    }
-
-    const { name, email, password } = await c.req.json();
-    if (!name || !email || !password) {
-      return c.json({ success: false, message: "Nama, email, dan kata sandi wajib diisi" }, 400);
-    }
-    const cleanEmail = String(email).trim().toLowerCase();
-    const existing = (await db.select().from(users).where(eq(users.email, cleanEmail)))[0];
-    if (existing) {
-      return c.json({ success: false, message: "Email sudah terdaftar" }, 400);
-    }
-
-    const hashedPassword = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
-    const newStaffId = `user-${Date.now()}`;
-    await db.insert(users).values({
-      id: newStaffId,
-      name: String(name).trim(),
-      email: cleanEmail,
-      passwordHash: hashedPassword,
-      role: "staff",
-      status: "active",
-      tenantId,
-      createdAt: new Date().toISOString(),
-    });
-
-    return c.json({
-      success: true,
-      message: "Kasir/Staff baru berhasil ditambahkan",
-      data: { id: newStaffId, name, email: cleanEmail, role: "staff", tenantId },
-    });
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
+    const actor = getUser(c);
+    const created = await createBranchStaff(routeParam(c, "id"), actor.userId, actor.role === "superadmin", parsed.data);
+    return c.json({ success: true, data: created }, 201);
+  } catch (error) {
+    console.warn("[staff] creation refused", { actorId: getUser(c).userId });
+    return c.json({ success: false, message: "Staf tidak dapat dibuat. Periksa kuota, email, dan akses cabang." }, 409);
   }
 });
 
 app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1248,7 +1234,7 @@ app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_
 app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1290,7 +1276,7 @@ app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_own
 app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1317,7 +1303,7 @@ app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadm
 app.patch("/api/staff/:id/status", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1573,7 +1559,7 @@ app.get("/api/shifts/history", authMiddleware, async (c) => {
 // ==========================================
 app.get("/api/orders/:id/wa-logs", authMiddleware, async (c) => {
   try {
-    const orderId = c.req.param("id");
+    const orderId = routeParam(c, "id");
     const logs = await db.select().from(waLogs).where(eq(waLogs.orderId, orderId)).orderBy(desc(waLogs.createdAt));
     return c.json({ success: true, data: logs });
   } catch (error: any) {
@@ -1584,7 +1570,7 @@ app.get("/api/orders/:id/wa-logs", authMiddleware, async (c) => {
 app.get("/api/tenants/:id/wa-logs", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const tenantId = c.req.param("id");
+    const tenantId = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== tenantId) {
       return c.json({ success: false, message: "Akses ditolak" }, 403);
@@ -1670,7 +1656,7 @@ app.post("/api/customers", authMiddleware, async (c) => {
 app.put("/api/customers/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(customers).where(eq(customers.id, id));
     if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
 
@@ -1697,7 +1683,7 @@ app.put("/api/customers/:id", authMiddleware, async (c) => {
 app.delete("/api/customers/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(customers).where(eq(customers.id, id));
     if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
 
@@ -2050,7 +2036,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
 app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const { status } = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
@@ -2193,7 +2179,7 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
 app.patch("/api/orders/:id/payment", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const { paymentStatus, paymentMethod } = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
@@ -2246,7 +2232,7 @@ app.patch("/api/orders/:id/payment", authMiddleware, async (c) => {
 app.put("/api/orders/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
@@ -2344,7 +2330,7 @@ app.delete(
   async (c) => {
     try {
       const user = getUser(c);
-      const id = c.req.param("id");
+      const id = routeParam(c, "id");
 
       const existingResults = await db.select().from(orders).where(eq(orders.id, id));
       const existing = existingResults[0];
@@ -2477,7 +2463,7 @@ app.get("/api/reports/business-health", authMiddleware, requireRole(["superadmin
 app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const applyAll = c.req.query("applyAll") === "true" || id === "all";
 
     if (id !== "all" && user.role !== "superadmin" && user.tenantId !== id) {
@@ -2523,7 +2509,7 @@ app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["super
 app.delete("/api/expenses/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     const [existing] = await db.select().from(expenses).where(eq(expenses.id, id));
     if (!existing) {

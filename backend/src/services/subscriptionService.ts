@@ -8,11 +8,13 @@ import {
   subscriptionEvents,
   referralCodes,
   expenses,
+  platformCashflow,
 } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { newId } from "../utils/id";
 import { addDays, daysRemaining, today, toDateOnly } from "../utils/date";
-import { applyDiscount } from "../utils/money";
+import { invalidateTenantAuthCache } from "../middleware/auth";
+import { calculateSubscriptionPrice } from "./subscriptionPricing";
 import { DEFAULT_MONTHLY_PRICE } from "../constants/services";
 import { validateCode, recordCommission } from "./referralService";
 
@@ -44,7 +46,8 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   if (!tenant) return null;
 
-  const subUntil = tenant.subscriptionUntil || null;
+  const [owner] = await db.select().from(users).where(eq(users.id, tenant.userId));
+  const subUntil = owner?.subscriptionUntil || tenant.subscriptionUntil || null;
   const remaining = subUntil ? daysRemaining(subUntil) : -999;
   const isActive = remaining >= 0 && tenant.status === "active";
 
@@ -52,7 +55,7 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
   const invoices = await db
     .select()
     .from(subscriptionInvoices)
-    .where(eq(subscriptionInvoices.tenantId, tenantId))
+    .where(eq(subscriptionInvoices.userId, tenant.userId))
     .orderBy(desc(subscriptionInvoices.createdAt));
 
   const pendingInvoice =
@@ -108,6 +111,15 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
  * Hitung harga langganan yang berlaku untuk tenant, termasuk diskon referral jika ada
  */
 export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?: string, customCode?: string) {
+  // Referral eligibility is account-wide; use the Owner's primary branch consistently.
+  if (tenantId) {
+    const [selected] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (selected) {
+      const [owner] = await db.select().from(users).where(eq(users.id, selected.userId));
+      const branches = await db.select().from(tenants).where(eq(tenants.userId, selected.userId)).orderBy(tenants.createdAt, tenants.id);
+      tenantId = branches.find(branch => branch.id === owner?.tenantId)?.id || branches[0]?.id || tenantId;
+    }
+  }
   let plan = null;
 
   if (planIdOrCode) {
@@ -125,22 +137,18 @@ export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?
     }
   }
 
+  if (planIdOrCode && (!plan || plan.isActive !== "true")) throw new Error("Paket tidak tersedia");
   if (!plan) {
     const activePlans = await db
       .select()
       .from(plans)
       .where(eq(plans.isActive, "true"))
       .orderBy(plans.sortOrder);
-    plan = activePlans[0] || {
-      id: "basic",
-      code: "basic",
-      name: "Paket Standar",
-      pricePerMonth: DEFAULT_MONTHLY_PRICE,
-      durationMonths: 1,
-    };
+    plan = activePlans[0];
+    if (!plan) throw new Error("Belum ada paket aktif");
   }
 
-  const basePrice = plan.pricePerMonth || DEFAULT_MONTHLY_PRICE;
+  const basePrice = plan.pricePerMonth;
 
   // Cek kupon diskon: prioritas kode baru yang dimasukkan, atau kode referral bawaan outlet
   let referralCodeIdToApply: string | null = null;
@@ -149,49 +157,35 @@ export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?
 
   if (customCode && customCode.trim()) {
     const valRes = await validateCode(customCode.trim(), tenantId || "");
+    if (!valRes.valid) throw new Error(valRes.message || "Kode referral tidak valid");
     if (valRes.valid && valRes.code) {
       referralCodeIdToApply = valRes.code.id;
       discountType = valRes.discountType || "percent";
       discountValue = valRes.discountValue || 0;
     }
-  } else if (tenantId && tenantId.trim()) {
-    const tid = tenantId.trim();
-    // Cek referral bawaan tenant (cari by id, userId, atau suffix)
-    let [tenant] = await db.select().from(tenants).where(eq(tenants.id, tid));
-    if (!tenant) {
-      const [byUser] = await db.select().from(tenants).where(eq(tenants.userId, tid));
-      if (byUser) tenant = byUser;
-    }
-    if (!tenant && tid.length > 0) {
-      const [byLike] = await db
-        .select()
-        .from(tenants)
-        .where(sql`${tenants.id} ILIKE ${'%' + tid}`);
-      if (byLike) tenant = byLike;
-    }
-
-    if (tenant && tenant.referralCodeId) {
-      const [refCode] = await db
-        .select()
-        .from(referralCodes)
-        .where(eq(referralCodes.id, tenant.referralCodeId));
-      if (refCode && refCode.isActive === "true") {
-        referralCodeIdToApply = refCode.id;
-        discountType = refCode.discountType as "percent" | "fixed";
-        discountValue = refCode.discountValue;
+  } else if (tenantId) {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (tenant?.referralCodeId) {
+      const [code] = await db.select().from(referralCodes).where(eq(referralCodes.id, tenant.referralCodeId));
+      if (code) {
+        const valid = await validateCode(code.code, tenantId);
+        if (valid.valid && valid.code) {
+          referralCodeIdToApply = valid.code.id;
+          discountType = valid.discountType || "percent";
+          discountValue = valid.discountValue || 0;
+        }
       }
     }
   }
 
-  const { discountAmount, finalPrice } = applyDiscount(basePrice, discountType, discountValue);
-
-  return {
-    plan,
-    basePrice,
-    discountAmount,
-    finalPrice,
-    referralCodeId: referralCodeIdToApply,
-  };
+  const calculated = calculateSubscriptionPrice({
+    pricePerMonth: basePrice,
+    promotionAmount: "promotionAmount" in plan ? Number(plan.promotionAmount) : 0,
+    promotionStartsAt: "promotionStartsAt" in plan ? plan.promotionStartsAt as string | null : null,
+    promotionEndsAt: "promotionEndsAt" in plan ? plan.promotionEndsAt as string | null : null,
+    referral: referralCodeIdToApply ? { type: discountType, value: discountValue } : undefined,
+  });
+  return { plan, ...calculated, referralCodeId: referralCodeIdToApply };
 }
 
 /**
@@ -206,6 +200,11 @@ export async function createSubscriptionInvoice(params: {
 }) {
   const { tenantId, userId, planId, durationMonths = 1, referralCode } = params;
 
+  if (!Number.isInteger(durationMonths) || durationMonths < 1 || durationMonths > 120) throw new Error("Durasi tidak valid");
+  const [billingTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+  if (!billingTenant) throw new Error("Outlet tidak ditemukan");
+  const [actor] = await db.select().from(users).where(eq(users.id, userId));
+  if (!actor || (actor.role !== "superadmin" && actor.id !== billingTenant.userId)) throw new Error("Akses tagihan ditolak");
   const priceCalc = await getApplicablePrice(tenantId, planId, referralCode);
   const originalAmount = priceCalc.basePrice * durationMonths;
   const discountAmount = priceCalc.discountAmount * durationMonths;
@@ -221,12 +220,14 @@ export async function createSubscriptionInvoice(params: {
       id: invoiceId,
       invoiceNo,
       tenantId,
-      userId,
+      userId: billingTenant.userId,
       planId: priceCalc.plan.id,
       referralCodeId: priceCalc.referralCodeId,
       durationMonths,
       originalAmount,
       discountAmount,
+      promotionDiscountAmount: priceCalc.promotionDiscountPerMonth * durationMonths,
+      referralDiscountAmount: priceCalc.referralDiscountPerMonth * durationMonths,
       finalAmount,
       status: "unpaid",
       createdAt: nowIso,
@@ -283,9 +284,10 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
       paymentProofUploadedAt: new Date().toISOString(),
       status: "pending_verification",
     })
-    .where(eq(subscriptionInvoices.id, invoiceId))
+    .where(and(eq(subscriptionInvoices.id, invoiceId), sql`${subscriptionInvoices.status} IN ('unpaid', 'rejected')`))
     .returning();
 
+  if (!updated) throw new Error("Invoice tidak dapat diubah pada status saat ini");
   return updated;
 }
 
@@ -293,30 +295,38 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
  * Verifikasi dan aktivasi invoice langganan (Superadmin)
  */
 export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: string) {
-  const [invoice] = await db
+  const result = await db.transaction(async (tx) => {
+  const [invoice] = await tx
     .select()
     .from(subscriptionInvoices)
-    .where(eq(subscriptionInvoices.id, invoiceId));
+    .where(eq(subscriptionInvoices.id, invoiceId)).for("update");
 
   if (!invoice) {
     throw new Error("Invoice tidak ditemukan");
   }
 
-  if (invoice.status === "paid") {
-    throw new Error("Invoice ini sudah diverifikasi sebelumnya");
+  if (invoice.status !== "pending_verification") {
+    throw new Error("Invoice tidak dalam status menunggu verifikasi");
   }
 
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, invoice.tenantId));
+  const [tenant] = await tx.select().from(tenants).where(eq(tenants.id, invoice.tenantId));
   if (!tenant) {
     throw new Error("Outlet tidak ditemukan");
   }
 
+  const [owner] = await tx.select().from(users).where(eq(users.id, tenant.userId)).for("update");
+  if (!owner) throw new Error("Owner tidak ditemukan");
+  const [plan] = invoice.planId ? await tx.select().from(plans).where(eq(plans.id, invoice.planId)) : [];
+  const tier = plan?.code === "premium" ? "premium" : "pro";
+  const ownedBranches = await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.userId, owner.id));
+  if (tier !== "premium" && ownedBranches.length > 1) throw new Error("Tutup cabang tambahan sebelum menurunkan paket");
+
   // Hitung masa aktif baru:
   // Jika langganan outlet masih aktif (> 0 hari tersisa), perpanjang dari subscriptionUntil yang ada.
   // Jika sudah kedaluwarsa, mulai dari hari ini.
-  const remaining = tenant.subscriptionUntil ? daysRemaining(tenant.subscriptionUntil) : -1;
-  const baseStartDate = remaining > 0 && tenant.subscriptionUntil
-    ? new Date(tenant.subscriptionUntil)
+  const remaining = owner.subscriptionUntil ? daysRemaining(owner.subscriptionUntil) : -1;
+  const baseStartDate = remaining > 0 && owner.subscriptionUntil
+    ? new Date(owner.subscriptionUntil)
     : new Date();
 
   const durationDays = Math.round(invoice.durationMonths * 30);
@@ -325,7 +335,7 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
   const nowIso = new Date().toISOString();
 
   // 1. Update Invoice
-  const [updatedInvoice] = await db
+  const [updatedInvoice] = await tx
     .update(subscriptionInvoices)
     .set({
       status: "paid",
@@ -338,19 +348,21 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
     .returning();
 
   // 2. Update Tenant: Perpanjang subscriptionUntil, set isTrial = 'false'
-  await db
+  await tx
     .update(tenants)
     .set({
+      tier,
       subscriptionUntil: periodEnd,
       isTrial: "false",
       status: "active",
     })
-    .where(eq(tenants.id, tenant.id));
+    .where(eq(tenants.userId, owner.id));
 
   // 3. Update User Owner
-  await db
+  await tx
     .update(users)
     .set({
+      tier,
       subscriptionUntil: periodEnd,
       isTrial: "false",
       status: "active",
@@ -365,11 +377,11 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
       baseAmount: invoice.finalAmount,
       tenantId: tenant.id,
       durationMonths: invoice.durationMonths,
-    });
+    }, tx);
   }
 
   // 4b. Otomatis catat ke pengeluaran outlet (Buku Kas Tenant)
-  await db.insert(expenses).values({
+  await tx.insert(expenses).values({
     id: newId("exp"),
     tenantId: tenant.id,
     type: "expense",
@@ -383,8 +395,15 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
     createdAt: nowIso,
   });
 
+  await tx.insert(platformCashflow).values({
+    id: newId("pcf"), type: "income", category: "subscription", amount: invoice.finalAmount,
+    date: today(), tenantId: tenant.id, durationMonths: invoice.durationMonths,
+    description: `Langganan Owner (${invoice.invoiceNo})`, proofUrl: invoice.paymentProofUrl,
+    createdByUserId: adminUserId, createdAt: nowIso,
+  });
+
   // 5. Catat riwayat event langganan
-  await db.insert(subscriptionEvents).values({
+  await tx.insert(subscriptionEvents).values({
     id: newId("subevt"),
     tenantId: tenant.id,
     eventType: "renewed",
@@ -401,17 +420,21 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
     createdAt: nowIso,
   });
 
+  console.info("[subscription] invoice verified", { invoiceId, ownerId: owner.id });
   return {
     invoice: updatedInvoice,
     tenant: {
       id: tenant.id,
+      tier,
       subscriptionUntil: periodEnd,
       isTrial: false,
       status: "active",
     },
   };
+  });
+  invalidateTenantAuthCache();
+  return result;
 }
-
 /**
  * Tolak invoice pembayaran langganan (Superadmin)
  */

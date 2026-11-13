@@ -74,9 +74,7 @@ export async function callGoogleGemini(
       model: "gemini-3-flash-preview",
       input: fullInput,
       generation_config: {
-        temperature: 0.8,
         max_output_tokens: 4096,
-        top_p: 0.95,
       },
     });
 

@@ -209,6 +209,9 @@ export const plans = pgTable("plans", {
   description: text("description"),
   durationMonths: doublePrecision("duration_months").notNull().default(1),
   pricePerMonth: doublePrecision("price_per_month").notNull().default(0),
+  promotionAmount: doublePrecision("promotion_amount").notNull().default(0),
+  promotionStartsAt: text("promotion_starts_at"),
+  promotionEndsAt: text("promotion_ends_at"),
   features: text("features"), // JSON array of string
   maxBranches: doublePrecision("max_branches").notNull().default(1),
   maxWaNumbers: doublePrecision("max_wa_numbers").notNull().default(1),
@@ -272,6 +275,8 @@ export const subscriptionInvoices = pgTable("subscription_invoices", {
   durationMonths: doublePrecision("duration_months").notNull().default(1),
   originalAmount: doublePrecision("original_amount").notNull(),
   discountAmount: doublePrecision("discount_amount").notNull().default(0),
+  promotionDiscountAmount: doublePrecision("promotion_discount_amount").notNull().default(0),
+  referralDiscountAmount: doublePrecision("referral_discount_amount").notNull().default(0),
   finalAmount: doublePrecision("final_amount").notNull(),
   status: text("status").notNull().default("unpaid"), // 'unpaid' | 'pending_verification' | 'paid' | 'rejected' | 'cancelled'
   paymentProofUrl: text("payment_proof_url"),

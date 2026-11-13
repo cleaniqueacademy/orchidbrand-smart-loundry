@@ -363,6 +363,10 @@ export interface Plan {
   description?: string | null;
   durationMonths: number;
   pricePerMonth: number;
+  promotionAmount?: number;
+  promotionStartsAt?: string | null;
+  promotionEndsAt?: string | null;
+  maxBranches?: number;
   features?: string[] | string;
   maxWaNumbers: number;
   maxStaff: number;
@@ -424,6 +428,8 @@ export interface SubscriptionInvoice {
   durationMonths: number;
   originalAmount: number;
   discountAmount: number;
+  promotionDiscountAmount?: number;
+  referralDiscountAmount?: number;
   finalAmount: number;
   status: "unpaid" | "pending_verification" | "paid" | "rejected" | "cancelled";
   paymentProofUrl?: string | null;
@@ -521,13 +527,13 @@ export const ACCOUNT_TIERS = {
     badgeLabel: "Premium",
     description: "Solusi enterprise multi-cabang, delegasi staf kasir & printer thermal bluetooth",
     highlightFeature: "Multi-Cabang • Kelola Karyawan • Printer Thermal POS",
-    pricePerMonth: 100000,
+    pricePerMonth: 200000,
     canConnectThermalPrinter: true,
     canManageEmployees: true,
     canManageMultipleBranches: true,
-    maxBranches: 10,
+    maxBranches: 5,
     maxStaff: 25,
-    isComingSoon: true, // Saat ini berstatus Coming Soon
+    isComingSoon: false,
   },
 } as const satisfies Record<AccountTier, TierDefinition>;
 
@@ -542,45 +548,45 @@ export interface PremiumFeatureMeta {
   readonly subtitle: string;
   readonly badge: string;
   readonly capabilities: readonly string[];
-  readonly releaseStatus: "coming_soon" | "in_development";
+  readonly releaseStatus: "available" | "coming_soon" | "in_development";
 }
 
 export const PREMIUM_FEATURES_REGISTRY = {
   thermal_printer: {
     key: "thermal_printer",
     title: "Koneksi Thermal Printer POS",
-    subtitle: "Cetak nota kasir instan via Bluetooth / USB Thermal Printer (58mm / 80mm)",
-    badge: "Paket Premium • Coming Soon",
+    subtitle: "Cetak nota melalui browser ke printer sistem operasi (58mm / 80mm)",
+    badge: "Paket Premium",
     capabilities: [
-      "Koneksi instan Web Bluetooth & USB Serial ke printer kasir",
+      "Cetak melalui dialog browser dan driver printer sistem operasi",
       "Kustomisasi format header, footer, & QRIS pada struk kasir",
       "Cetak nota 1-klik langsung dari modal checkout pesanan kasir",
     ],
-    releaseStatus: "coming_soon",
+    releaseStatus: "available",
   },
   employee_management: {
     key: "employee_management",
     title: "Manajemen Karyawan & Kasir",
     subtitle: "Kelola akun staf kasir, shift kerja, dan pantau rekonsiliasi laci kas",
-    badge: "Paket Premium • Coming Soon",
+    badge: "Paket Premium",
     capabilities: [
       "Tambah akun kasir/operator terisolasi dengan pembagian hak akses terukur",
       "Audit rekonsiliasi kas laci & log aktivitas per staf kasir",
       "Reset sandi dan pembekuan akun staf secara fleksibel",
     ],
-    releaseStatus: "coming_soon",
+    releaseStatus: "available",
   },
   branch_management: {
     key: "branch_management",
     title: "Manajemen Multi-Cabang Outlet",
     subtitle: "Kelola dan pantau seluruh cabang laundry dalam satu akun Owner terpadu",
-    badge: "Paket Premium • Coming Soon",
+    badge: "Paket Premium",
     capabilities: [
       "Tambah dan kelola Hingga 5 Gerai/cabang dalam 1 akun Owner",
       "Pemisahan omzet, buku kas, dan laporan performa per gerai",
       "Peralihan cepat antar cabang tanpa perlu logout akun",
     ],
-    releaseStatus: "coming_soon",
+    releaseStatus: "available",
   },
 } as const satisfies Record<PremiumFeatureKey, PremiumFeatureMeta>;
 
