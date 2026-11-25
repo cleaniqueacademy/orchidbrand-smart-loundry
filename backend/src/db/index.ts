@@ -1,5 +1,7 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { migrateProductionV1 } from "./productionMigration";
+import { migrateInvoiceLifecycle } from "./invoiceLifecycleMigration";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -11,6 +13,7 @@ export const client = postgres(connectionString, {
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,
+  onnotice: () => {},
 });
 
 export const db = drizzle(client, { schema });
@@ -285,7 +288,7 @@ export async function initPostgresTables() {
     `;
     await client`ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_branches DOUBLE PRECISION NOT NULL DEFAULT 1;`;
 
-    // Ensure Default Subscription Plans (Pro: Rp 60.000 & Premium: Rp 100.000)
+    // Seed missing plans; never overwrite administrator settings on restart.
     await client`
       INSERT INTO plans (
         id, code, name, description, duration_months, price_per_month, features,
@@ -302,17 +305,12 @@ export async function initPostgresTables() {
         ),
         (
           'plan-premium', 'premium', 'Paket Premium',
-          'Solusi enterprise: koneksi thermal printer POS, multi-cabang (10 gerai), dan manajemen multi-karyawan kasir.',
-          1, 100000,
-          '["Koneksi Thermal Printer POS (Bluetooth/USB)","Multi-Cabang (Hingga 5 Gerai)","Manajemen Multi-Karyawan & Hak Akses Kasir","Semua Fitur Paket Pro","Prioritas Dukungan Teknis"]',
-          2, 25, 100, 'false', 'true', 2, 10, CURRENT_DATE::text
+          'Solusi enterprise: koneksi thermal printer POS, multi-cabang (5 gerai), dan manajemen multi-karyawan kasir.',
+          1, 200000,
+          '["Cetak Thermal melalui Browser","Multi-Cabang (Hingga 5 Gerai)","Manajemen Multi-Karyawan & Hak Akses Kasir","Semua Fitur Paket Pro","Prioritas Dukungan Teknis"]',
+          5, 25, 100, 'false', 'true', 2, 5, CURRENT_DATE::text
         )
-      ON CONFLICT (code) DO UPDATE SET 
-        name = EXCLUDED.name,
-        price_per_month = EXCLUDED.price_per_month,
-        max_branches = EXCLUDED.max_branches,
-        features = EXCLUDED.features,
-        description = EXCLUDED.description;
+      ON CONFLICT (code) DO NOTHING;
     `;
 
     await client`
@@ -528,6 +526,36 @@ export async function initPostgresTables() {
     `;
 
     // ----------------------------------------------------
+    await client`ALTER TABLE plans ADD COLUMN IF NOT EXISTS promotion_amount DOUBLE PRECISION NOT NULL DEFAULT 0;`;
+    await client`ALTER TABLE plans ADD COLUMN IF NOT EXISTS promotion_starts_at TEXT;`;
+    await client`ALTER TABLE plans ADD COLUMN IF NOT EXISTS promotion_ends_at TEXT;`;
+    await client`ALTER TABLE subscription_invoices ADD COLUMN IF NOT EXISTS promotion_discount_amount DOUBLE PRECISION NOT NULL DEFAULT 0;`;
+    await client`ALTER TABLE subscription_invoices ADD COLUMN IF NOT EXISTS referral_discount_amount DOUBLE PRECISION NOT NULL DEFAULT 0;`;
+    await client`UPDATE subscription_invoices SET referral_discount_amount = discount_amount
+      WHERE promotion_discount_amount = 0 AND referral_discount_amount = 0 AND discount_amount > 0;`;
+    await client`CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());`;
+    await client.begin(async tx => {
+      const applied = await tx`INSERT INTO schema_migrations(name) VALUES ('20261113_premium_pricing') ON CONFLICT DO NOTHING RETURNING name;`;
+      if (applied.length) {
+        await tx`UPDATE plans SET price_per_month = 200000, promotion_amount = 50000, max_branches = 5 WHERE code = 'premium';`;
+        // Preserve existing branch dates; divergent legacy entitlements require operator review.
+      }
+    });
+
+    await client`CREATE TABLE IF NOT EXISTS payment_attempts (
+      id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES subscription_invoices(id),
+      order_id TEXT NOT NULL UNIQUE, transaction_id TEXT UNIQUE, amount DOUBLE PRECISION NOT NULL,
+      status TEXT NOT NULL DEFAULT 'creating', redirect_url TEXT, resolution TEXT,
+      expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+    );`;
+    await client`ALTER TABLE payment_attempts ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IDR';`;
+    await client`CREATE UNIQUE INDEX IF NOT EXISTS one_open_payment_per_invoice ON payment_attempts(invoice_id) WHERE status IN ('creating', 'pending');`;
+    await client`CREATE INDEX IF NOT EXISTS payment_attempts_invoice ON payment_attempts(invoice_id);`;
+    await client`CREATE TABLE IF NOT EXISTS payment_events (
+      id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES payment_attempts(id),
+      provider_status TEXT NOT NULL, created_at TEXT NOT NULL
+    );`;
+
     // Indexes (Idempotent)
     // ----------------------------------------------------
     await client`CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code);`;
@@ -540,8 +568,11 @@ export async function initPostgresTables() {
     await client`CREATE INDEX IF NOT EXISTS idx_wa_messages_tenant ON wa_messages(tenant_id);`;
     await client`CREATE INDEX IF NOT EXISTS idx_ai_messages_conv ON ai_messages(conversation_id);`;
 
+    await migrateProductionV1(client);
+    await migrateInvoiceLifecycle(client);
     console.log("✅ PostgreSQL tables verified/initialized successfully (including v2.0 modules)");
   } catch (err: any) {
-    console.warn("⚠️ PostgreSQL init notice:", err.message);
+    console.error("PostgreSQL initialization failed");
+    throw err;
   }
 }

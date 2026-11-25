@@ -1,3 +1,4 @@
+import { businessDateKey } from "../../../utils/businessDate";
 import React, { useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -49,28 +50,28 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
 }) => {
   // Preset detection for active styling
   const isToday = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = businessDateKey(new Date());
     return startDate === todayStr && endDate === todayStr;
   }, [startDate, endDate]);
 
   const isThisMonth = useMemo(() => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const start = businessDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+    const end = businessDateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     return startDate === start && endDate === end;
   }, [startDate, endDate]);
 
   const isLastMonth = useMemo(() => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+    const start = businessDateKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    const end = businessDateKey(new Date(now.getFullYear(), now.getMonth(), 0));
     return startDate === start && endDate === end;
   }, [startDate, endDate]);
 
   const isThisYear = useMemo(() => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-    const end = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+    const start = businessDateKey(new Date(now.getFullYear(), 0, 1));
+    const end = businessDateKey(new Date(now.getFullYear(), 11, 31));
     return startDate === start && endDate === end;
   }, [startDate, endDate]);
 
@@ -205,8 +206,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             type="button"
             onClick={() => {
               const now = new Date();
-              const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-              const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+              const startMonth = businessDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+              const endMonth = businessDateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0));
               setStartDate(startMonth);
               setEndDate(endMonth);
             }}
@@ -222,8 +223,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             type="button"
             onClick={() => {
               const now = new Date();
-              const startLast = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-              const endLast = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+              const startLast = businessDateKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+              const endLast = businessDateKey(new Date(now.getFullYear(), now.getMonth(), 0));
               setStartDate(startLast);
               setEndDate(endLast);
             }}
@@ -239,8 +240,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             type="button"
             onClick={() => {
               const now = new Date();
-              const startYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-              const endYear = new Date(now.getFullYear(), 11, 31).toISOString().slice(0, 10);
+              const startYear = businessDateKey(new Date(now.getFullYear(), 0, 1));
+              const endYear = businessDateKey(new Date(now.getFullYear(), 11, 31));
               setStartDate(startYear);
               setEndDate(endYear);
             }}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { CashierShift } from "../types";
-import { authHeaders, getAuthToken } from "../utils/api";
+import { authHeaders } from "../utils/api";
 
 export function useCashierShift(tenantId: string | null, userId: string | null) {
   const [currentShift, setCurrentShift] = useState<CashierShift | null>(null);
@@ -9,8 +9,6 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchActiveShift = useCallback(async (tId?: string, uId?: string) => {
-    const token = getAuthToken();
-    if (!token) return null;
 
     const targetTenant = tId || tenantId;
     const targetUser = uId || userId;
@@ -130,7 +128,7 @@ export function useCashierShift(tenantId: string | null, userId: string | null) 
   }, [tenantId]);
 
   useEffect(() => {
-    if (tenantId && userId && getAuthToken()) {
+    if (tenantId && userId) {
       fetchActiveShift();
     } else {
       setCurrentShift(null);

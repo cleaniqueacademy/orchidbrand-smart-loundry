@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { X, Check, Tag, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { api } from "../../../utils/api";
-import { Plan } from "../../../types";
+import { Plan, SubscriptionInvoice } from "../../../types";
 
 interface RenewSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (invoice: SubscriptionInvoice) => void;
   tenantId: string;
+  allowPlanChange?: boolean;
 }
 
 export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
@@ -15,41 +16,65 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   onClose,
   onSuccess,
   tenantId,
+  allowPlanChange = false,
 }) => {
   const [plansList, setPlansList] = useState<Plan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [referralCode, setReferralCode] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [existingInvoice, setExistingInvoice] = useState<SubscriptionInvoice | null>(null);
 
+  const [priceLoading, setPriceLoading] = useState(false);
   const [priceData, setPriceData] = useState<{
     basePrice: number;
     discountAmount: number;
+    promotionDiscountPerMonth?: number;
+    referralDiscountPerMonth?: number;
     finalPrice: number;
-  }>({ basePrice: 60000, discountAmount: 0, finalPrice: 60000 });
+  }>({ basePrice: 0, discountAmount: 0, finalPrice: 0 });
 
   useEffect(() => {
     if (isOpen) {
+      setRequestKey(crypto.randomUUID());
+      setExistingInvoice(null);
       fetchPlans();
     }
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && tenantId) {
-      calculatePrice();
-    }
+    if (!isOpen || !tenantId || !selectedPlanId) return;
+    const controller = new AbortController();
+    setPriceLoading(true);
+    setErrorMsg(null);
+    api.get<{ success: boolean; message?: string; data: typeof priceData }>(
+      `/api/subscription/pricing?tenantId=${encodeURIComponent(tenantId)}&planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`,
+      { signal: controller.signal },
+    ).then(res => {
+      if (controller.signal.aborted) return;
+      if (!res.success) throw new Error(res.message || "Harga tidak tersedia");
+      setPriceData(res.data);
+    }).catch(err => {
+      if (!controller.signal.aborted) setErrorMsg(err.message || "Gagal menghitung harga");
+    }).finally(() => { if (!controller.signal.aborted) setPriceLoading(false); });
+    return () => controller.abort();
   }, [isOpen, selectedPlanId, referralCode, tenantId]);
 
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const res = await api.get<{ success: boolean; data: Plan[] }>("/api/plans/public");
-      if (res.success && res.data.length > 0) {
-        setPlansList(res.data);
-        setSelectedPlanId(res.data[0].id);
-      }
+      const [res, quote] = await Promise.all([
+        api.get<{success:boolean;data:Plan[]}>("/api/plans/public"),
+        api.get<{success:boolean;data:{plan:Plan}}>(`/api/subscription/pricing?tenantId=${encodeURIComponent(tenantId)}`),
+      ]);
+      if (!res.success || !quote.success) throw new Error("Paket tidak tersedia");
+      const eligible=allowPlanChange?res.data:res.data.filter(plan=>plan.id===quote.data.plan.id);
+      setPlansList(eligible);
+      setSelectedPlanId(quote.data.plan.id);
+
     } catch (err) {
       console.error("Gagal mengambil paket:", err);
     } finally {
@@ -57,30 +82,10 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     }
   };
 
-  const calculatePrice = async () => {
-    try {
-      const url = `/api/subscription/pricing?planId=${encodeURIComponent(selectedPlanId)}&referralCode=${encodeURIComponent(referralCode.trim())}`;
-      const res = await api.get<{
-        success: boolean;
-        data: {
-          basePrice: number;
-          discountAmount: number;
-          finalPrice: number;
-        };
-      }>(url);
-
-      if (res.success && res.data) {
-        setPriceData(res.data);
-      }
-    } catch (err) {
-      console.error("Gagal menghitung harga:", err);
-    }
-  };
 
   if (!isOpen) return null;
 
   const originalTotal = priceData.basePrice * durationMonths;
-  const discountTotal = priceData.discountAmount * durationMonths;
   const finalTotal = priceData.finalPrice * durationMonths;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,16 +94,18 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await api.post<{ success: boolean; message?: string }>("/api/subscription/invoices", {
+      const res = await api.post<{ success: boolean; code?: string; message?: string; data?: { invoice: SubscriptionInvoice; reused?: boolean } }>("/api/subscription/invoices", {
         planId: selectedPlanId,
         durationMonths,
+        idempotencyKey: requestKey,
         referralCode: referralCode.trim() || undefined,
       });
 
-      if (res.success) {
-        onSuccess();
+      if (res.success && res.data?.invoice) {
+        onSuccess(res.data.invoice);
         onClose();
       } else {
+        if (res.code === "ACTIVE_INVOICE" && res.data?.invoice) setExistingInvoice(res.data.invoice);
         setErrorMsg(res.message || "Gagal membuat invoice tagihan.");
       }
     } catch (err: any) {
@@ -119,7 +126,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
               <span>Perpanjang Masa Aktif Langganan</span>
             </h3>
             <span className="text-xs text-zinc-500 block mt-0.5">
-              Pilih paket dan durasi langganan untuk outlet Anda
+              Perpanjang paket saat ini. Perubahan Pro/Premium melalui admin; satu periode = 30 hari.
             </span>
           </div>
           <button
@@ -135,7 +142,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{errorMsg}</span>
+              <div><p>{errorMsg}</p>{existingInvoice && <button type="button" className="mt-2 font-semibold underline" onClick={() => { onSuccess(existingInvoice); onClose(); }}>Lanjutkan invoice #{existingInvoice.invoiceNo} ({existingInvoice.durationMonths} periode)</button>}</div>
             </div>
           )}
 
@@ -195,10 +202,10 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { months: 1, label: "1 Bulan" },
-                { months: 3, label: "3 Bulan" },
-                { months: 6, label: "6 Bulan" },
-                { months: 12, label: "1 Tahun" },
+                { months: 1, label: "1 periode (30 hari)" },
+                { months: 3, label: "3 periode (90 hari)" },
+                { months: 6, label: "6 periode (180 hari)" },
+                { months: 12, label: "12 periode (360 hari)" },
               ].map((item) => (
                 <button
                   key={item.months}
@@ -236,18 +243,14 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
           {/* Ringkasan Biaya Tagihan */}
           <div className="p-3.5 sm:p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2 text-xs">
             <div className="flex justify-between text-zinc-600">
-              <span>Subtotal ({durationMonths} Bulan)</span>
+              <span>Subtotal ({durationMonths} periode (30 hari))</span>
               <span className="font-semibold text-zinc-900">
                 Rp {originalTotal.toLocaleString("id-ID")}
               </span>
             </div>
 
-            {discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-700 font-semibold">
-                <span>Diskon Promo</span>
-                <span>- Rp {discountTotal.toLocaleString("id-ID")}</span>
-              </div>
-            )}
+            {(priceData.promotionDiscountPerMonth ?? 0) > 0 && <div className="flex justify-between text-emerald-700"><span>Potongan promo</span><span>- Rp {((priceData.promotionDiscountPerMonth ?? 0) * durationMonths).toLocaleString("id-ID")}</span></div>}
+            {(priceData.referralDiscountPerMonth ?? 0) > 0 && <div className="flex justify-between text-emerald-700"><span>Potongan referral (setelah promo)</span><span>- Rp {((priceData.referralDiscountPerMonth ?? 0) * durationMonths).toLocaleString("id-ID")}</span></div>}
 
             <div className="pt-2 border-t border-zinc-200 flex justify-between items-baseline font-bold text-sm text-zinc-900">
               <span>Total Tagihan</span>
@@ -268,11 +271,11 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || priceLoading || !!errorMsg || !selectedPlanId}
               className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>Buat Tagihan Pembayaran</span>
+              <span>Lanjut pilih pembayaran</span>
             </button>
           </div>
         </form>

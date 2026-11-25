@@ -249,10 +249,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onNavigateToSettings,
 }) => {
   const toast = useToast();
-  const { config: printerConfig, connectPrinter, isConnecting } = useThermalPrinter();
+  const { config: printerConfig } = useThermalPrinter();
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">(printerConfig.paperWidth || "58mm");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   // Sync paper width with configured setting
@@ -315,14 +316,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handlePrint = () => {
-    if (printerConfig.requireConnectedBeforePrint && !printerConfig.isConnected) {
-      toast.warning(
-        "Printer Thermal Belum Terhubung!",
-        "Mencoba menyambungkan printer thermal..."
-      );
-      handleQuickConnect();
-      return;
-    }
+    if (tenant?.tier !== "premium") { toast.error("Cetak thermal memerlukan Premium", "Hubungi admin untuk perubahan paket."); return; }
 
     try {
       const doc = generateReceiptPdf(order, activeTenant, paperWidth, qrDataUrl);
@@ -355,26 +349,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       };
     } catch (_) {
       window.print();
-    }
-  };
-
-  const handleQuickConnect = async () => {
-    try {
-      const res = await connectPrinter(
-        printerConfig.connectionType,
-        printerConfig.deviceName,
-        paperWidth
-      );
-      if (res.success) {
-        toast.success(
-          "Printer Thermal Terhubung!",
-          `${res.deviceName} siap mencetak struk.`
-        );
-      } else {
-        toast.error("Koneksi Gagal", res.error || "Gagal menyambungkan ke printer.");
-      }
-    } catch (err: any) {
-      toast.error("Gagal", err.message);
     }
   };
 
@@ -439,7 +413,6 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
     });
   };
 
-  const [isSendingViaBaileys, setIsSendingViaBaileys] = useState(false);
 
   const getReceiptText = () => {
     const formatReceiptPaymentMethod = (method?: string) => {
@@ -597,41 +570,7 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
             </button>
           </div>
 
-          {/* Thermal Printer Connection Status Banner */}
-          {printerConfig.isConnected ? (
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs mb-3.5">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="font-semibold text-emerald-300">Printer Thermal:</span>
-                <span className="text-zinc-200 font-medium">
-                  {printerConfig.deviceName} ({printerConfig.paperWidth})
-                </span>
-              </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-mono uppercase font-semibold">
-                {printerConfig.connectionType}
-              </span>
-            </div>
-          ) : (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs mb-3.5 space-y-2">
-              <div className="flex items-start gap-2.5">
-                <Crown className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-amber-200">Printer Thermal POS</p>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Paket Premium • Coming Soon
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-amber-300/80 leading-relaxed mt-1">
-                    Koneksi Bluetooth/USB Thermal Printer eksklusif hadir pada Paket Premium. Anda tetap dapat mencetak struk kasir melalui cetak browser / nota digital.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <p className="text-xs text-zinc-400 mb-3">Cetak thermal tersedia pada Premium melalui dialog browser. Pilih ukuran kertas 58 mm atau 80 mm.</p>
 
           {/* Paper Width Selector */}
           <div className="flex items-center justify-between bg-zinc-800/80 p-2 rounded-xl mb-4 text-xs">
@@ -929,17 +868,14 @@ Terima kasih telah mempercayakan pakaian Anda kepada Laundry Cleanique!`;
               <button
                 type="button"
                 onClick={handlePrint}
+                disabled={tenant?.tier !== "premium"}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer ${
-                  printerConfig.requireConnectedBeforePrint && !printerConfig.isConnected
-                    ? "bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40"
-                    : "bg-blue-600 hover:bg-blue-500 text-white"
+                  "bg-blue-600 hover:bg-blue-500 text-white"
                 }`}
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>
-                  {printerConfig.requireConnectedBeforePrint && !printerConfig.isConnected
-                    ? "Perlu Sambung Printer"
-                    : "Cetak Struk"}
+                  Cetak Struk
                 </span>
               </button>
             </div>

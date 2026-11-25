@@ -2,10 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: cleanique_postgres
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
       POSTGRES_DB: ${POSTGRES_DB:-cleanique_laundry}
     volumes:
       - cleanique_postgres_data:/var/lib/postgresql/data
@@ -19,21 +24,39 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: backend/Dockerfile.prod
     container_name: cleanique_backend
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       - PORT=5000
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/${POSTGRES_DB:-cleanique_laundry}
-      - JWT_SECRET=${JWT_SECRET:-cleanique_super_secret_jwt_key_2026}
+      - APP_ORIGIN=${APP_ORIGIN:?APP_ORIGIN required}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@postgres:5432/${POSTGRES_DB:-cleanique_laundry}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET required}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - AIVENE_API_KEY=${AIVENE_API_KEY:-}
+      - TRUST_PROXY=true
+      - UPLOADS_DIR=/app/backend/data/uploads
+      - WA_SESSIONS_DIR=/app/backend/data/wa_sessions
+      - MIDTRANS_ENABLED=${MIDTRANS_ENABLED:-false}
+      - MIDTRANS_IS_PRODUCTION=${MIDTRANS_IS_PRODUCTION:-false}
+      - MIDTRANS_SERVER_KEY=${MIDTRANS_SERVER_KEY:-}
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:5000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     volumes:
       # Sesi WhatsApp Baileys & Uploads wajib persisten agar tidak hilang saat restart
-      - cleanique_wa_sessions:/app/auth_info_baileys
-      - cleanique_uploads_data:/app/data/uploads
+      - cleanique_wa_sessions:/app/backend/data/wa_sessions
+      - cleanique_uploads_data:/app/backend/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,15 +65,26 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: frontend/Dockerfile.prod
     container_name: cleanique_frontend
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       # Port aplikasi web di VPS (default port 8081, diproxy oleh Nginx reverse proxy host)
-      - "${APP_PORT:-8081}:80"
+      - "127.0.0.1:${APP_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - cleanique_net
 

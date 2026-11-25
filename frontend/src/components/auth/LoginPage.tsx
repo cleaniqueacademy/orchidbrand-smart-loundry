@@ -153,9 +153,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      if (data.token) {
-        localStorage.setItem("cleanique_token", data.token);
-      }
+      localStorage.removeItem("cleanique_token");
+      sessionStorage.removeItem("cleanique_token");
 
       setSuccessMessage("Berhasil masuk! Membuka ruang kerja Anda...");
       window.setTimeout(() => {

@@ -21,7 +21,7 @@ import {
   Building2,
   Crown,
 } from "lucide-react";
-import { Tenant, User, AccountTier, isFeatureAccessible } from "../../types";
+import { Tenant, User, AccountTier, ACCOUNT_TIERS, isFeatureAccessible } from "../../types";
 import { useToast } from "../common/ToastContext";
 import WhatsAppIcon from "../common/WhatsAppIcon";
 import { EditProfileModal } from "../modals/EditProfileModal";
@@ -32,6 +32,7 @@ import { BranchManagementSection } from "./BranchManagementSection";
 import { PremiumFeatureLock } from "../common/PremiumFeatureLock";
 
 interface SettingsTabProps {
+  onSelectBranch?: (id: string) => void;
   tenant?: Tenant | null;
   currentUser?: User | null;
   currentUserRole?: string;
@@ -92,6 +93,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onOpenWhatsAppModal,
   waStatus = "disconnected",
   setActiveTab,
+  onSelectBranch,
 }) => {
   const toast = useToast();
   type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "cabang";
@@ -113,6 +115,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const isStaffLocked = !isFeatureAccessible(effectiveTier, "employee_management");
   const isPrinterLocked = !isFeatureAccessible(effectiveTier, "thermal_printer");
   const isBranchLocked = !isFeatureAccessible(effectiveTier, "branch_management");
+  const learnMoreSubscription = ACCOUNT_TIERS.premium.isComingSoon ? undefined : () => setActiveTab && setActiveTab("subscription");
 
   const [ownerName, setOwnerName] = useState(currentUser?.name || "");
   const [outletName, setOutletName] = useState(tenant?.outletName || resolvedTenant?.outletName || "");
@@ -613,7 +616,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <PremiumFeatureLock
             feature="employee_management"
             isLocked={isStaffLocked}
-            onLearnMore={() => setActiveTab && setActiveTab("subscription")}
+            onLearnMore={learnMoreSubscription}
           >
             <div className="space-y-5">
               {/* Card Toggle Fitur Shift Kasir & Rekonsiliasi Laci */}
@@ -682,7 +685,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <PremiumFeatureLock
           feature="thermal_printer"
           isLocked={isPrinterLocked}
-          onLearnMore={() => setActiveTab && setActiveTab("subscription")}
+          onLearnMore={learnMoreSubscription}
         >
           <ThermalPrinterSettingsSection
             outletName={displayOutletName}
@@ -695,9 +698,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       {/* === TAB: MANAJEMEN CABANG === */}
       {settingsTab === "cabang" && (
         <BranchManagementSection
+          onSelectBranch={onSelectBranch}
           currentTenant={resolvedTenant || tenant}
           isLocked={isBranchLocked}
-          onLearnMore={() => setActiveTab && setActiveTab("subscription")}
+          onLearnMore={learnMoreSubscription}
         />
       )}
 

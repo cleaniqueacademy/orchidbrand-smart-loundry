@@ -4,6 +4,8 @@ import { platformSettings } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
+import { loadPlatformQris } from "../services/subscriptionQris";
+import { QrisCheckoutError } from "../services/qrisPayload";
 
 const platformSettingsRoutes = new Hono();
 
@@ -25,23 +27,18 @@ platformSettingsRoutes.get("/public", async (c) => {
       });
     }
 
-    const defaultQris = "/qris.png";
-    const currentQris = settings.qrisInfo && !settings.qrisInfo.includes("qris-official.png")
-      ? settings.qrisInfo
-      : defaultQris;
-
     return c.json({
       success: true,
       data: {
         platformName: settings.platformName,
         platformLogo: settings.platformLogo,
-        bankName: settings.bankName || "BCA (Bank Central Asia)",
-        bankAccountNumber: settings.bankAccountNumber || "8830-1928-3341",
-        bankAccountName: settings.bankAccountName || "PT CLEANIQUE SISTEM DIGITAL",
-        qrisInfo: currentQris,
-        ewalletName: settings.ewalletName || "DANA / GoPay / OVO",
-        ewalletNumber: settings.ewalletNumber || "0812-2340-6368",
-        ewalletAccountName: settings.ewalletAccountName || "PT CLEANIQUE SISTEM DIGITAL",
+        bankName: settings.bankName,
+        bankAccountNumber: settings.bankAccountNumber,
+        bankAccountName: settings.bankAccountName,
+        qrisInfo: settings.qrisInfo,
+        ewalletName: settings.ewalletName,
+        ewalletNumber: settings.ewalletNumber,
+        ewalletAccountName: settings.ewalletAccountName,
         defaultTrialDays: settings.defaultTrialDays,
         supportPhone: settings.supportPhone,
         supportEmail: settings.supportEmail,
@@ -82,11 +79,6 @@ platformSettingsRoutes.get("/", requireRole(["superadmin"]), async (c) => {
       settings = created;
     }
 
-    if (settings) {
-      if (!settings.qrisInfo || settings.qrisInfo.includes("qris-official.png")) {
-        settings.qrisInfo = "/qris.png";
-      }
-    }
 
     return c.json({ success: true, data: settings });
   } catch (err: any) {
@@ -104,6 +96,16 @@ platformSettingsRoutes.put("/", requireRole(["superadmin"]), async (c) => {
     let [existing] = await db.select().from(platformSettings).limit(1);
 
     const nowIso = new Date().toISOString();
+    if (body.qrisInfo !== undefined && body.qrisInfo !== null && typeof body.qrisInfo !== "string") {
+      return c.json({ success: false, message: "Lokasi gambar QRIS tidak valid." }, 422);
+    }
+    if (body.qrisInfo && body.qrisInfo !== existing?.qrisInfo) {
+      try { await loadPlatformQris(body.qrisInfo); }
+      catch (error) {
+        if (error instanceof QrisCheckoutError) return c.json({ success: false, message: error.message }, error.status);
+        throw error;
+      }
+    }
 
     const updates: Partial<typeof platformSettings.$inferInsert> = {
       platformName: body.platformName !== undefined ? String(body.platformName).trim() : existing?.platformName,

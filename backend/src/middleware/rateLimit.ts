@@ -26,7 +26,7 @@ setInterval(() => {
       rateLimitStore.delete(key);
     }
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref();
 
 export function rateLimit(options: RateLimitOptions = {}) {
   const windowMs = options.windowMs ?? 60 * 1000;
@@ -35,13 +35,8 @@ export function rateLimit(options: RateLimitOptions = {}) {
     options.message ?? "Terlalu banyak permintaan, silakan coba lagi beberapa saat lagi.";
 
   return async (c: Context, next: Next) => {
-    // Ekstraksi IP klien
-    let ip =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-      c.req.header("x-real-ip") ||
-      c.req.header("cf-connecting-ip") ||
-      "127.0.0.1";
-
+    // Only the isolated reverse proxy may supply this header. Direct backend ports stay private.
+    const ip = process.env.TRUST_PROXY === "true" ? (c.req.header("x-real-ip") || "unknown-proxy") : "direct-client";
     const key = options.keyGenerator
       ? options.keyGenerator(c)
       : `${ip}:${c.req.path}`;

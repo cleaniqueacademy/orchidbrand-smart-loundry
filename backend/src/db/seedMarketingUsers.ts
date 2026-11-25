@@ -191,63 +191,21 @@ export interface SeededMarketingUser {
   password: string;
 }
 
-export async function seedMarketingUsers(): Promise<SeededMarketingUser[]> {
-  console.log("Memulai pembaruan 17 akun Tim Marketing IndoTech Cleanique (Randomized Passwords)...");
+export async function seedMarketingUsers(executor: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db): Promise<SeededMarketingUser[]> {
+  if (process.env.NODE_ENV === "production" || process.env.ALLOW_DEMO_RESET !== "yes-local-only") throw new Error("Seeder marketing hanya untuk database demo lokal kosong.");
   const today = new Date().toISOString();
   const seededResults: SeededMarketingUser[] = [];
-
-  // 1. DROP SEMUA USER MARKETING DAN KODE REFERRAL SEBELUMNYA (TERMASUK CLEANHEMAT)
-  try {
-    const existingMktUsers = await db.select().from(users).where(eq(users.role, "marketing"));
-    const mktUserIds = existingMktUsers.map((u) => u.id);
-
-    console.log(`Menghapus ${mktUserIds.length} akun marketing lama...`);
-
-    // Hapus semua data riwayat komisi dan kode referral lama
-    const oldCodes = await db.select().from(referralCodes);
-
-    for (const c of oldCodes) {
-      await db.delete(referralCodeTenants).where(eq(referralCodeTenants.referralCodeId, c.id));
-      await db.delete(referralEvents).where(eq(referralEvents.referralCodeId, c.id));
-      await db.delete(marketingCommissions).where(eq(marketingCommissions.referralCodeId, c.id));
-      await db.delete(referralCodes).where(eq(referralCodes.id, c.id));
-    }
-
-    for (const uid of mktUserIds) {
-      const profs = await db.select().from(marketingProfiles).where(eq(marketingProfiles.userId, uid));
-      for (const p of profs) {
-        await db.delete(marketingCommissions).where(eq(marketingCommissions.marketingProfileId, p.id));
-      }
-      await db.delete(marketingProfiles).where(eq(marketingProfiles.userId, uid));
-    }
-
-    // Hapus profil platform lama jika ada
-    await db.delete(marketingProfiles).where(eq(marketingProfiles.id, "mkt-prof-platform"));
-
-    // Bersihkan referensi marketingUserId di users lain jika ada
-    await db.update(users).set({ marketingUserId: null });
-
-    // Hapus user marketing lama
-    for (const uid of mktUserIds) {
-      await db.delete(users).where(eq(users.id, uid));
-    }
-
-    console.log("✅ Berhasil drop semua user marketing dan kode referral lama.");
-  } catch (err: any) {
-    console.warn("Notice saat membersihkan marketing users:", err.message);
-  }
-
-  // 2. INSERT 17 MITRA MARKETING BARU (DENGAN RANDOM PASSWORD INDIVIDUAL)
+  if ((await executor.select({ id: users.id }).from(users).where(eq(users.role, "marketing")).limit(1)).length) throw new Error("Akun marketing sudah ada; seeder tidak menghapus data lama.");
   for (const item of MARKETING_SEEDS) {
     const userId = item.userId;
     const profileId = `mkt-prof-${item.slug}`;
     const codeId = `ref-code-${item.slug}`;
 
-    const rawPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(10);
-    const passwordHash = await Bun.password.hash(rawPassword, { algorithm: "bcrypt", cost: 10 });
+    const rawPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(16);
+    const passwordHash = await Bun.password.hash(rawPassword, { algorithm: "bcrypt", cost: 12 });
 
     // Insert User
-    await db.insert(users).values({
+    await executor.insert(users).values({
       id: userId,
       name: item.name,
       email: item.email,
@@ -258,7 +216,7 @@ export async function seedMarketingUsers(): Promise<SeededMarketingUser[]> {
     });
 
     // Insert Marketing Profile
-    await db.insert(marketingProfiles).values({
+    await executor.insert(marketingProfiles).values({
       id: profileId,
       userId: userId,
       phone: item.phone,
@@ -273,11 +231,11 @@ export async function seedMarketingUsers(): Promise<SeededMarketingUser[]> {
     });
 
     // Insert Referral Code (6 Karakter Random Huruf & Angka Kapital)
-    await db.insert(referralCodes).values({
+    await executor.insert(referralCodes).values({
       id: codeId,
       code: item.code,
       name: `Kode Referral ${item.name}`,
-      description: `Diskon Rp 5.000 per bulan dari harga normal Rp 60.000. Komisi Rp 5.000/bulan untuk ${item.name}.`,
+      description: `Diskon referral Rp5.000 per periode setelah promo; komisi Rp5.000 per periode.`,
       discountType: "fixed",
       discountValue: 5000,
       commissionType: "fixed",
@@ -299,7 +257,7 @@ export async function seedMarketingUsers(): Promise<SeededMarketingUser[]> {
       password: rawPassword,
     });
 
-    console.log(`+ [Kode: ${item.code}] ${item.name} (${item.email} / ${rawPassword})`);
+
   }
 
   console.log("✅ Berhasil men-generate 17 akun mitra marketing dengan random password & kode referral 6 karakter.");
@@ -313,7 +271,7 @@ if (import.meta.main) {
       process.exit(0);
     })
     .catch((err) => {
-      console.error("Gagal:", err);
+      console.error("[seed-marketing] gagal; tidak ada kredensial dicetak");
       process.exit(1);
     });
 }

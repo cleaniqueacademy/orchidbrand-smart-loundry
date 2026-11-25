@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Upload, AlertCircle, Loader2, Zap } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { api, uploadFile } from "../../../utils/api";
@@ -18,11 +18,12 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
   onSuccess,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [manualUrl, setManualUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(()=>()=>{if(previewUrl?.startsWith("blob:"))URL.revokeObjectURL(previewUrl);},[previewUrl]);
+  useEffect(()=>{if(isOpen){setSelectedFile(null);setPreviewUrl(null);setErrorMsg(null);}},[isOpen,invoice?.id]);
   if (!isOpen || !invoice) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,8 +43,8 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile && !manualUrl.trim()) {
-      setErrorMsg("Harap pilih foto bukti transfer atau masukkan tautan bukti.");
+    if (!selectedFile) {
+      setErrorMsg("Pilih berkas bukti transfer untuk penyimpanan privat.");
       return;
     }
 
@@ -51,7 +52,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
     setErrorMsg(null);
 
     try {
-      let finalProofUrl = manualUrl.trim();
+      let finalProofUrl = "";
 
       if (selectedFile) {
         const uploadRes = await uploadFile(selectedFile, "payments");
@@ -117,11 +118,11 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
             <div className="border-2 border-dashed border-zinc-200 hover:border-blue-500 rounded-xl p-5 text-center transition-all bg-zinc-50/50">
               {previewUrl ? (
                 <div className="space-y-3">
-                  <img
+                  {selectedFile?.type === "application/pdf" ? <p className="text-sm">PDF: {selectedFile.name}</p> : <img
                     src={previewUrl}
                     alt="Preview Bukti"
                     className="max-h-48 mx-auto rounded-xl shadow-xs border border-zinc-200 object-contain"
-                  />
+                  />}
                   <button
                     type="button"
                     onClick={() => {
@@ -142,7 +143,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
                     Klik untuk pilih gambar
                   </span>
                   <span className="text-[11px] text-zinc-400 mt-0.5">
-                    Format JPG, PNG, atau WEBP (maks. 5MB)
+                    Format JPG, PNG, WEBP, atau PDF (maks. 5MB)
                   </span>
                   <input
                     type="file"
@@ -153,25 +154,6 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
                 </label>
               )}
             </div>
-          </div>
-
-          {/* Atau Masukkan URL Gambar */}
-          <div>
-            <label className="block text-xs font-bold text-zinc-800 mb-1">
-              Atau Tautan Gambar (Opsional)
-            </label>
-            <input
-              type="url"
-              placeholder="https://..."
-              value={manualUrl}
-              onChange={(e) => {
-                setManualUrl(e.target.value);
-                if (!selectedFile) {
-                  setPreviewUrl(e.target.value || null);
-                }
-              }}
-              className="w-full px-3.5 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
-            />
           </div>
 
           <div className="pt-2 flex items-center justify-between gap-2.5">

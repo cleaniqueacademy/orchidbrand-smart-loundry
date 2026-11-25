@@ -32,6 +32,7 @@ export interface OrderItem {
 }
 
 export interface Order {
+  paidAt?: string | null;
   id: string;
   tenantId: string;
   customerId?: string;
@@ -184,6 +185,8 @@ export interface LaundryService {
 }
 
 export interface Tenant {
+  archivedAt?: string | null;
+  suspendedAt?: string | null;
   id: string;
   userId?: string;
   outletName: string;
@@ -363,6 +366,10 @@ export interface Plan {
   description?: string | null;
   durationMonths: number;
   pricePerMonth: number;
+  promotionAmount?: number;
+  promotionStartsAt?: string | null;
+  promotionEndsAt?: string | null;
+  maxBranches?: number;
   features?: string[] | string;
   maxWaNumbers: number;
   maxStaff: number;
@@ -415,6 +422,12 @@ export interface SignupRequest {
 }
 
 export interface SubscriptionInvoice {
+  qrisIssuedAt?: string | null;
+  invalidatedAt?: string | null;
+  invalidationReason?: string | null;
+  expiresAt?: string | null;
+  activationStatus?: string;
+  activationReason?: string | null;
   id: string;
   invoiceNo: string;
   tenantId: string;
@@ -424,8 +437,10 @@ export interface SubscriptionInvoice {
   durationMonths: number;
   originalAmount: number;
   discountAmount: number;
+  promotionDiscountAmount?: number;
+  referralDiscountAmount?: number;
   finalAmount: number;
-  status: "unpaid" | "pending_verification" | "paid" | "rejected" | "cancelled";
+  status: "unpaid" | "pending_verification" | "paid" | "rejected" | "cancelled" | "expired" | "review_required";
   paymentProofUrl?: string | null;
   paymentProofUploadedAt?: string | null;
   verifiedByUserId?: string | null;
@@ -441,6 +456,7 @@ export interface SubscriptionInvoice {
 }
 
 export interface SubscriptionSummary {
+  tier?: string;
   tenantId: string;
   outletName: string;
   isTrial: boolean;
@@ -448,6 +464,7 @@ export interface SubscriptionSummary {
   subscriptionUntil: string | null;
   daysRemaining: number;
   status: string;
+  premiumComingSoon?: boolean;
   referralCodeUsed?: string | null;
   pendingInvoice?: SubscriptionInvoice | null;
   platformBank?: {
@@ -521,13 +538,13 @@ export const ACCOUNT_TIERS = {
     badgeLabel: "Premium",
     description: "Solusi enterprise multi-cabang, delegasi staf kasir & printer thermal bluetooth",
     highlightFeature: "Multi-Cabang • Kelola Karyawan • Printer Thermal POS",
-    pricePerMonth: 100000,
+    pricePerMonth: 200000,
     canConnectThermalPrinter: true,
     canManageEmployees: true,
     canManageMultipleBranches: true,
-    maxBranches: 10,
+    maxBranches: 5,
     maxStaff: 25,
-    isComingSoon: true, // Saat ini berstatus Coming Soon
+    isComingSoon: true,
   },
 } as const satisfies Record<AccountTier, TierDefinition>;
 
@@ -542,17 +559,17 @@ export interface PremiumFeatureMeta {
   readonly subtitle: string;
   readonly badge: string;
   readonly capabilities: readonly string[];
-  readonly releaseStatus: "coming_soon" | "in_development";
+  readonly releaseStatus: "available" | "coming_soon" | "in_development";
 }
 
 export const PREMIUM_FEATURES_REGISTRY = {
   thermal_printer: {
     key: "thermal_printer",
     title: "Koneksi Thermal Printer POS",
-    subtitle: "Cetak nota kasir instan via Bluetooth / USB Thermal Printer (58mm / 80mm)",
+    subtitle: "Cetak nota melalui browser ke printer sistem operasi (58mm / 80mm)",
     badge: "Paket Premium • Coming Soon",
     capabilities: [
-      "Koneksi instan Web Bluetooth & USB Serial ke printer kasir",
+      "Cetak melalui dialog browser dan driver printer sistem operasi",
       "Kustomisasi format header, footer, & QRIS pada struk kasir",
       "Cetak nota 1-klik langsung dari modal checkout pesanan kasir",
     ],
@@ -594,7 +611,7 @@ export function isFeatureAccessible(
 ): boolean {
   if (!tier) return false;
   const config = ACCOUNT_TIERS[tier];
-  if (!config) return false;
+  if (!config || config.isComingSoon) return false;
 
   switch (feature) {
     case "thermal_printer":

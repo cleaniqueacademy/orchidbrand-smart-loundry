@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   Plus,
+  Printer,
   Phone,
   Edit3,
   Trash2,
@@ -402,6 +403,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       align: "right",
       cell: (order) => (
         <div className="flex items-center justify-end gap-1.5">
+          <button type="button" onClick={() => onOpenReceiptModal(order)} title="Lihat / Cetak Nota" aria-label={`Lihat / Cetak Nota ${order.invoiceNo}`} className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-700 hover:bg-blue-50 border border-zinc-200 transition"><Printer className="w-3.5 h-3.5" /></button>
           {/* Edit Data Pesanan (Khusus Operasional Kasir) */}
           {!isSuperAdmin && (
             order.status === "completed" ? (

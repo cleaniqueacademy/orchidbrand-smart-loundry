@@ -112,7 +112,7 @@ export const PWAInstallPrompt: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
-      const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_token");
+      const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_auth_user");
 
       // Jangan tampilkan jika sudah di-dismiss, sudah di-install, atau sedang di auth publik
       if (checkIsDismissed() || checkIsInstalled() || isPublicAuth) {
@@ -145,7 +145,7 @@ export const PWAInstallPrompt: React.FC = () => {
 
     // 5. Timer fallback untuk memunculkan notifikasi di browser tanpa event beforeinstallprompt (misal Safari iOS)
     let fallbackTimer: any = null;
-    const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_token");
+    const isPublicAuth = isAuthRoute() && !localStorage.getItem("cleanique_auth_user");
 
     if (!checkIsDismissed() && !checkIsInstalled() && !isPublicAuth) {
       fallbackTimer = setTimeout(() => {
@@ -202,7 +202,7 @@ export const PWAInstallPrompt: React.FC = () => {
   }
 
   // Jika sedang di halaman login / register publik dan tidak sedang membuka modal panduan manual, jangan render popup
-  const isPublicAuthPage = isAuthRoute() && !localStorage.getItem("cleanique_token");
+  const isPublicAuthPage = isAuthRoute() && !localStorage.getItem("cleanique_auth_user");
 
   if (isPublicAuthPage && !showGuideModal) {
     return null;
