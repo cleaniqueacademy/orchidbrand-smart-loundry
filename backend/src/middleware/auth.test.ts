@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { signToken, verifyToken, authMiddleware, getUser } from "./auth";
+import { normalizeSingleOrigin } from "../services/sessions";
 import { Hono } from "hono";
 
 describe("auth middleware & token helpers", () => {
@@ -106,5 +107,13 @@ describe("auth middleware & token helpers", () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.success).toBe(false);
+  });
+
+  it("normalizeSingleOrigin menerima header Origin duplikat yang identik dari proxy tetapi menolak origin berbeda", () => {
+    expect(normalizeSingleOrigin("https://app.laundrycleanique.com")).toBe("https://app.laundrycleanique.com");
+    expect(normalizeSingleOrigin("https://app.laundrycleanique.com, https://app.laundrycleanique.com")).toBe("https://app.laundrycleanique.com");
+    expect(normalizeSingleOrigin("https://evil.example, https://app.laundrycleanique.com")).toBeNull();
+    expect(normalizeSingleOrigin("https://app.laundrycleanique.com, ")).toBeNull();
+    expect(normalizeSingleOrigin(undefined)).toBeNull();
   });
 });

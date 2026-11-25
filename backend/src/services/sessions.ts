@@ -33,10 +33,19 @@ export async function resolveSession(c: Context) {
   if (!user || user.authVersion !== session.authVersion) return null;
   return { user, session };
 }
+export function normalizeSingleOrigin(raw?: string): string | null {
+  if (!raw) return null;
+  const parts = raw.split(",").map(part => part.trim());
+  if (!parts.length || parts.some(part => !part)) return null;
+  return new Set(parts).size === 1 ? parts[0] : null;
+}
+
 export function validRequestOrigin(c: Context) {
-  const origin = c.req.header("Origin");
-  if (config.production) return origin === config.origin;
-  if (!origin) return true; // Non-browser integration clients still require a session-bound CSRF token.
+  const raw = c.req.header("Origin");
+  if (config.production) return normalizeSingleOrigin(raw) === config.origin;
+  if (!raw) return true; // Non-browser integration clients still require a session-bound CSRF token.
+  const origin = normalizeSingleOrigin(raw);
+  if (!origin) return false;
   try { const parsed = new URL(origin); return parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname); } catch { return false; }
 }
 export function validCsrf(c: Context, hash: string) {

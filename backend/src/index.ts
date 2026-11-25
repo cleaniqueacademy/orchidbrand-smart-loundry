@@ -8,7 +8,7 @@ import { localMaintenanceActive } from "./services/localMaintenance";
 import { Hono, type Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
-import { issueSession, revokeSession, validRequestOrigin } from "./services/sessions";
+import { issueSession, normalizeSingleOrigin, revokeSession, validRequestOrigin } from "./services/sessions";
 import { today } from "./utils/date";
 import { secureHeaders } from "hono/secure-headers";
 import { config } from "./config";
@@ -82,7 +82,10 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: config.origin,
+    origin: (rawOrigin) => {
+      if (config.origin === "*") return "*";
+      return normalizeSingleOrigin(rawOrigin) === config.origin ? config.origin : null;
+    },
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "X-CSRF-Token", "X-Tenant-Id"],
     credentials: true,
