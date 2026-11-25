@@ -83,9 +83,6 @@ export const PlatformSettingsTab: React.FC = () => {
       const res = await api.get<{ success: boolean; data: PlatformSettings }>("/api/platform-settings");
       if (res.success && res.data) {
         const sanitized = { ...res.data };
-        if (!sanitized.qrisInfo || sanitized.qrisInfo.includes("qris-official.png")) {
-          sanitized.qrisInfo = "/qris.png";
-        }
         setFormData(sanitized);
       }
     } catch (err) {
@@ -273,11 +270,12 @@ export const PlatformSettingsTab: React.FC = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Contoh: /qris.png atau tautan Google Drive / URL Gambar"
+                placeholder="Unggah gambar QRIS statis merchant platform"
                 value={formData.qrisInfo || ""}
                 onChange={(e) => setFormData({ ...formData, qrisInfo: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
+              <p className="mt-2 text-xs text-slate-600">QRIS Saurus membaca gambar QRIS statis ini untuk membuat QR bernominal sesuai invoice. Gunakan upload PNG, JPG, atau WEBP; tautan gambar eksternal tidak didukung untuk pembuatan QR.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-0.5">

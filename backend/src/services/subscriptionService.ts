@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { db } from "../db/index";
+import { ActiveInvoiceError, bindInvoiceRequest, blockingOwnerInvoice, expireOwnerInvoices, expireOwnerInvoicesTx, invoiceEvent, invoiceFunds, lockBillingOwner } from "./invoiceLifecycle";
 import {
   tenants,
   users,
@@ -13,6 +15,8 @@ import {
   storedFiles,
   referralAssignments,
   marketingProfiles,
+  manualPaymentReceipts,
+  invoiceRequestKeys,
 } from "../db/schema";
 import { eq, desc, and, sql, isNull, inArray } from "drizzle-orm";
 import { newId } from "../utils/id";
@@ -51,6 +55,7 @@ export interface SubscriptionSummary {
 export async function getSubscriptionSummary(tenantId: string): Promise<SubscriptionSummary | null> {
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   if (!tenant) return null;
+  await expireOwnerInvoices(tenant.userId);
 
   const [owner] = await db.select().from(users).where(eq(users.id, tenant.userId));
   const subUntil = owner?.subscriptionUntil || tenant.subscriptionUntil || null;
@@ -65,7 +70,7 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
     .orderBy(desc(subscriptionInvoices.createdAt));
 
   const pendingInvoice =
-    invoices.find((inv) => inv.status === "pending_verification" || inv.status === "unpaid") || null;
+    invoices.find(inv => ["unpaid", "rejected", "pending_verification", "review_required"].includes(inv.status) || (inv.status === "paid" && !["active", "refunded"].includes(inv.activationStatus))) || null;
 
   // Ambil informasi rekening platform
   const [settings] = await db.select().from(platformSettings).limit(1);
@@ -196,14 +201,24 @@ export async function createSubscriptionInvoice(params: {
   idempotencyKey?: string;
 }) {
   const months = params.durationMonths ?? 1;
+  const fingerprint = createHash("sha256").update(JSON.stringify({ branch: params.tenantId, months, plan: params.planId || null, referral: params.referralCode?.trim().toUpperCase() || null })).digest("hex");
   if (![1,3,6,12].includes(months)) throw new Error("Durasi hanya 1, 3, 6, atau 12 periode 30 hari");
   return db.transaction(async tx => {
     const [branch] = await tx.select().from(tenants).where(eq(tenants.id, params.tenantId));
     const [actor] = await tx.select().from(users).where(eq(users.id, params.userId));
     if (!branch || !actor || !["tenant_owner","superadmin"].includes(actor.role) || actor.status !== "active" || actor.archivedAt || actor.suspendedAt || (actor.role !== "superadmin" && branch.userId !== actor.id)) throw new Error("Akses tagihan ditolak");
+    await lockBillingOwner(tx, branch.userId);
+    await expireOwnerInvoicesTx(tx, branch.userId);
     const [owner] = await tx.select().from(users).where(eq(users.id, branch.userId)).for("update");
     if (!owner || owner.archivedAt || owner.suspendedAt || owner.status !== "active") throw new Error("Owner diblokir atau diarsipkan");
     if (params.idempotencyKey) {
+      const [binding] = await tx.select().from(invoiceRequestKeys).where(eq(invoiceRequestKeys.requestKey, params.idempotencyKey));
+      if (binding) {
+        if (binding.fingerprint !== fingerprint) throw new Error("Idempotency key digunakan dengan parameter berbeda.");
+        const [bound] = await tx.select().from(subscriptionInvoices).where(and(eq(subscriptionInvoices.id, binding.invoiceId), eq(subscriptionInvoices.userId, owner.id)));
+        if (!bound) throw new Error("Akses idempotency key ditolak.");
+        return { invoice: bound, paymentDestination: null, reused: true };
+      }
       const [existing] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.idempotencyKey, params.idempotencyKey));
       if (existing) {
         if (existing.userId !== owner.id || existing.tenantId !== branch.id || existing.durationMonths !== months) throw new Error("Idempotency key digunakan dengan parameter berbeda");
@@ -215,8 +230,24 @@ export async function createSubscriptionInvoice(params: {
           const [frozenCode] = existing.referralCodeId ? await tx.select().from(referralCodes).where(eq(referralCodes.id,existing.referralCodeId)) : [];
           if (frozenCode?.code.toUpperCase() !== params.referralCode.trim().toUpperCase()) throw new Error("Idempotency key berbeda referral");
         }
-        return { invoice: existing, paymentDestination: null };
+        await bindInvoiceRequest(tx, params.idempotencyKey, existing.id, fingerprint);
+        return { invoice: existing, paymentDestination: null, reused: true };
       }
+    }
+    const active = await blockingOwnerInvoice(tx, owner.id);
+    if (active) {
+      let matches = ["unpaid", "rejected", "pending_verification"].includes(active.status) && active.durationMonths === months;
+      if (params.planId) {
+        const [requested] = await tx.select().from(plans).where(sql`${plans.id} = ${params.planId} OR ${plans.code} = ${params.planId}`);
+        matches = matches && requested?.id === active.planId;
+      }
+      if (params.referralCode) {
+        const [code] = active.referralCodeId ? await tx.select().from(referralCodes).where(eq(referralCodes.id, active.referralCodeId)) : [];
+        matches = matches && code?.code.toUpperCase() === params.referralCode.trim().toUpperCase();
+      }
+      if (!matches) throw new ActiveInvoiceError(active);
+      await bindInvoiceRequest(tx, params.idempotencyKey, active.id, fingerprint);
+      return { invoice: active, paymentDestination: null, reused: true };
     }
     if (params.referralCode) await setOwnerReferralTx(tx, branch.id, actor.id, actor.role === "superadmin", params.referralCode);
     const price = await getApplicablePrice(branch.id, params.planId || (owner.tier === "premium" ? "premium" : "pro"), undefined, tx);
@@ -237,7 +268,9 @@ export async function createSubscriptionInvoice(params: {
       commissionType: price.commission?.type, commissionValue: price.commission?.value, commissionProfileId: price.commission?.marketingProfileId,
       idempotencyKey: params.idempotencyKey, status: "unpaid", createdAt: now.toISOString(),
     }).returning();
-    return { invoice, paymentDestination: null };
+    await bindInvoiceRequest(tx, params.idempotencyKey, invoice.id, fingerprint);
+    await invoiceEvent(tx, invoice.id, "created", actor.id, { amount: invoice.finalAmount, durationMonths: months }, `created:${invoice.id}`);
+    return { invoice, paymentDestination: null, reused: false };
   });
 }
 
@@ -250,6 +283,9 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
   }
 
   return db.transaction(async tx => {
+  const [known] = await tx.select({ ownerId: subscriptionInvoices.userId }).from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId));
+  if (!known) throw new Error("Invoice tidak ditemukan");
+  await lockBillingOwner(tx, known.ownerId);
   const [existing] = await tx
     .select()
     .from(subscriptionInvoices)
@@ -260,6 +296,8 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
   }
 
   if (!existing.expiresAt || Date.parse(existing.expiresAt) <= Date.now()) throw new Error("Invoice kedaluwarsa atau memerlukan review admin");
+  const [reusedProof] = await tx.select({ id: subscriptionInvoices.id }).from(subscriptionInvoices).where(and(sql`${subscriptionInvoices.id} <> ${invoiceId}`, eq(subscriptionInvoices.paymentProofUrl, proofUrl), inArray(subscriptionInvoices.status, ["pending_verification", "paid", "review_required"])));
+  if (reusedProof) throw new Error("Bukti pembayaran sudah digunakan pada invoice lain.");
   const [file] = await tx.select().from(storedFiles).where(eq(storedFiles.path, proofUrl));
   if (!file || file.quarantined || file.category !== "payments") throw new Error("Bukti harus berupa berkas privat yang telah diunggah");
   const [uploader] = file.ownerId ? await tx.select().from(users).where(eq(users.id, file.ownerId)) : [];
@@ -267,17 +305,20 @@ export async function uploadPaymentProof(invoiceId: string, proofUrl: string, te
   if (file.ownerId !== existing.userId) await tx.update(storedFiles).set({ ownerId: existing.userId }).where(eq(storedFiles.path, proofUrl));
   const openAttempts = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.invoiceId, invoiceId), sql`${paymentAttempts.status} IN ('creating', 'pending')`));
   if (openAttempts.length) throw new Error("Selesaikan atau rekonsiliasi transaksi Midtrans sebelum memakai transfer manual");
+  const submittedAt = new Date().toISOString();
+  if (Date.parse(existing.expiresAt) <= Date.parse(submittedAt)) throw new Error("Invoice kedaluwarsa. Hubungi admin jika dana sudah ditransfer.");
   const [updated] = await tx
     .update(subscriptionInvoices)
     .set({
       paymentProofUrl: proofUrl,
-      paymentProofUploadedAt: new Date().toISOString(),
+      paymentProofUploadedAt: submittedAt,
       status: "pending_verification",
     })
     .where(and(eq(subscriptionInvoices.id, invoiceId), sql`${subscriptionInvoices.status} IN ('unpaid', 'rejected')`))
     .returning();
 
   if (!updated) throw new Error("Invoice tidak dapat diubah pada status saat ini");
+  await invoiceEvent(tx, invoiceId, "proof_submitted", actorId || existing.userId);
   return updated;
   });
 }
@@ -303,10 +344,14 @@ export async function recordSubscriptionPaymentTx(invoiceId: string, adminId: st
     date: today(), tenantId: invoice.tenantId, durationMonths: invoice.durationMonths, description: `Langganan Owner (${invoice.invoiceNo})`,
     proofUrl: invoice.paymentProofUrl, createdByUserId: adminId,
   }).onConflictDoNothing();
+  await invoiceEvent(tx, invoiceId, "payment_received", adminId, { amount: invoice.finalAmount, source: paymentSource }, `receipt:${invoiceId}`);
   return paid;
 }
 
 export async function activateSubscriptionInvoice(invoiceId: string, adminId: string | null, tx: SubscriptionTransaction, source: "manual" | "midtrans") {
+  const [known] = await tx.select({ ownerId: subscriptionInvoices.userId }).from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId));
+  if (!known) throw new Error("Invoice tidak ditemukan");
+  await lockBillingOwner(tx, known.ownerId);
   let [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
   if (!invoice) throw new Error("Invoice tidak ditemukan");
   if (source === "manual" && invoice.status !== "paid" && invoice.status !== "pending_verification") throw new Error("Invoice tidak menunggu verifikasi");
@@ -314,13 +359,18 @@ export async function activateSubscriptionInvoice(invoiceId: string, adminId: st
   if (invoice.status !== "paid") throw new Error("Pembayaran belum tercatat");
   const [owner] = await tx.select().from(users).where(eq(users.id, invoice.userId)).for("update");
   const [branch] = await tx.select().from(tenants).where(eq(tenants.id, invoice.tenantId));
-  const pending = async (reason: string) => {
-    const [updated] = await tx.update(subscriptionInvoices).set({ activationStatus: "pending_review", activationReason: reason }).where(eq(subscriptionInvoices.id, invoice.id)).returning();
+  const pending = async (reason: string, status = "pending_review") => {
+    const [updated] = await tx.update(subscriptionInvoices).set({ activationStatus: status, activationReason: reason }).where(eq(subscriptionInvoices.id, invoice.id)).returning();
     return { invoice: updated, tenant: { id: invoice.tenantId, subscriptionUntil: owner?.subscriptionUntil ?? null, isTrial: owner?.isTrial === "true", status: owner?.status ?? "inactive" } };
   };
   if (invoice.activationStatus === "active") return { invoice, tenant: { id: invoice.tenantId, subscriptionUntil: invoice.periodEnd, isTrial: false, status: owner?.status || "inactive" } };
   if (!owner || !branch || branch.userId !== invoice.userId) return pending("ownership_changed");
   if (owner.archivedAt || owner.suspendedAt || owner.status !== "active" || branch.archivedAt || branch.suspendedAt || branch.status !== "active") return pending("owner_suspended_or_archived");
+  const funds = await invoiceFunds(tx, invoice);
+  if (funds.net < invoice.finalAmount) return pending("refund_requires_review", funds.net <= 0 && funds.refunded > 0 ? "refunded" : "pending_review");
+  if (funds.refunded > 0 && (!invoice.activationReviewedAt || Date.parse(invoice.activationReviewedAt) < funds.latestRefund)) return pending("refund_requires_review");
+  const validDelayedSettlement = source === "midtrans" && invoice.invalidationReason === "invoice_expired" && !!invoice.verifiedAt && !!invoice.expiresAt && Date.parse(invoice.verifiedAt) <= Date.parse(invoice.expiresAt);
+  if (invoice.invalidatedAt && !invoice.activationReviewedAt && !validDelayedSettlement) return pending("invalidated_invoice_requires_review");
   const reservedAt = invoice.paymentProofUploadedAt || invoice.verifiedAt;
   if (!invoice.activationReviewedAt && (!invoice.expiresAt || !reservedAt || Date.parse(reservedAt) > Date.parse(invoice.expiresAt))) return pending("expired_or_legacy_invoice");
   const [plan] = invoice.planId ? await tx.select().from(plans).where(eq(plans.id, invoice.planId)) : [];
@@ -344,6 +394,7 @@ export async function activateSubscriptionInvoice(invoiceId: string, adminId: st
   await tx.insert(subscriptionEvents).values({ id: `activation-${invoice.id}`, tenantId: invoice.tenantId, eventType: "renewed", eventDate: today(),
     metadata: JSON.stringify({ invoiceId: invoice.id, ownerId: invoice.userId, periodEnd }),
   }).onConflictDoNothing();
+  await invoiceEvent(tx, invoiceId, "activated", adminId, { periodStart: start, periodEnd }, `activated:${invoiceId}`);
   return { invoice: updated, tenant: { id: branch.id, subscriptionUntil: periodEnd, isTrial: false, status: branch.status } };
 }
 export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: string) {
@@ -354,12 +405,46 @@ export async function verifySubscriptionInvoice(invoiceId: string, adminUserId: 
 export async function retryInvoiceActivation(invoiceId: string) {
   return db.transaction(tx => activateSubscriptionInvoice(invoiceId, null, tx, "midtrans"));
 }
+
+/** Admin records money verified in merchant/bank history; receipt survives invalid/late invoice status. */
+export async function recordManualReceipt(invoiceId: string, actorId: string, input: { reference: string; amount: number; receivedAt: string; notes: string }) {
+  const reference = input.reference.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9:/_.-]{5,119}$/.test(reference) || !Number.isSafeInteger(input.amount) || input.amount <= 0 || input.notes.trim().length < 10 || input.notes.length > 2000 || !Number.isFinite(Date.parse(input.receivedAt)) || Date.parse(input.receivedAt) > Date.now() + 300000) throw new Error("Referensi transaksi, nominal, waktu pembayaran dan alasan lengkap diperlukan.");
+  const [admin] = await db.select().from(users).where(eq(users.id, actorId));
+  if (!admin || admin.role !== "superadmin" || admin.status !== "active" || admin.archivedAt || admin.suspendedAt) throw new Error("Pencatatan membutuhkan admin aktif.");
+  const [known] = await db.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId));
+  if (!known) throw new Error("Invoice tidak ditemukan.");
+  return db.transaction(async tx => {
+    await lockBillingOwner(tx, known.userId);
+    const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
+    const [existing] = await tx.select().from(manualPaymentReceipts).where(eq(manualPaymentReceipts.reference, reference));
+    if (existing) {
+      if (existing.invoiceId !== invoiceId || existing.amount !== input.amount || existing.receivedAt !== new Date(input.receivedAt).toISOString()) throw new Error("Referensi pembayaran sudah digunakan dengan data berbeda.");
+      return existing;
+    }
+    const apply = invoice.status !== "paid" && input.amount === invoice.finalAmount;
+    const [receipt] = await tx.insert(manualPaymentReceipts).values({ id: crypto.randomUUID(), invoiceId, reference, amount: input.amount, receivedAt: new Date(input.receivedAt).toISOString(), notes: input.notes.trim(), appliedToInvoice: apply, actorId }).onConflictDoNothing().returning();
+    if (!receipt) throw new Error("Referensi pembayaran sudah digunakan. Periksa transaksi sebelum mencoba kembali.");
+    if (apply) {
+      await tx.update(subscriptionInvoices).set({ invalidatedAt: invoice.invalidatedAt || new Date().toISOString(), invalidationReason: invoice.invalidationReason || "manual_receipt_requires_review" }).where(eq(subscriptionInvoices.id, invoiceId));
+      await recordSubscriptionPaymentTx(invoiceId, actorId, tx, receipt.receivedAt, "manual");
+      await tx.update(subscriptionInvoices).set({ activationStatus: "pending_review", activationReason: "manual_receipt_requires_review" }).where(eq(subscriptionInvoices.id, invoiceId));
+    } else {
+      await tx.insert(platformCashflow).values({ id: `manual-receipt:${receipt.id}`, type: "income", category: invoice.status === "paid" ? "duplicate_payment" : "unmatched_subscription_payment", amount: input.amount, date: today(), tenantId: invoice.tenantId, description: `Penerimaan perlu review ${invoice.invoiceNo}`, notes: input.notes.trim(), createdByUserId: actorId });
+      if (invoice.status === "paid" && invoice.activationStatus === "refunded") await tx.update(subscriptionInvoices).set({ activationStatus: "pending_review", activationReason: "payment_after_refund", activationReviewedAt: null }).where(eq(subscriptionInvoices.id, invoiceId));
+      if (invoice.status !== "paid") await tx.update(subscriptionInvoices).set({ status: "review_required", invalidatedAt: invoice.invalidatedAt || new Date().toISOString(), invalidationReason: "amount_mismatch", activationStatus: "pending_review", activationReason: "amount_mismatch" }).where(eq(subscriptionInvoices.id, invoiceId));
+    }
+    await invoiceEvent(tx, invoiceId, "manual_receipt_recorded", actorId, { amount: receipt.amount, reference, receivedAt: receipt.receivedAt, appliedToInvoice: apply }, `manual-receipt:${receipt.id}`);
+    return receipt;
+  });
+}
 export async function rejectSubscriptionInvoice(invoiceId: string, adminUserId: string, reason: string) {
   return db.transaction(async tx => {
     const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
     if (!invoice || invoice.status !== "pending_verification") throw new Error("Hanya bukti yang menunggu verifikasi dapat ditolak");
     const [updated] = await tx.update(subscriptionInvoices).set({ status: "rejected", rejectionReason: reason.slice(0,1000), verifiedByUserId: adminUserId })
       .where(and(eq(subscriptionInvoices.id, invoiceId), eq(subscriptionInvoices.status, "pending_verification"))).returning();
+    await invoiceEvent(tx, invoiceId, "proof_rejected", adminUserId, { reason: reason.slice(0, 1000) });
     return updated;
   });
 }

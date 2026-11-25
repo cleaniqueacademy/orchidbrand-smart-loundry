@@ -3,6 +3,8 @@ import { registerNewTenant } from "./services/signupService";
 import { authSessions } from "./db/schema";
 import { enqueueWaDelivery, processWaQueue } from "./services/waQueue";
 import { changeLifecycle } from "./services/accountLifecycle";
+import { expireSubscriptionInvoices } from "./services/invoiceLifecycle";
+import { localMaintenanceActive } from "./services/localMaintenance";
 import { Hono, type Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
@@ -62,6 +64,10 @@ function routeParam(c: Context, name: string): string {
 }
 const app = new Hono();
 app.use("*", secureHeaders());
+app.use("/api/*", async (c, next) => {
+  if (localMaintenanceActive()) return c.json({ success: false, message: "Database lokal sedang direset. Silakan masuk kembali setelah proses selesai." }, 503);
+  await next();
+});
 app.use("/api/*", bodyLimit({ maxSize: 8 * 1024 * 1024 }));
 app.use("*", async (c,next) => {
   await next();
@@ -88,7 +94,7 @@ let initialization: Promise<void> | undefined;
 export function initializeApplication(restoreWhatsApp = true) {
   initialization ??= initPostgresTables().then(async () => {
     initialized = true;
-    if (restoreWhatsApp) await autoRestoreSavedSessions();
+    if (restoreWhatsApp && !localMaintenanceActive()) await autoRestoreSavedSessions();
   });
   return initialization;
 }
@@ -2386,11 +2392,13 @@ app.post(
 const port = Number(process.env.PORT) || 5000;
 if (import.meta.main) {
   await initializeApplication();
-  setInterval(() => processWaQueue().catch(() => console.error("[wa-queue] worker failed")), 5000).unref();
+  setInterval(() => { if (!localMaintenanceActive()) void processWaQueue().catch(() => console.error("[wa-queue] worker failed")); }, 5000).unref();
   setInterval(async () => {
+    if (localMaintenanceActive()) return;
     try {
       const { runTrialReminderCheck } = await import("./jobs/trialReminder");
       await runTrialReminderCheck();
+      await expireSubscriptionInvoices();
       await db.delete(authSessions).where(sql`${authSessions.expiresAt} < now()`);
       const { reconcilePendingPayments } = await import("./services/subscriptionPayments");
       await reconcilePendingPayments();

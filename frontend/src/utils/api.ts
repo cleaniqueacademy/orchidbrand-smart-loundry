@@ -15,6 +15,21 @@ export function authHeaders(extraHeaders: Record<string, string> = {}): Record<s
   };
 }
 
+/** Proxies can return empty/HTML errors; never expose their body or JSON parser details. */
+async function readApiResponse<T>(res: Response): Promise<T> {
+  try {
+    return JSON.parse(await res.text()) as T;
+  } catch {
+    if (res.status >= 500) {
+      throw new Error(`Layanan server tidak tersedia (HTTP ${res.status}). Silakan coba lagi.`);
+    }
+    if (res.status === 401) throw new Error("Sesi berakhir. Silakan masuk kembali.");
+    if (res.status === 403) throw new Error("Anda tidak memiliki akses ke data ini.");
+    if (res.status === 429) throw new Error("Terlalu banyak permintaan. Silakan coba lagi nanti.");
+    throw new Error(`Respons server tidak valid (HTTP ${res.status}). Silakan coba lagi.`);
+  }
+}
+
 export async function fetchApi<T = any>(
   endpoint: string,
   options: RequestInit = {}
@@ -30,7 +45,7 @@ export async function fetchApi<T = any>(
       headers,
     });
 
-    const data = await res.json();
+    const data = await readApiResponse<{ success: boolean; data?: T; message?: string }>(res);
     return data;
   } catch (err: any) {
     return {
@@ -50,7 +65,7 @@ export const api = {
         ...(options.headers as Record<string, string>),
       },
     });
-    return res.json();
+    return readApiResponse<T>(res);
   },
 
   async post<T = any>(endpoint: string, body?: any, options: RequestInit = {}): Promise<T> {
@@ -69,7 +84,7 @@ export const api = {
       headers,
       body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
-    return res.json();
+    return readApiResponse<T>(res);
   },
 
   async put<T = any>(endpoint: string, body?: any, options: RequestInit = {}): Promise<T> {
@@ -88,7 +103,7 @@ export const api = {
       headers,
       body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
     });
-    return res.json();
+    return readApiResponse<T>(res);
   },
 
   async delete<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -100,7 +115,7 @@ export const api = {
         ...(options.headers as Record<string, string>),
       },
     });
-    return res.json();
+    return readApiResponse<T>(res);
   },
 };
 

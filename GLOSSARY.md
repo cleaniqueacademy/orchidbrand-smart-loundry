@@ -24,6 +24,44 @@ _Avoid_: langganan per cabang
 Tagihan untuk Paket Langganan dan durasi tertentu, dengan nilai serta rincian diskon yang dibekukan ketika invoice dibuat.
 _Avoid_: tagihan cabang
 
+## Pembayaran langganan
+
+**Invoice Aktif**:
+Invoice Langganan yang masih menunggu pembayaran atau pemeriksaan bukti. Satu Owner hanya memiliki satu Invoice Aktif pada satu waktu.
+_Avoid_: invoice baru (untuk tagihan lama yang dilanjutkan)
+
+**Invoice Kedaluwarsa**:
+Invoice Langganan yang batas bayarnya telah terlewati. Dana yang tetap diterima sesudahnya ditangani melalui peninjauan admin.
+_Avoid_: uang tidak valid
+
+**Penerimaan Tidak Sesuai**:
+Dana yang benar-benar diterima tetapi nominalnya berbeda dari Invoice Langganan, sehingga memerlukan peninjauan atau pengembalian dana.
+_Avoid_: pembayaran hilang, saldo gagal
+
+**Referensi Pembayaran Manual**:
+Identitas transaksi pada riwayat bank atau merchant yang diperiksa admin untuk mencatat penerimaan dana.
+_Avoid_: nama berkas bukti, referensi QR lokal
+
+**Merchant Langganan**:
+Akun penerima pembayaran milik platform yang dikhususkan untuk Langganan Owner. Akun ini terpisah dari penerimaan pembayaran cucian milik Cabang.
+_Avoid_: QRIS cabang (untuk pembayaran langganan)
+
+**Penerimaan Pembayaran Langganan**:
+Dana yang telah diterima Merchant Langganan untuk pembayaran Invoice Langganan. Penerimaan dana tetap merupakan kejadian keuangan meskipun Aktivasi Langganan memerlukan peninjauan.
+_Avoid_: aktivasi pembayaran
+
+**Konfirmasi Pembayaran Langganan**:
+Penetapan bahwa Penerimaan Pembayaran Langganan telah terbukti melalui catatan resmi penyedia pembayaran atau verifikasi admin atas penerimaan transfer manual.
+_Avoid_: bukti screenshot (sebagai konfirmasi otomatis)
+
+**Aktivasi Langganan**:
+Pemberian periode akses Paket Langganan kepada Owner dan Cabang yang tercakup setelah pembayaran dikonfirmasi dan ketentuan langganan terpenuhi.
+_Avoid_: settlement (untuk pemberian akses)
+
+**Pencairan Dana Merchant**:
+Pemindahan saldo penerimaan Merchant Langganan ke rekening atau tujuan pencairan yang disepakati dengan penyedia pembayaran.
+_Avoid_: pembayaran invoice, payout komisi marketing
+
 ## Harga
 
 **Harga Normal Premium**:

@@ -7,6 +7,7 @@ import { recordSubscriptionPaymentTx, retryInvoiceActivation } from "./subscript
 import { invalidateTenantAuthCache } from "../middleware/auth";
 import type { PaymentGateway } from "./midtransClient";
 import { GatewayRejectedError } from "./midtransClient";
+import { lockBillingOwner, expireOwnerInvoicesTx, blockingOwnerInvoice } from "./invoiceLifecycle";
 
 const providerEvent = z.object({
   order_id: z.string().min(1).max(50), transaction_id: z.string().min(1).max(100),
@@ -37,7 +38,12 @@ export async function ownedInvoice(invoiceId: string, actorId: string, isAdmin =
 
 /** Persist order_id before the network call; uncertain responses must never create another charge. */
 export async function checkoutInvoice(invoiceId: string, actorId: string, gateway: PaymentGateway, isAdmin = false) {
+  const known = await ownedInvoice(invoiceId, actorId, isAdmin);
   const attempt = await db.transaction(async tx => {
+    await lockBillingOwner(tx, known.userId);
+    await expireOwnerInvoicesTx(tx, known.userId);
+    const blocking = await blockingOwnerInvoice(tx, known.userId);
+    if (blocking && blocking.id !== invoiceId) throw new Error("Selesaikan tagihan lain yang memerlukan review sebelum membayar.");
     const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
     if (!invoice || (!isAdmin && invoice.userId !== actorId)) throw new Error("Akses invoice ditolak");
     if (!["unpaid", "rejected"].includes(invoice.status)) throw new Error("Invoice tidak dapat dibayar melalui gateway pada status ini");
@@ -103,6 +109,7 @@ export async function applyGatewayEvent(raw: unknown) {
       }).where(eq(paymentAttempts.id, attempt.id));
       if (invoice.status !== "paid") await recordSubscriptionPaymentTx(invoice.id, null, tx, providerPaidAt(event.settlement_time || event.transaction_time), "midtrans");
       else await tx.insert(platformCashflow).values({ id: `duplicate:${attempt.id}`, type: "income", category: "duplicate_payment", amount, date: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date()), tenantId: invoice.tenantId, description: `Pembayaran tambahan ${invoice.invoiceNo}; review refund` }).onConflictDoNothing();
+      if (invoice.activationStatus === "refunded") await tx.update(subscriptionInvoices).set({ activationStatus: "pending_review", activationReason: "payment_after_refund", activationReviewedAt: null }).where(eq(subscriptionInvoices.id, invoice.id));
     } else if (failed) {
       await tx.update(paymentAttempts).set({ status: event.transaction_status === "expire" ? "expired" : "failed", transactionId: event.transaction_id }).where(eq(paymentAttempts.id, attempt.id));
     }

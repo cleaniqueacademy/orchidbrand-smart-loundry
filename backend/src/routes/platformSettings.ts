@@ -4,6 +4,8 @@ import { platformSettings } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
+import { loadPlatformQris } from "../services/subscriptionQris";
+import { QrisCheckoutError } from "../services/qrisPayload";
 
 const platformSettingsRoutes = new Hono();
 
@@ -94,6 +96,16 @@ platformSettingsRoutes.put("/", requireRole(["superadmin"]), async (c) => {
     let [existing] = await db.select().from(platformSettings).limit(1);
 
     const nowIso = new Date().toISOString();
+    if (body.qrisInfo !== undefined && body.qrisInfo !== null && typeof body.qrisInfo !== "string") {
+      return c.json({ success: false, message: "Lokasi gambar QRIS tidak valid." }, 422);
+    }
+    if (body.qrisInfo && body.qrisInfo !== existing?.qrisInfo) {
+      try { await loadPlatformQris(body.qrisInfo); }
+      catch (error) {
+        if (error instanceof QrisCheckoutError) return c.json({ success: false, message: error.message }, error.status);
+        throw error;
+      }
+    }
 
     const updates: Partial<typeof platformSettings.$inferInsert> = {
       platformName: body.platformName !== undefined ? String(body.platformName).trim() : existing?.platformName,

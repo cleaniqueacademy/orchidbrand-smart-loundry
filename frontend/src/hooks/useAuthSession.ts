@@ -101,12 +101,14 @@ export function useAuthSession() {
 
     toast.info("Mengeluarkan Akun...", "Mencabut sesi server.");
     try {
-      const response = await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         headers: authHeaders(),
+        credentials: "include",
       });
-      if (!response.ok && response.status !== 401) throw new Error("Session revocation failed");
-    } catch { toast.error("Logout belum berhasil", "Koneksi server diperlukan untuk mencabut sesi. Coba kembali."); return; }
+    } catch (e) {
+      console.warn("Gagal mencabut sesi di server, melanjutkan pembersihan sesi lokal:", e);
+    }
     // Clear localStorage
     try {
       localStorage.removeItem(AUTH_KEY);
@@ -114,6 +116,7 @@ export function useAuthSession() {
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith("cleanique_")) localStorage.removeItem(key);
       });
+      setCurrentUser(null);
     } catch (e) {
       console.error(e);
     }

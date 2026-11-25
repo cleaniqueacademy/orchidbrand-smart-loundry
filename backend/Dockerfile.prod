@@ -5,6 +5,7 @@ COPY backend/package.json backend/package.json
 COPY frontend/package.json frontend/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY backend backend
+COPY frontend/public/qris.png backend/assets/qris.png
 WORKDIR /app/backend
 RUN mkdir -p data/uploads data/wa_sessions && chown -R bun:bun data
 USER bun

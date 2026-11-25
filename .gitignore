@@ -150,6 +150,8 @@ docs/**
 docs/adr/**
 !docs/adr/0001-owner-level-subscription.md
 !docs/adr/0002-stacked-subscription-discounts.md
+!docs/adr/0003-qris-saas-payment-evidence.md
+!docs/adr/0004-single-active-owner-invoice.md
 
 
 

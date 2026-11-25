@@ -354,6 +354,7 @@ export async function autoRestoreSavedSessions() {
   try {
     const allTenants = await db.select().from(tenants);
     const tenantsWithCreds = allTenants.filter((t) => {
+      if (t.waMode !== "baileys" || t.status !== "active" || t.archivedAt || t.suspendedAt) return false;
       const dir = getSessionDir(t.id);
       return fs.existsSync(path.join(dir, "creds.json"));
     });

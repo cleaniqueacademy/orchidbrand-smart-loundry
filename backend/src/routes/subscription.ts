@@ -29,6 +29,12 @@ import {
 } from "../services/subscriptionService";
 import { validateCode, recordCommission } from "../services/referralService";
 import { runTrialReminderCheck } from "../jobs/trialReminder";
+import { checkoutSubscriptionQris } from "../services/subscriptionQris";
+import { QrisCheckoutError } from "../services/qrisPayload";
+import { rateLimit } from "../middleware/rateLimit";
+import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices, expireSubscriptionInvoices } from "../services/invoiceLifecycle";
+import { invoiceLifecycleEvents } from "../db/schema";
+import { recordManualReceipt } from "../services/subscriptionService";
 
 const subscriptionRoutes = new Hono();
 
@@ -61,6 +67,53 @@ subscriptionRoutes.get("/pricing", async (c) => {
 // Rute Terproteksi Autentikasi
 // ---------------------------------------------------------------------------
 subscriptionRoutes.use("*", authMiddleware);
+
+subscriptionRoutes.post("/invoices/:id/cancel", requireRole(["superadmin", "tenant_owner"]), async c => {
+  const parsed = z.object({ reason: z.string().trim().min(10).max(1000), acknowledgeSavedQris: z.boolean().default(false) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Alasan pembatalan lengkap diperlukan." }, 422);
+  try {
+    const actor = getUser(c);
+    const invoice = await cancelSubscriptionInvoice(c.req.param("id")!, actor.userId, actor.role === "superadmin", parsed.data.reason, parsed.data.acknowledgeSavedQris);
+    return c.json({ success: true, data: presentInvoice(invoice) });
+  } catch (error) {
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Invoice belum dapat dibatalkan." }, 409);
+  }
+});
+
+subscriptionRoutes.post("/invoices/:id/received", requireRole(["superadmin"]), async c => {
+  const parsed = z.object({ reference: z.string().trim().min(6).max(120), amount: z.number().int().positive(), receivedAt: z.string().max(40), notes: z.string().trim().min(10).max(2000) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Data penerimaan pembayaran tidak valid." }, 422);
+  try {
+    const receipt = await recordManualReceipt(c.req.param("id")!, getUser(c).userId, parsed.data);
+    return c.json({ success: true, message: "Penerimaan dicatat. Aktivasi atau koreksi tetap memerlukan review admin.", data: receipt });
+  } catch (error) {
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Penerimaan belum dapat dicatat." }, 409);
+  }
+});
+
+subscriptionRoutes.get("/invoices/:id/events", requireRole(["superadmin", "tenant_owner"]), async c => {
+  const actor = getUser(c);
+  const [invoice] = await db.select().from(subscriptionInvoices).where(and(eq(subscriptionInvoices.id, c.req.param("id")!), actor.role === "superadmin" ? undefined : eq(subscriptionInvoices.userId, actor.userId)));
+  if (!invoice) return c.json({ success: false, message: "Invoice tidak ditemukan." }, 404);
+  c.header("Cache-Control", "private, no-store");
+  const events = await db.select().from(invoiceLifecycleEvents).where(eq(invoiceLifecycleEvents.invoiceId, invoice.id)).orderBy(invoiceLifecycleEvents.createdAt, invoiceLifecycleEvents.id);
+  return c.json({ success: true, data: events.map(event => ({ id: event.id, eventType: event.eventType, createdAt: event.createdAt, ...(actor.role === "superadmin" ? { actorId: event.actorId, details: event.details } : {}) })) });
+});
+
+subscriptionRoutes.get("/invoices/:id/qris", requireRole(["superadmin", "tenant_owner"]), rateLimit({ max: 20, windowMs: 60000, keyGenerator: c => `subscription-qris:${getUser(c).userId}` }), async c => {
+  c.header("Cache-Control", "private, no-store, max-age=0");
+  try {
+    const actor = getUser(c);
+    const id = c.req.param("id");
+    if (!id) return c.json({ success: false, message: "Invoice tidak ditemukan." }, 404);
+    const data = await checkoutSubscriptionQris(id, actor.userId, actor.role === "superadmin");
+    return c.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof QrisCheckoutError) return c.json({ success: false, message: error.message }, error.status);
+    console.error("[subscription-qris] generation failed", { invoiceId: c.req.param("id") });
+    return c.json({ success: false, message: "QRIS belum dapat dibuat. Silakan coba lagi atau hubungi admin." }, 500);
+  }
+});
 
 /**
  * 2. GET /api/subscription/summary
@@ -124,7 +177,8 @@ subscriptionRoutes.post("/invoices", requireRole(["superadmin", "tenant_owner"])
       data: result,
     });
   } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
+    if (err instanceof ActiveInvoiceError) return c.json({ success: false, code: "ACTIVE_INVOICE", message: err.message, data: { invoice: presentInvoice(err.invoice) } }, 409);
+    return c.json({ success: false, message: err.message }, 409);
   }
 });
 
@@ -180,6 +234,8 @@ subscriptionRoutes.post("/invoices/:id/proof", requireRole(["superadmin", "tenan
 subscriptionRoutes.get("/invoices", async (c) => {
   try {
     const user = getUser(c);
+    if (user.role === "superadmin") await expireSubscriptionInvoices();
+    else await expireOwnerInvoices(user.userId);
     const status = c.req.query("status");
 
     let query = db
@@ -206,6 +262,9 @@ subscriptionRoutes.get("/invoices", async (c) => {
         expiresAt: subscriptionInvoices.expiresAt,
         activationStatus: subscriptionInvoices.activationStatus,
         activationReason: subscriptionInvoices.activationReason,
+        qrisIssuedAt: subscriptionInvoices.qrisIssuedAt,
+        invalidatedAt: subscriptionInvoices.invalidatedAt,
+        invalidationReason: subscriptionInvoices.invalidationReason,
         createdAt: subscriptionInvoices.createdAt,
         outletName: tenants.outletName,
         userName: users.name,

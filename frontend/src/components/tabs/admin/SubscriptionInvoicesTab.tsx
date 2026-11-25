@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { paymentStatusLabel } from "../../../utils/paymentStatus";
 import { api } from "../../../utils/api";
+import { InvoiceTimeline } from "../subscription/InvoiceTimeline";
 import { SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
@@ -31,6 +32,18 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 }) => {
   const toast = useToast();
   const confirm = useConfirm();
+  const [receiving, setReceiving] = useState<SubscriptionInvoice | null>(null);
+  const [receiptReference, setReceiptReference] = useState("");
+  const [receiptAmount, setReceiptAmount] = useState("");
+  const [receiptTime, setReceiptTime] = useState("");
+  const [receiptNotes, setReceiptNotes] = useState("");
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const cancelInvoice = async (invoice: SubscriptionInvoice) => {
+    const ok = await confirm({ title: "Batalkan tagihan ini?", description: "Pastikan tidak ada penerimaan dana yang belum dicatat. Pembatalan lokal tidak membatalkan QRIS yang sudah disimpan di bank atau e-wallet.", confirmText: "Konfirmasi pembatalan", variant: "danger" });
+    if (!ok) return;
+    try { const result = await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${encodeURIComponent(invoice.id)}/cancel`, { reason: "Pembatalan dikonfirmasi admin setelah pemeriksaan tagihan.", acknowledgeSavedQris: true }); if (!result.success) throw new Error(result.message); await fetchInvoices(); }
+    catch (error) { toast.error("Pembatalan gagal", error instanceof Error ? error.message : "Coba lagi nanti."); }
+  };
   const [reviewing, setReviewing] = useState<SubscriptionInvoice | null>(null);
   const [reviewTier, setReviewTier] = useState("pro");
   const [reviewNotes, setReviewNotes] = useState("");
@@ -43,6 +56,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
   const [adjustmentBusy, setAdjustmentBusy] = useState(false);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [gatewayEnabled, setGatewayEnabled] = useState(false);
   const [checkingGateway, setCheckingGateway] = useState<string | null>(null);
   useEffect(() => {
@@ -75,17 +89,17 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 
   const fetchInvoices = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const url =
         statusFilter !== "all"
           ? `/api/subscription/invoices?status=${statusFilter}`
           : "/api/subscription/invoices";
-      const res = await api.get<{ success: boolean; data: SubscriptionInvoice[] }>(url);
-      if (res.success && res.data) {
-        setInvoices(res.data);
-      }
+      const res = await api.get<{ success: boolean; data: SubscriptionInvoice[]; message?: string }>(url);
+      if (!res.success || !Array.isArray(res.data)) throw new Error(res.message || "Data invoice tidak dapat dimuat.");
+      setInvoices(res.data);
     } catch (err) {
-      console.error("Gagal mengambil data invoice:", err);
+      setLoadError(err instanceof Error ? err.message : "Gagal menghubungi server.");
     } finally {
       setLoading(false);
     }
@@ -174,10 +188,10 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 
   return (
     <div className="space-y-5">
-      {invoices.filter(inv => inv.status === "paid" && inv.activationStatus !== "active" || ["unpaid","pending_verification","rejected"].includes(inv.status) && (!inv.expiresAt || Date.parse(inv.expiresAt)<Date.now())).map(inv => <div key={inv.id} className="p-4 border border-amber-300 rounded-xl bg-amber-50 space-y-2">
+      {invoices.filter(inv => inv.status === "review_required" || inv.status === "paid" && !["active", "refunded"].includes(inv.activationStatus || "")).map(inv => <div key={inv.id} className="p-4 border border-amber-300 rounded-xl bg-amber-50 space-y-2">
         <p className="font-semibold">{inv.invoiceNo}: {inv.status === "paid" ? "pembayaran lunas, aktivasi tertahan" : "masa berlaku perlu ditinjau"}</p>
         <p className="text-sm">{({ownership_changed:"Kepemilikan cabang berubah",owner_suspended_or_archived:"Owner atau cabang diblokir/diarsipkan",expired_or_legacy_invoice:"Masa berlaku atau invoice lama perlu ditinjau",legacy_terms_require_review:"Paket invoice lama perlu dikonfirmasi",quota_requires_review:"Kuota cabang melebihi paket",staff_quota_requires_review:"Kuota staf melebihi paket",plan_unavailable:"Paket tidak tersedia"} as Record<string,string>)[inv.activationReason || ""] || "Aktivasi menunggu proses ulang"}. Periksa status akun, kepemilikan, masa berlaku dan kuota.</p>
-        <button className="underline" onClick={async () => { const result = await api.post<{success:boolean}>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi setelah koreksi</button><button className="underline ml-3" onClick={()=>{setReviewing(inv);setReviewNotes("");}}>Tinjau invoice lama/kedaluwarsa</button>
+        {inv.status === "paid" && <><button className="underline" onClick={async () => { const result = await api.post<{success:boolean}>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi setelah koreksi</button><button className="underline ml-3" onClick={()=>{setReviewing(inv);setReviewNotes("");}}>Tinjau aktivasi setelah penerimaan dipastikan</button></>}
       </div>)}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -223,7 +237,22 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
         <label className="block">Catatan dan referensi transfer<textarea required minLength={10} maxLength={2000} value={adjustmentNotes} onChange={e=>setAdjustmentNotes(e.target.value)} className="block border p-2 w-full" /></label>
         <button disabled={adjustmentBusy} type="submit" className="border p-2 rounded">Simpan jurnal refund</button><button type="button" onClick={()=>setAdjusting(null)} className="p-2">Batal</button>
       </form>}
-      <details><summary>Jurnal refund dan pembayaran ganda</summary><div className="flex flex-wrap gap-2 p-2">{invoices.filter(inv=>inv.status === "paid").map(inv=><button key={inv.id} className="border p-2 rounded text-xs" onClick={()=>{setAdjusting(inv);setAdjustmentKey(crypto.randomUUID());setAdjustmentAmount("");setCommissionCorrection("0");setAdjustmentNotes("");}}>{inv.invoiceNo}</button>)}</div></details>
+      <details><summary>Jurnal refund dan pembayaran ganda</summary><div className="flex flex-wrap gap-2 p-2">{invoices.filter(inv=>["paid", "review_required"].includes(inv.status)).map(inv=><button key={inv.id} className="border p-2 rounded text-xs" onClick={()=>{setAdjusting(inv);setAdjustmentKey(crypto.randomUUID());setAdjustmentAmount("");setCommissionCorrection("0");setAdjustmentNotes("");}}>{inv.invoiceNo}</button>)}</div></details>
+      {receiving && <form className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3" onSubmit={async event => {
+        event.preventDefault();setReceiptBusy(true);
+        try { const result=await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${encodeURIComponent(receiving.id)}/received`, {reference:receiptReference,amount:Number(receiptAmount),receivedAt:new Date(receiptTime+"+07:00").toISOString(),notes:receiptNotes});if(!result.success)throw new Error(result.message);toast.success("Dana masuk tercatat",result.message);setReceiving(null);await fetchInvoices();onVerifySuccess?.(); }
+        catch(error){toast.error("Pencatatan gagal",error instanceof Error?error.message:"Coba lagi nanti.");}finally{setReceiptBusy(false);}
+      }}>
+        <h3 className="font-semibold">Catat penerimaan dana · {receiving.invoiceNo}</h3>
+        <p className="text-sm text-zinc-600">Gunakan setelah memeriksa riwayat merchant atau mutasi rekening. Pencatatan ini tidak memindahkan uang dan tidak langsung mengaktifkan langganan.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm text-zinc-700">Referensi unik bank/merchant<input required minLength={6} maxLength={120} value={receiptReference} onChange={e=>setReceiptReference(e.target.value)} placeholder="BANK:RRN123456" className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
+          <label className="text-sm text-zinc-700">Nominal yang benar-benar diterima<input type="number" required min={1} step={1} value={receiptAmount} onChange={e=>setReceiptAmount(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
+          <label className="text-sm text-zinc-700">Waktu pembayaran (WIB)<input type="datetime-local" required value={receiptTime} onChange={e=>setReceiptTime(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
+          <label className="text-sm text-zinc-700">Catatan pemeriksaan<textarea required minLength={10} maxLength={2000} value={receiptNotes} onChange={e=>setReceiptNotes(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
+        </div>
+        <div className="flex gap-3"><button disabled={receiptBusy} type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{receiptBusy?"Menyimpan…":"Simpan penerimaan untuk review"}</button><button type="button" disabled={receiptBusy} onClick={()=>setReceiving(null)} className="text-sm font-semibold text-zinc-600">Tutup</button></div>
+      </form>}
       {/* Filter Tabs Status */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
@@ -232,6 +261,9 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           { id: "unpaid", label: "Belum Dibayar" },
           { id: "paid", label: "Lunas" },
           { id: "rejected", label: "Ditolak" },
+          { id: "expired", label: "Kedaluwarsa" },
+          { id: "cancelled", label: "Dibatalkan" },
+          { id: "review_required", label: "Perlu Review" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -269,6 +301,14 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                     Memuat tagihan...
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={7} role="alert" className="py-8 px-4 text-center text-rose-700">
+                    <p className="font-semibold">Gagal memuat invoice</p>
+                    <p>{loadError}</p>
+                    <button type="button" onClick={fetchInvoices} className="mt-2 underline">Coba lagi</button>
+                  </td>
+                </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400">
@@ -282,6 +322,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       <div className="font-mono font-bold text-slate-900 dark:text-white">
                         #{inv.invoiceNo}
                       </div>
+                      <InvoiceTimeline invoiceId={inv.id} status={`${inv.status}:${inv.qrisIssuedAt || ""}`} />
                       <div className="text-[11px] text-slate-400">
                         {new Date(inv.createdAt).toLocaleDateString("id-ID", {
                           day: "numeric",
@@ -299,7 +340,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">
-                      {inv.durationMonths} Bulan
+                      {inv.durationMonths} periode ({inv.durationMonths * 30} hari)
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-indigo-600 dark:text-indigo-400">
@@ -326,7 +367,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       )}
                     </td>
                     <td className="py-3.5 px-4 min-w-[130px] whitespace-nowrap">
-                      {inv.status === "paid" ? (
+                      {["expired", "cancelled", "review_required"].includes(inv.status) ? <span className="text-xs font-semibold text-zinc-700">{({expired:"Kedaluwarsa",cancelled:"Dibatalkan",review_required:"Perlu review admin"} as Record<string,string>)[inv.status]}</span> : inv.status === "paid" ? (
                         <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
                           Lunas
                         </span>
@@ -345,7 +386,11 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      {inv.status === "pending_verification" || inv.status === "unpaid" ? (
+                      <div className="mb-2 flex flex-wrap justify-end gap-2">
+                        <button type="button" className="text-xs font-semibold text-blue-700 underline" onClick={() => {setReceiving(inv);setReceiptReference("");setReceiptAmount(String(inv.finalAmount));setReceiptTime("");setReceiptNotes("");}}>Catat dana masuk</button>
+                        {["unpaid","rejected","pending_verification","review_required","expired"].includes(inv.status) && <button type="button" className="text-xs font-semibold text-rose-700 underline" onClick={() => cancelInvoice(inv)}>Batalkan</button>}
+                      </div>
+                      {inv.status === "pending_verification" ? (
                         <div className="inline-flex items-center gap-2">
                           <button
                             onClick={() => handleVerify(inv)}
@@ -363,7 +408,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                           </button>
                         </div>
                       ) : (
-                        <span className="text-slate-400 text-xs">Selesai</span>
+                        <span className="text-slate-500 text-xs">{inv.status === "paid" ? "Pembayaran tercatat" : "Belum dikonfirmasi"}</span>
                       )}
                     </td>
                   </tr>

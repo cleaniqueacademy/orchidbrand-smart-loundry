@@ -1,7 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { marketingProfiles, marketingCommissions, marketingWithdrawals, paymentAdjustments, subscriptionInvoices, paymentAttempts, platformCashflow } from "../db/schema";
+import { marketingProfiles, marketingCommissions, marketingWithdrawals, paymentAdjustments, subscriptionInvoices, paymentAttempts, platformCashflow, manualPaymentReceipts } from "../db/schema";
 import { today } from "../utils/date";
+import { invoiceEvent } from "./invoiceLifecycle";
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function commissionAdjustments(profileId: string, tx: Tx | typeof db = db) {
   const rows = await tx.select({ amount: paymentAdjustments.commissionAmount }).from(paymentAdjustments).innerJoin(subscriptionInvoices, eq(subscriptionInvoices.id, paymentAdjustments.invoiceId)).where(eq(subscriptionInvoices.commissionProfileId, profileId));
@@ -49,7 +50,7 @@ export async function recordPaymentAdjustment(invoiceId: string, actorId: string
   if (!/^[a-zA-Z0-9-]{16,80}$/.test(input.requestKey) || !["refund","duplicate_refund"].includes(input.type) || !Number.isSafeInteger(input.amount) || input.amount<=0 || !Number.isSafeInteger(input.commissionAmount) || input.commissionAmount<0 || typeof input.notes !== "string" || input.notes.trim().length<10 || input.notes.length>2000) throw new Error("Penyesuaian tidak valid; isi referensi refund dan alasan lengkap");
   return db.transaction(async tx => {
     const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id,invoiceId)).for("update");
-    if (!invoice || invoice.status !== "paid") throw new Error("Invoice belum lunas");
+    if (!invoice || !["paid", "review_required"].includes(invoice.status)) throw new Error("Invoice tidak memiliki penerimaan yang dapat dikoreksi");
     const [existing] = await tx.select().from(paymentAdjustments).where(eq(paymentAdjustments.requestKey,input.requestKey));
     if (existing) {
       if (existing.invoiceId !== invoiceId || existing.amount !== input.amount || existing.commissionAmount !== input.commissionAmount || existing.type !== input.type) throw new Error("Idempotency key berbeda parameter");
@@ -58,13 +59,20 @@ export async function recordPaymentAdjustment(invoiceId: string, actorId: string
     if (invoice.commissionProfileId) await tx.select().from(marketingProfiles).where(eq(marketingProfiles.id, invoice.commissionProfileId)).for("update");
     const adjustments = await tx.select().from(paymentAdjustments).where(eq(paymentAdjustments.invoiceId,invoiceId));
     const paid = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.invoiceId,invoiceId),eq(paymentAttempts.status,"paid")));
-    const receipts = invoice.paymentSource === "manual" ? invoice.finalAmount + paid.reduce((s,p)=>s+p.amount,0) : Math.max(invoice.finalAmount, paid.reduce((s,p)=>s+p.amount,0));
+    const manual = await tx.select().from(manualPaymentReceipts).where(and(eq(manualPaymentReceipts.invoiceId, invoiceId), eq(manualPaymentReceipts.appliedToInvoice, false)));
+    const base = invoice.status === "paid" ? (invoice.paymentSource === "manual" ? invoice.finalAmount + paid.reduce((s,p)=>s+p.amount,0) : Math.max(invoice.finalAmount, paid.reduce((s,p)=>s+p.amount,0))) : paid.reduce((s,p)=>s+p.amount,0);
+    const receipts = base + manual.reduce((sum, receipt) => sum + receipt.amount, 0);
     if (adjustments.reduce((s,a)=>s+a.amount,0)+input.amount>receipts) throw new Error("Refund melebihi penerimaan tercatat");
     const commissions = await tx.select().from(marketingCommissions).where(eq(marketingCommissions.subscriptionInvoiceId,invoiceId));
     if (adjustments.reduce((s,a)=>s+a.commissionAmount,0)+input.commissionAmount > commissions.reduce((s,c)=>s+c.commissionAmount,0)) throw new Error("Koreksi komisi melebihi komisi invoice");
     const id=crypto.randomUUID();
     const [record]=await tx.insert(paymentAdjustments).values({ id, invoiceId, requestKey: input.requestKey, amount:input.amount, commissionAmount:input.commissionAmount, type:input.type, notes:input.notes.trim(), createdBy:actorId }).returning();
     await tx.insert(platformCashflow).values({id:`adjustment:${id}`,type:"expense",category:"subscription_refund",amount:input.amount,date:today(),tenantId:invoice.tenantId,description:`Refund ${invoice.invoiceNo}`,notes:input.notes,createdByUserId:actorId});
+    if (invoice.status === "paid" && invoice.activationStatus !== "active") {
+      const totalRefund = adjustments.reduce((sum, adjustment) => sum + adjustment.amount, 0) + input.amount;
+      await tx.update(subscriptionInvoices).set({ activationStatus: totalRefund >= receipts ? "refunded" : "pending_review", activationReason: "refund_requires_review", activationReviewedAt: null, invalidatedAt: invoice.invalidatedAt || new Date().toISOString(), invalidationReason: invoice.invalidationReason || "payment_refunded" }).where(eq(subscriptionInvoices.id, invoiceId));
+    }
+    await invoiceEvent(tx, invoiceId, "refund_recorded", actorId, { amount: input.amount, type: input.type }, `refund:${record.id}`);
     return record;
   });
 }

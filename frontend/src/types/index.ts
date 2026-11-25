@@ -422,6 +422,9 @@ export interface SignupRequest {
 }
 
 export interface SubscriptionInvoice {
+  qrisIssuedAt?: string | null;
+  invalidatedAt?: string | null;
+  invalidationReason?: string | null;
   expiresAt?: string | null;
   activationStatus?: string;
   activationReason?: string | null;
@@ -437,7 +440,7 @@ export interface SubscriptionInvoice {
   promotionDiscountAmount?: number;
   referralDiscountAmount?: number;
   finalAmount: number;
-  status: "unpaid" | "pending_verification" | "paid" | "rejected" | "cancelled";
+  status: "unpaid" | "pending_verification" | "paid" | "rejected" | "cancelled" | "expired" | "review_required";
   paymentProofUrl?: string | null;
   paymentProofUploadedAt?: string | null;
   verifiedByUserId?: string | null;

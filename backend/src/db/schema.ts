@@ -280,6 +280,9 @@ export const subscriptionInvoices = pgTable("subscription_invoices", {
   expiresAt: text("expires_at"),
   entitlementTier: text("entitlement_tier"),
   paymentSource: text("payment_source"),
+  qrisIssuedAt: text("qris_issued_at"),
+  invalidatedAt: text("invalidated_at"),
+  invalidationReason: text("invalidation_reason"),
   activationReviewedBy: text("activation_reviewed_by").references(() => users.id),
   activationReviewedAt: text("activation_reviewed_at"),
   activationReviewNotes: text("activation_review_notes"),
@@ -305,6 +308,27 @@ export const subscriptionInvoices = pgTable("subscription_invoices", {
   periodEnd: text("period_end"),
   notes: text("notes"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const invoiceLifecycleEvents = pgTable("invoice_lifecycle_events", {
+  id: text("id").primaryKey(),
+  invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id),
+  eventType: text("event_type").notNull(),
+  actorId: text("actor_id").references(() => users.id),
+  details: text("details").notNull().default("{}"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const manualPaymentReceipts = pgTable("manual_payment_receipts", {
+  id: text("id").primaryKey(), invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id),
+  reference: text("reference").notNull().unique(), amount: doublePrecision("amount").notNull(),
+  receivedAt: text("received_at").notNull(), notes: text("notes").notNull(),
+  appliedToInvoice: boolean("applied_to_invoice").notNull().default(false),
+  actorId: text("actor_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const invoiceRequestKeys = pgTable("invoice_request_keys", {
+  requestKey: text("request_key").primaryKey(), invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id), fingerprint: text("fingerprint").notNull(),
 });
 
 export const marketingCommissions = pgTable("marketing_commissions", {
@@ -471,4 +495,5 @@ export const paymentAdjustments = pgTable("payment_adjustments", {
   id: text("id").primaryKey(), invoiceId: text("invoice_id").notNull().references(() => subscriptionInvoices.id), requestKey: text("request_key").notNull().unique(),
   type: text("type").notNull(), amount: doublePrecision("amount").notNull(), commissionAmount: doublePrecision("commission_amount").notNull().default(0),
   notes: text("notes").notNull(), createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -8,6 +8,7 @@
     "db:push": "bunx drizzle-kit push",
     "db:push:force": "bunx drizzle-kit push --force",
     "db:seed": "bun src/db/seed.ts",
+    "db:reset-local": "bun src/scripts/resetLocalDatabase.ts",
     "db:push-users": "bun src/scripts/pushUsersFromLocalTxt.ts",
     "db:studio": "bunx drizzle-kit studio",
     "build": "bun build src/index.ts --target=bun --packages=external --outdir dist",
@@ -20,9 +21,12 @@
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.16",
+    "jsqr": "1.4.0",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
+    "qris-saurus": "1.1.0",
+    "sharp": "0.35.5",
     "zod": "^4.6.6"
   },
   "devDependencies": {

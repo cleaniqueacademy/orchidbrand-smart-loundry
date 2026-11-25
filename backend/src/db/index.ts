@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrateProductionV1 } from "./productionMigration";
+import { migrateInvoiceLifecycle } from "./invoiceLifecycleMigration";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -568,6 +569,7 @@ export async function initPostgresTables() {
     await client`CREATE INDEX IF NOT EXISTS idx_ai_messages_conv ON ai_messages(conversation_id);`;
 
     await migrateProductionV1(client);
+    await migrateInvoiceLifecycle(client);
     console.log("✅ PostgreSQL tables verified/initialized successfully (including v2.0 modules)");
   } catch (err: any) {
     console.error("PostgreSQL initialization failed");

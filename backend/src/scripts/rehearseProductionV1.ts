@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { migrateProductionV1 } from "../db/productionMigration";
+import { migrateInvoiceLifecycle } from "../db/invoiceLifecycleMigration";
 import assert from "node:assert/strict";
 const url=process.env.REHEARSAL_DATABASE_URL;
 if (!url || new URL(url).pathname!=="/cleanique_test_legacy" || process.env.PREMIUM_TEST_DATABASE!=="isolated") throw new Error("Only dedicated cleanique_test_legacy is allowed");
@@ -24,6 +25,7 @@ try {
   await client`INSERT INTO marketing_commissions VALUES ('old-commission','old-paid','legacy-profile')`;
   const before=await metrics();
   await migrateProductionV1(client);await migrateProductionV1(client);
+  await migrateInvoiceLifecycle(client);await migrateInvoiceLifecycle(client);
   assert.deepEqual(await metrics(),before);
   const [blocked]=await client`SELECT suspended_at FROM users WHERE id='legacy-owner'`;assert.ok(blocked.suspended_at);
   const [paid]=await client`SELECT activation_status FROM subscription_invoices WHERE id='old-paid'`;assert.equal(paid.activation_status,"active");

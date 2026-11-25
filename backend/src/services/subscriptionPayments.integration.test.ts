@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, initPostgresTables } from "../db";
@@ -30,10 +30,13 @@ test("Midtrans signatures reject forged, missing and modified amounts", () => {
 });
 
 describe.skipIf(process.env.PREMIUM_TEST_DATABASE !== "isolated")("subscription gateway with isolated PostgreSQL", () => {
-  const ownerId = `gateway-${crypto.randomUUID()}`, branchId = `branch-${ownerId}`;
+  let ownerId: string, branchId: string;
   beforeAll(async () => {
     if (!process.env.DATABASE_URL?.includes("cleanique_test")) throw new Error("Dedicated test DB required");
     await initPostgresTables();
+  });
+  beforeEach(async () => {
+    ownerId = `gateway-${crypto.randomUUID()}`; branchId = `branch-${ownerId}`;
     await db.insert(users).values({ id: ownerId, name: "Gateway Owner", email: `${ownerId}@test.invalid`, passwordHash: "test", role: "tenant_owner", tier: "premium", subscriptionUntil: "2030-01-01" });
     await db.insert(tenants).values({ id: branchId, userId: ownerId, outletName: "Gateway Branch", address: "Test", phone: "08123456789", tier: "premium", subscriptionUntil: "2030-01-01" });
     await db.update(plans).set({ pricePerMonth: 200000, promotionAmount: 50000, promotionStartsAt: new Date(Date.now() - 60000).toISOString(), promotionEndsAt: new Date(Date.now() + 3600000).toISOString() }).where(eq(plans.id, "plan-premium"));
