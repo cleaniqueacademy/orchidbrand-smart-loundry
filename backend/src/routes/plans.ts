@@ -7,6 +7,7 @@ import { requireRole } from "../middleware/rbac";
 import { newId } from "../utils/id";
 
 import { planConfiguration } from "../services/planConfiguration";
+import { isPremiumComingSoon } from "../config";
 
 const planRoutes = new Hono();
 
@@ -16,13 +17,18 @@ const planRoutes = new Hono();
  */
 planRoutes.get("/public", async (c) => {
   try {
+    const comingSoon = isPremiumComingSoon();
     const activePlans = await db
       .select()
       .from(plans)
       .where(eq(plans.isActive, "true"))
       .orderBy(plans.sortOrder);
 
-    return c.json({ success: true, data: activePlans });
+    const visiblePlans = comingSoon
+      ? activePlans.filter((plan) => plan.code !== "premium")
+      : activePlans;
+
+    return c.json({ success: true, data: visiblePlans, meta: { premiumComingSoon: comingSoon } });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }

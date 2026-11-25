@@ -7,15 +7,20 @@ export interface PaymentGateway {
   status(orderId: string): Promise<GatewayTransaction | null>;
 }
 export class GatewayRejectedError extends Error {}
-export const midtransSettings = {
-  enabled: process.env.MIDTRANS_ENABLED === "true",
-  production: process.env.MIDTRANS_IS_PRODUCTION === "true",
-  serverKey: process.env.MIDTRANS_SERVER_KEY || "",
-};
-if (midtransSettings.enabled && (!midtransSettings.serverKey ||
-    (midtransSettings.production && midtransSettings.serverKey.startsWith("SB-")))) {
-  throw new Error("Konfigurasi Server Key Midtrans tidak sesuai environment");
+export function resolveMidtransSettings(env: Record<string, string | undefined> = process.env) {
+  const serverKey = (env.MIDTRANS_SERVER_KEY || "").trim();
+  const production = env.MIDTRANS_IS_PRODUCTION === "true";
+  const explicitlyDisabled = env.MIDTRANS_ENABLED === "false";
+  if (explicitlyDisabled || !serverKey) {
+    return { enabled: false, production, serverKey: "" };
+  }
+  if (production && serverKey.startsWith("SB-")) {
+    throw new Error("Konfigurasi Server Key Midtrans tidak sesuai environment");
+  }
+  return { enabled: true, production, serverKey };
 }
+
+export const midtransSettings = resolveMidtransSettings();
 
 export class MidtransClient implements PaymentGateway {
   constructor(private readonly key: string, private readonly production: boolean) {}

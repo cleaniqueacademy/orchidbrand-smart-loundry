@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { plans, tenants, users } from "../db/schema";
 import { newId } from "../utils/id";
+import { isPremiumComingSoon } from "../config";
 
 export const staffInput = z.object({
   name: z.string().trim().min(1).max(120),
@@ -12,6 +13,7 @@ export const staffInput = z.object({
 });
 
 export async function createBranchStaff(tenantId: string, actorId: string, isAdmin: boolean, input: z.infer<typeof staffInput>) {
+  if (!isAdmin && isPremiumComingSoon()) throw new Error("Fitur manajemen staf Paket Premium masih Coming Soon");
   const passwordHash = await Bun.password.hash(input.password, { algorithm: "bcrypt", cost: 12 });
   return db.transaction(async tx => {
     const [branch] = await tx.select().from(tenants).where(eq(tenants.id, tenantId));

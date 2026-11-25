@@ -26,6 +26,7 @@ import { calculateSubscriptionPrice } from "./subscriptionPricing";
 import { DEFAULT_MONTHLY_PRICE } from "../constants/services";
 import { setOwnerReferralTx } from "./ownerReferral";
 import { validateCode, recordCommission } from "./referralService";
+import { isPremiumComingSoon } from "../config";
 
 export interface SubscriptionSummary {
   tier: string;
@@ -36,6 +37,7 @@ export interface SubscriptionSummary {
   subscriptionUntil: string | null;
   daysRemaining: number;
   status: string;
+  premiumComingSoon?: boolean;
   referralCodeUsed?: string | null;
   pendingInvoice?: typeof subscriptionInvoices.$inferSelect | null;
   platformBank?: {
@@ -95,6 +97,7 @@ export async function getSubscriptionSummary(tenantId: string): Promise<Subscrip
     subscriptionUntil: subUntil,
     daysRemaining: remaining,
     status: tenant.status,
+    premiumComingSoon: isPremiumComingSoon(),
     referralCodeUsed: referralCodeStr,
     pendingInvoice: pendingInvoice ? presentInvoice(pendingInvoice) : null,
     platformBank: settings ? {
@@ -117,10 +120,11 @@ export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?
       tenantId = branches.find(branch => branch.id === owner?.tenantId)?.id || branches[0]?.id || tenantId;
     }
   }
+  const comingSoon = isPremiumComingSoon();
   if (!planIdOrCode && tenantId) {
     const [branch] = await executor.select().from(tenants).where(eq(tenants.id, tenantId));
     const [owner] = branch ? await executor.select().from(users).where(eq(users.id, branch.userId)) : [];
-    if (owner) planIdOrCode = owner.tier === "premium" ? "premium" : "pro";
+    if (owner) planIdOrCode = owner.tier === "premium" && !comingSoon ? "premium" : "pro";
   }
   let plan = null;
 
@@ -136,9 +140,21 @@ export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?
         .from(plans)
         .where(eq(plans.code, planIdOrCode));
       if (matchedByCode.length > 0) plan = matchedByCode[0];
+      else if (planIdOrCode === "pro") {
+        // Kompatibilitas DB lama dari main yang masih memakai kode paket 'standard' atau 'monthly'.
+        const [legacyPlan] = await executor
+          .select()
+          .from(plans)
+          .where(and(eq(plans.isActive, "true"), inArray(plans.code, ["standard", "monthly"])))
+          .orderBy(plans.sortOrder);
+        if (legacyPlan) plan = legacyPlan;
+      }
     }
   }
 
+  if (comingSoon && plan?.code === "premium") {
+    throw new Error("Paket Premium masih Coming Soon dan belum dapat dipesan");
+  }
   if (planIdOrCode && (!plan || plan.isActive !== "true")) throw new Error("Paket tidak tersedia");
   if (!plan) {
     const activePlans = await executor
@@ -146,7 +162,7 @@ export async function getApplicablePrice(tenantId?: string | null, planIdOrCode?
       .from(plans)
       .where(eq(plans.isActive, "true"))
       .orderBy(plans.sortOrder);
-    plan = activePlans[0];
+    plan = comingSoon ? activePlans.find(p => p.code !== "premium") : activePlans[0];
     if (!plan) throw new Error("Belum ada paket aktif");
   }
 
@@ -250,7 +266,7 @@ export async function createSubscriptionInvoice(params: {
       return { invoice: active, paymentDestination: null, reused: true };
     }
     if (params.referralCode) await setOwnerReferralTx(tx, branch.id, actor.id, actor.role === "superadmin", params.referralCode);
-    const price = await getApplicablePrice(branch.id, params.planId || (owner.tier === "premium" ? "premium" : "pro"), undefined, tx);
+    const price = await getApplicablePrice(branch.id, params.planId || (owner.tier === "premium" && !isPremiumComingSoon() ? "premium" : "pro"), undefined, tx);
     const tier = price.plan.code === "premium" ? "premium" : "pro";
     if (actor.role !== "superadmin" && owner.isTrial !== "true" && tier !== owner.tier) throw new Error("Perubahan paket dilakukan melalui admin");
     const activeBranches = await tx.select().from(tenants).where(and(eq(tenants.userId, owner.id), isNull(tenants.archivedAt), eq(tenants.status, "active")));

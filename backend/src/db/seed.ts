@@ -5,6 +5,7 @@ import { db, initPostgresTables } from "./index";
 import { users, tenants, plans, platformSettings, services } from "./schema";
 import { seedMarketingUsers } from "./seedMarketingUsers";
 import { generateRandomPassword } from "../utils/password";
+import { isPremiumComingSoon } from "../config";
 
 /** Local demo bootstrap only. Reset is a separate, backup-gated operation. */
 export async function seedInitialData(force = false) {
@@ -20,7 +21,7 @@ export async function seedInitialData(force = false) {
     await tx.insert(platformSettings).values({ id: "default", platformName: "Laundry Cleanique", qrisInfo: "/qris.png", defaultTrialDays: 7, defaultAiDailyQuota: 50, updatedAt: createdAt });
     const seedPlans = [
       { id: "plan-pro", code: "pro", name: "Paket Pro", description: "Operasional satu cabang", pricePerMonth: 60000, maxBranches: 1, maxStaff: 0, maxWaNumbers: 1, aiTokenQuotaDaily: 50, features: JSON.stringify(["Kasir POS", "Arus kas", "Nota browser"]), isTrialAllowed: "true", isActive: "true", sortOrder: 1 },
-      { id: "plan-premium", code: "premium", name: "Paket Premium", description: "Langganan Owner untuk hingga lima cabang", pricePerMonth: 200000, promotionAmount: 50000, promotionStartsAt: createdAt, promotionEndsAt: promoEnds, maxBranches: 5, maxStaff: 5, maxWaNumbers: 5, aiTokenQuotaDaily: 50, features: JSON.stringify(["Fitur Pro", "Manajemen staf", "Hingga lima cabang", "Cetak thermal melalui browser"]), isTrialAllowed: "true", isActive: "true", sortOrder: 2 },
+      { id: "plan-premium", code: "premium", name: "Paket Premium", description: "Langganan Owner untuk hingga lima cabang", pricePerMonth: 200000, promotionAmount: 50000, promotionStartsAt: createdAt, promotionEndsAt: promoEnds, maxBranches: 5, maxStaff: 5, maxWaNumbers: 5, aiTokenQuotaDaily: 50, features: JSON.stringify(["Fitur Pro", "Manajemen staf", "Hingga lima cabang", "Cetak thermal melalui browser"]), isTrialAllowed: "true", isActive: isPremiumComingSoon() ? "false" : "true", sortOrder: 2 },
     ];
     for (const plan of seedPlans) await tx.insert(plans).values(plan).onConflictDoUpdate({ target: plans.code, set: plan });
     const adminPassword = process.env.SEED_DEFAULT_PASSWORD || generateRandomPassword(16);

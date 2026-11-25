@@ -8,8 +8,13 @@ const origin = process.env.APP_ORIGIN;
 if (production && (!origin || new URL(origin).protocol !== "https:" || new URL(origin).origin !== origin)) {
   throw new Error("APP_ORIGIN production harus berupa origin HTTPS yang valid");
 }
+export function isPremiumComingSoon(env: Record<string, string | undefined> = process.env): boolean {
+  return env.PREMIUM_COMING_SOON !== "false";
+}
+
 export const config = {
   production,
   jwtSecret: suppliedSecret || crypto.randomUUID() + crypto.randomUUID(),
   origin: origin || "*",
+  premiumComingSoon: isPremiumComingSoon(),
 };

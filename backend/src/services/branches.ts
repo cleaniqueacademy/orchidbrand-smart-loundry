@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { tenants, users, services, plans } from "../db/schema";
 import { newId } from "../utils/id";
+import { isPremiumComingSoon } from "../config";
 
 export const branchInput = z.object({
   outletName: z.string().trim().min(1).max(120),
@@ -14,6 +15,7 @@ export const branchInput = z.object({
 
 /** Owner row serializes creation and billing so concurrent requests cannot exceed quota. */
 export async function createOwnerBranch(ownerId: string, input: z.infer<typeof branchInput>) {
+  if (isPremiumComingSoon()) throw new Error("Fitur multi-cabang Paket Premium masih Coming Soon");
   return db.transaction(async tx => {
     const [owner] = await tx.select().from(users).where(and(eq(users.id, ownerId), eq(users.role, "tenant_owner"))).for("update");
     if (!owner || owner.tier !== "premium") throw new Error("Paket Premium diperlukan");

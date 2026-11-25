@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, initPostgresTables } from "../db";
@@ -31,7 +31,13 @@ test("Midtrans signatures reject forged, missing and modified amounts", () => {
 
 describe.skipIf(process.env.PREMIUM_TEST_DATABASE !== "isolated")("subscription gateway with isolated PostgreSQL", () => {
   let ownerId: string, branchId: string;
+  const prevComingSoon = process.env.PREMIUM_COMING_SOON;
+  afterAll(() => {
+    if (prevComingSoon === undefined) delete process.env.PREMIUM_COMING_SOON;
+    else process.env.PREMIUM_COMING_SOON = prevComingSoon;
+  });
   beforeAll(async () => {
+    process.env.PREMIUM_COMING_SOON = "false";
     if (!process.env.DATABASE_URL?.includes("cleanique_test")) throw new Error("Dedicated test DB required");
     await initPostgresTables();
   });

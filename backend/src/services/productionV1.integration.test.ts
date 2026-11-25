@@ -1,4 +1,4 @@
-import { beforeAll, test, expect } from "bun:test";
+import { afterAll, beforeAll, test, expect } from "bun:test";
 import { and, eq, sql } from "drizzle-orm";
 import { client, db, initPostgresTables } from "../db";
 import { users, tenants, plans, storedFiles, subscriptionInvoices, paymentAttempts, expenses, platformCashflow, referralCodes, marketingProfiles, marketingCommissions, paymentAdjustments, marketingWithdrawals, orders, customers } from "../db/schema";
@@ -39,7 +39,13 @@ async function manual(bill:typeof subscriptionInvoices.$inferSelect) {
   await db.insert(storedFiles).values({path,ownerId:bill.userId,category:"payments"});
   await uploadPaymentProof(bill.id,path,bill.tenantId);
 }
+const prevComingSoon = process.env.PREMIUM_COMING_SOON;
+afterAll(() => {
+  if (prevComingSoon === undefined) delete process.env.PREMIUM_COMING_SOON;
+  else process.env.PREMIUM_COMING_SOON = prevComingSoon;
+});
 beforeAll(async()=>{
+  process.env.PREMIUM_COMING_SOON = "false";
   await initializeApplication(false);
   adminId=crypto.randomUUID();
   await db.insert(users).values({id:adminId,name:"Test Admin",email:`${adminId}@test.invalid`,passwordHash:"not-a-login-password",role:"superadmin"});

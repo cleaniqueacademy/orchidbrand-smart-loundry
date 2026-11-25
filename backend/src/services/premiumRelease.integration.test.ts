@@ -1,5 +1,5 @@
 import { createSession } from "./sessions";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db, initPostgresTables } from "../db";
@@ -15,7 +15,13 @@ const enabled = process.env.PREMIUM_TEST_DATABASE === "isolated";
 describe.skipIf(!enabled)("Premium release with isolated PostgreSQL", () => {
   const suffix = crypto.randomUUID();
   const ownerId = `owner-${suffix}`, tenantId = `branch-${suffix}`, otherId = `other-${suffix}`;
+  const prevComingSoon = process.env.PREMIUM_COMING_SOON;
+  afterAll(() => {
+    if (prevComingSoon === undefined) delete process.env.PREMIUM_COMING_SOON;
+    else process.env.PREMIUM_COMING_SOON = prevComingSoon;
+  });
   beforeAll(async () => {
+    process.env.PREMIUM_COMING_SOON = "false";
     if (!process.env.DATABASE_URL?.includes("cleanique_test")) throw new Error("Dedicated cleanique_test database required");
     await initPostgresTables();
     await db.insert(users).values([

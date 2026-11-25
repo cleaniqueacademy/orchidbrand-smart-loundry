@@ -464,6 +464,7 @@ export interface SubscriptionSummary {
   subscriptionUntil: string | null;
   daysRemaining: number;
   status: string;
+  premiumComingSoon?: boolean;
   referralCodeUsed?: string | null;
   pendingInvoice?: SubscriptionInvoice | null;
   platformBank?: {
@@ -543,7 +544,7 @@ export const ACCOUNT_TIERS = {
     canManageMultipleBranches: true,
     maxBranches: 5,
     maxStaff: 25,
-    isComingSoon: false,
+    isComingSoon: true,
   },
 } as const satisfies Record<AccountTier, TierDefinition>;
 
@@ -566,37 +567,37 @@ export const PREMIUM_FEATURES_REGISTRY = {
     key: "thermal_printer",
     title: "Koneksi Thermal Printer POS",
     subtitle: "Cetak nota melalui browser ke printer sistem operasi (58mm / 80mm)",
-    badge: "Paket Premium",
+    badge: "Paket Premium • Coming Soon",
     capabilities: [
       "Cetak melalui dialog browser dan driver printer sistem operasi",
       "Kustomisasi format header, footer, & QRIS pada struk kasir",
       "Cetak nota 1-klik langsung dari modal checkout pesanan kasir",
     ],
-    releaseStatus: "available",
+    releaseStatus: "coming_soon",
   },
   employee_management: {
     key: "employee_management",
     title: "Manajemen Karyawan & Kasir",
     subtitle: "Kelola akun staf kasir, shift kerja, dan pantau rekonsiliasi laci kas",
-    badge: "Paket Premium",
+    badge: "Paket Premium • Coming Soon",
     capabilities: [
       "Tambah akun kasir/operator terisolasi dengan pembagian hak akses terukur",
       "Audit rekonsiliasi kas laci & log aktivitas per staf kasir",
       "Reset sandi dan pembekuan akun staf secara fleksibel",
     ],
-    releaseStatus: "available",
+    releaseStatus: "coming_soon",
   },
   branch_management: {
     key: "branch_management",
     title: "Manajemen Multi-Cabang Outlet",
     subtitle: "Kelola dan pantau seluruh cabang laundry dalam satu akun Owner terpadu",
-    badge: "Paket Premium",
+    badge: "Paket Premium • Coming Soon",
     capabilities: [
       "Tambah dan kelola Hingga 5 Gerai/cabang dalam 1 akun Owner",
       "Pemisahan omzet, buku kas, dan laporan performa per gerai",
       "Peralihan cepat antar cabang tanpa perlu logout akun",
     ],
-    releaseStatus: "available",
+    releaseStatus: "coming_soon",
   },
 } as const satisfies Record<PremiumFeatureKey, PremiumFeatureMeta>;
 
@@ -610,7 +611,7 @@ export function isFeatureAccessible(
 ): boolean {
   if (!tier) return false;
   const config = ACCOUNT_TIERS[tier];
-  if (!config) return false;
+  if (!config || config.isComingSoon) return false;
 
   switch (feature) {
     case "thermal_printer":
