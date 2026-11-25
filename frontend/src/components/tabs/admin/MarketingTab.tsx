@@ -69,7 +69,6 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   const confirm = useConfirm();
   const toast = useToast();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [syncingBalances, setSyncingBalances] = useState(false);
 
   const isSuperadmin = currentUser?.role === "superadmin";
   const isMarketing = currentUser?.role === "marketing";
@@ -101,22 +100,6 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
       fetchCommissions();
     }
   }, [isSuperadmin, isMarketing, fetchProfiles, fetchWithdrawals, fetchCommissions, fetchMe]);
-
-  const handleSyncBalances = async () => {
-    setSyncingBalances(true);
-    try {
-      const res = await syncBalances();
-      if (res.success) {
-        toast.success(res.message || "Saldo dan komisi berhasil disinkronkan");
-      } else {
-        toast.error(res.message || "Gagal menyinkronkan saldo");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Terjadi kesalahan sistem");
-    } finally {
-      setSyncingBalances(false);
-    }
-  };
 
   const handleOpenCreate = () => {
     setSelectedProfileForEdit(null);
@@ -170,7 +153,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
   const handleDeleteProfile = async (profileId: string, userName: string) => {
     const confirmed = await confirm({
       title: "Hapus Akun Marketing Permanen",
-      description: `Hapus akun "${userName}" dari sistem? Tindakan ini bersifat permanen. Kode referral yang sudah dipakai outlet akan tetap tersimpan.`,
+      description: `Arsipkan akun "${userName}"? Akses dicabut; kode referral, komisi, dan histori tetap tersimpan.`,
       confirmText: "Hapus Permanen",
       variant: "danger" as const,
     });
@@ -267,15 +250,6 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
             </p>
           </div>
           <div className="flex items-center gap-2 self-start">
-            <button
-              onClick={handleSyncBalances}
-              disabled={syncingBalances}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-              title="Sinkronkan saldo dan status komisi dari riwayat invoice"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncingBalances ? "animate-spin text-blue-600" : ""}`} />
-              <span>{syncingBalances ? "Menyinkronkan..." : "Sinkronkan Saldo"}</span>
-            </button>
             <button
               onClick={handleOpenCreate}
               className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
@@ -537,7 +511,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
                               <button
                                 onClick={() => handleDeleteProfile(p.id, p.userName || "Marketing")}
                                 className="p-1.5 rounded-lg text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                                title="Hapus akun marketing permanen"
+                                title="Arsipkan akun marketing"
                                 disabled={actionLoading === p.id}
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -566,7 +540,6 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ currentUser, autoOpe
           {activeSubTab === "commissions" && (
             <CommissionPayoutTable
               commissions={commissions}
-              onUpdateStatus={updateCommissionStatus}
               isSuperadmin={true}
             />
           )}

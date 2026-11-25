@@ -19,5 +19,12 @@
     "docker:up": "docker compose --profile full-stack up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"
+  },
+  "overrides": {
+    "shell-quote": "1.11.0",
+    "source-map-js": "1.2.2",
+    "sharp": "0.35.5",
+    "music-metadata": "11.16.1",
+    "postcss-selector-parser": "6.1.6"
   }
 }

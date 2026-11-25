@@ -1,5 +1,5 @@
 // Service Worker for Laundry Cleanique PWA
-const CACHE_NAME = "cleanique-cache-v4";
+const CACHE_NAME = "cleanique-cache-v5-private-files";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // 2. Bypass non-GET and API / dynamic tracking requests from caching
-  if (event.request.method !== "GET" || url.pathname.startsWith("/api/")) {
+  if (event.request.method !== "GET" || url.pathname.startsWith("/api/") || url.pathname.startsWith("/uploads/")) {
     return;
   }
 

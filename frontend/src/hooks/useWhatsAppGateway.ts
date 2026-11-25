@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "../components/common/ToastContext";
-import { authHeaders, getAuthToken } from "../utils/api";
+import { authHeaders } from "../utils/api";
 
 const API_BASE = "/api";
 
@@ -30,8 +30,7 @@ export function useWhatsAppGateway(tenantId: string) {
 
   // Fetch status
   const fetchStatus = useCallback(async () => {
-    const token = getAuthToken();
-    if (!tenantId || !token) return;
+    if (!tenantId) return;
     try {
       const res = await fetch(`${API_BASE}/whatsapp/status?tenantId=${tenantId}`, {
         headers: authHeaders(),
@@ -54,7 +53,7 @@ export function useWhatsAppGateway(tenantId: string) {
   }, [tenantId, toast]);
 
   useEffect(() => {
-    if (tenantId && getAuthToken()) {
+    if (tenantId) {
       fetchStatus();
     }
   }, [fetchStatus, tenantId]);

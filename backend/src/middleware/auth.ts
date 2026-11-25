@@ -13,29 +13,13 @@ export interface TokenPayload {
   exp: number; // Unix ms
 }
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "cleanique_laundry_super_secret_jwt_key_2026";
+import { config } from "../config";
+const JWT_SECRET = config.jwtSecret;
 
-// ─── Cache status tenant & user ringan (20 detik) ───────────────────────────────
-interface TenantStatusCache {
-  status: string;
-  subscriptionUntil: string | null;
-  checkedAt: number;
-}
-const tenantCache = new Map<string, TenantStatusCache>();
-const userStatusCache = new Map<string, { status: string; checkedAt: number }>();
-
-export function invalidateTenantAuthCache(tenantId?: string, userId?: string) {
-  if (tenantId) {
-    tenantCache.delete(tenantId);
-  } else {
-    tenantCache.clear();
-  }
-  if (userId) {
-    userStatusCache.delete(userId);
-  } else {
-    userStatusCache.clear();
-  }
-}
+// Authorization is resolved from current database identity, without an allow-on-error cache.
+export function invalidateTenantAuthCache(_tenantId?: string, _userId?: string) {}
+import { resolveSession, validCsrf } from "../services/sessions";
+import { today } from "../utils/date";
 
 // ─── HMAC-SHA256 helpers (Bun built-in crypto) ───────────────────────────────
 
@@ -52,8 +36,8 @@ async function hmacSign(data: string): Promise<string> {
 }
 
 async function hmacVerify(data: string, sig: string): Promise<boolean> {
-  const expected = await hmacSign(data);
-  return expected === sig;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(JWT_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+  return crypto.subtle.verify("HMAC", key, Buffer.from(sig, "base64url"), new TextEncoder().encode(data));
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -105,106 +89,56 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
  * Mengembalikan 401 jika token tidak ada atau tidak valid.
  */
 export async function authMiddleware(c: Context, next: Next) {
-  const authHeader = c.req.header("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token) {
-    return c.json({ success: false, message: "Token autentikasi diperlukan" }, 401);
-  }
-
-  const payload = await verifyToken(token);
-  if (!payload) {
-    return c.json({ success: false, message: "Token tidak valid atau telah kedaluwarsa" }, 401);
-  }
-
-  const path = c.req.path;
-  const isExemptRoute =
-    path.startsWith("/api/subscription") ||
-    path.startsWith("/api/plans") ||
-    path.startsWith("/api/platform-settings") ||
-    path.startsWith("/api/auth");
-
-  // Verifikasi status akun pengguna (jika dinonaktifkan secara sepihak oleh admin)
-  if (payload.role !== "superadmin") {
-    try {
-      let uCached = userStatusCache.get(payload.userId);
-      if (!uCached || Date.now() - uCached.checkedAt > 20000) {
-        const uRows = await db
-          .select({ status: users.status })
-          .from(users)
-          .where(eq(users.id, payload.userId));
-        if (uRows && uRows.length > 0) {
-          uCached = { status: uRows[0].status || "active", checkedAt: Date.now() };
-          userStatusCache.set(payload.userId, uCached);
-        }
-      }
-      if (uCached && uCached.status === "inactive" && !isExemptRoute) {
-        return c.json(
-          {
-            success: false,
-            code: "ACCOUNT_INACTIVE",
-            message: "Akun Anda telah dinonaktifkan oleh Super Admin. Hubungi pihak manajemen.",
-          },
-          403
-        );
-      }
-    } catch (err) {
-      console.warn("[authMiddleware] User status check error:", err);
+  try {
+    const identity = await resolveSession(c);
+    if (!identity) return c.json({ success: false, message: "Silakan login kembali" }, 401);
+    const { user, session } = identity;
+    if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method) && !validCsrf(c, session.csrfHash)) {
+      return c.json({ success: false, message: "Validasi keamanan request gagal" }, 403);
     }
-  }
-
-  // Verifikasi status aktif dan masa langganan outlet secara realtime untuk peran non-superadmin
-  if (payload.role !== "superadmin" && payload.tenantId) {
-    try {
-      let tenantInfo = tenantCache.get(payload.tenantId);
-      if (!tenantInfo || Date.now() - tenantInfo.checkedAt > 20000) {
-        const tRows = await db
-          .select({ status: tenants.status, subscriptionUntil: tenants.subscriptionUntil })
-          .from(tenants)
-          .where(eq(tenants.id, payload.tenantId));
-        if (tRows && tRows.length > 0) {
-          tenantInfo = {
-            status: tRows[0].status || "active",
-            subscriptionUntil: tRows[0].subscriptionUntil || null,
-            checkedAt: Date.now(),
-          };
-          tenantCache.set(payload.tenantId, tenantInfo);
-        }
-      }
-
-      if (tenantInfo) {
-        if (tenantInfo.status === "inactive" && !isExemptRoute) {
-          return c.json(
-            {
-              success: false,
-              code: "ACCOUNT_INACTIVE",
-              message: "Outlet Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi.",
-            },
-            403
-          );
-        }
-
-        if (tenantInfo.subscriptionUntil && !isExemptRoute) {
-          const expDate = new Date(`${tenantInfo.subscriptionUntil}T23:59:59`);
-          if (!isNaN(expDate.getTime()) && expDate < new Date()) {
-            return c.json(
-              {
-                success: false,
-                code: "SUBSCRIPTION_EXPIRED",
-                message: `Masa aktif langganan outlet ini telah berakhir pada ${tenantInfo.subscriptionUntil}. Silakan hubungi Super Admin untuk perpanjangan.`,
-              },
-              403
-            );
-          }
-        }
-      }
-    } catch (err) {
-      // Jika terjadi kesalahan koneksi atau tabel mock pada isolated test, lewatkan
-      console.warn("[authMiddleware] Tenant check notice:", err);
+    const authPath = c.req.path.startsWith("/api/auth/");
+    if (!["superadmin","tenant_owner","staff","marketing"].includes(user.role)) return c.json({success:false,message:"Role tidak diizinkan"},403);
+    if (user.role === "marketing" && !authPath && !/^\/api\/(marketing|referral-codes)(?:\/|$)/.test(c.req.path) && c.req.path !== "/api/ai/chat") return c.json({success:false,message:"Akses operasional hanya untuk Owner/staf cabang"},403);
+    if ((user.status !== "active" || user.suspendedAt || user.archivedAt) && !authPath) {
+      return c.json({ success: false, code: "ACCOUNT_SUSPENDED", message: "Akun diblokir atau diarsipkan. Hubungi admin." }, 403);
     }
+    let tenantId = user.tenantId;
+    const selected = c.req.header("X-Tenant-Id");
+    if (user.role === "tenant_owner" && !selected) {
+      const branches = await db.select().from(tenants).where(eq(tenants.userId,user.id)).orderBy(tenants.createdAt,tenants.id);
+      const available = branches.filter(branch=>branch.status === "active" && !branch.archivedAt && !branch.suspendedAt);
+      tenantId = available.find(branch=>branch.id === user.tenantId)?.id || available[0]?.id || branches.find(branch=>branch.id === user.tenantId)?.id || branches[0]?.id || null;
+    }
+    if (selected && selected !== tenantId && user.role !== "superadmin") {
+      if (user.role !== "tenant_owner") return c.json({ success: false, message: "Akses cabang ditolak" }, 403);
+      tenantId = selected;
+    }
+    const billingPath = user.role === "tenant_owner" && (
+      authPath || (c.req.method === "GET" && c.req.path === "/api/my-branches") || /^\/api\/subscription(?:\/|$)/.test(c.req.path) ||
+      /^\/api\/payments\/midtrans\/invoices\//.test(c.req.path) || c.req.path === "/api/upload" ||
+      /^\/uploads\/(payments|general)\//.test(c.req.path)
+    );
+    if (["tenant_owner", "staff"].includes(user.role)) {
+      if (!tenantId) return c.json({ success: false, message: "Cabang tidak ditemukan" }, 403);
+      const [branch] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+      if (!branch || (user.role === "tenant_owner" && branch.userId !== user.id)) return c.json({ success: false, message: "Akses cabang ditolak" }, 403);
+      const [owner] = await db.select().from(users).where(eq(users.id, branch.userId));
+      if (!owner || owner.archivedAt || owner.suspendedAt || owner.status !== "active") {
+        if (!authPath) return c.json({ success: false, code: "ACCOUNT_SUSPENDED", message: "Cabang atau Owner diblokir/diarsipkan" }, 403);
+      }
+      if ((branch.archivedAt || branch.suspendedAt || branch.status !== "active") && !billingPath && !authPath) return c.json({ success: false, code: "ACCOUNT_SUSPENDED", message: "Cabang diblokir/diarsipkan" }, 403);
+      if (user.role === "staff" && owner?.tier !== "premium" && !authPath) return c.json({ success: false, message: "Staf membutuhkan Premium" }, 403);
+      const until = owner?.subscriptionUntil || branch.subscriptionUntil;
+      if ((!until || !/^\d{4}-\d{2}-\d{2}$/.test(until) || until < today()) && !billingPath && !authPath) {
+        return c.json({ success: false, code: "SUBSCRIPTION_EXPIRED", message: "Langganan berakhir. Owner dapat melakukan perpanjangan." }, 403);
+      }
+    }
+    c.set("user", { userId: user.id, role: user.role, tenantId, exp: session.expiresAt.getTime() } satisfies TokenPayload);
+    c.set("sessionUser", user);
+  } catch {
+    console.error("[auth] identity validation unavailable");
+    return c.json({ success: false, message: "Validasi akses sedang tidak tersedia" }, 503);
   }
-
-  c.set("user", payload);
   await next();
 }
 

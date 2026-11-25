@@ -43,11 +43,11 @@ export async function callAiveneAPI(
       "User-Agent": "CleaniqueApp/1.0",
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(12000), redirect: "error",
   });
 
   if (!res.ok) {
-    const errorBody = await res.text();
-    throw new Error(`Aivene API error [HTTP ${res.status}]: ${errorBody}`);
+    throw new Error(`Aivene API error [HTTP ${res.status}]`);
   }
 
   const json: any = await res.json();
@@ -70,7 +70,7 @@ export async function callAiveneWithFallback(
 ): Promise<{ text: string; modelName: string }> {
   let lastErr: Error | null = null;
 
-  for (const model of AIVENE_MODELS) {
+  for (const model of AIVENE_MODELS.slice(0, 1)) {
     try {
       const text = await callAiveneAPI(
         apiKey,

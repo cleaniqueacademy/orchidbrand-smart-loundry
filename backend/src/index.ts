@@ -1,9 +1,23 @@
-import { Hono } from "hono";
+import { z } from "zod";
+import { registerNewTenant } from "./services/signupService";
+import { authSessions } from "./db/schema";
+import { enqueueWaDelivery, processWaQueue } from "./services/waQueue";
+import { changeLifecycle } from "./services/accountLifecycle";
+import { expireSubscriptionInvoices } from "./services/invoiceLifecycle";
+import { localMaintenanceActive } from "./services/localMaintenance";
+import { Hono, type Context } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { bodyLimit } from "hono/body-limit";
+import { issueSession, revokeSession, validRequestOrigin } from "./services/sessions";
+import { today } from "./utils/date";
+import { secureHeaders } from "hono/secure-headers";
+import { config } from "./config";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { db, initPostgresTables } from "./db/index";
 import {
   users,
+  plans,
   tenants,
   customers,
   orders,
@@ -18,7 +32,7 @@ import {
   referralCodeTenants,
   referralEvents,
 } from "./db/schema";
-import { eq, desc, and, gte, lte, like } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
 import whatsappRoutes from "./routes/whatsapp";
 import referralRoutes from "./routes/referralCodes";
 import marketingRoutes from "./routes/marketing";
@@ -26,8 +40,10 @@ import signupRoutes from "./routes/signup";
 import planRoutes from "./routes/plans";
 import platformSettingsRoutes from "./routes/platformSettings";
 import subscriptionRoutes from "./routes/subscription";
+import midtransRoutes from "./routes/midtrans";
 import platformCashflowRoutes from "./routes/platformCashflow";
 import uploadRoutes from "./routes/upload";
+import fileRoutes from "./routes/files";
 import { getUploadsBaseDir } from "./services/storageService";
 import path from "path";
 import { sendWhatsAppMessage, autoRestoreSavedSessions, getWhatsAppStatus } from "./services/whatsapp";
@@ -38,26 +54,55 @@ import { signToken, authMiddleware, getUser, invalidateTenantAuthCache } from ".
 import { requireRole, requireTenantAccess } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
 
+import { staffInput, createBranchStaff } from "./services/staff";
+import { branchInput, createOwnerBranch } from "./services/branches";
+
+function routeParam(c: Context, name: string): string {
+  const value = c.req.param(name);
+  if (!value) throw new HTTPException(400, { message: "Parameter route diperlukan" });
+  return value;
+}
 const app = new Hono();
+app.use("*", secureHeaders());
+app.use("/api/*", async (c, next) => {
+  if (localMaintenanceActive()) return c.json({ success: false, message: "Database lokal sedang direset. Silakan masuk kembali setelah proses selesai." }, 503);
+  await next();
+});
+app.use("/api/*", bodyLimit({ maxSize: 8 * 1024 * 1024 }));
+app.use("*", async (c,next) => {
+  await next();
+  if (config.production && c.res.status >= 500) {
+    console.error("[http] request unavailable", { path:c.req.path,status:c.res.status });
+    return c.json({success:false,message:"Layanan sementara tidak tersedia. Coba kembali atau hubungi admin."},c.res.status as 500);
+  }
+});
 
 // Middlewares
 app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: config.origin,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "X-CSRF-Token", "X-Tenant-Id"],
+    credentials: true,
   })
 );
 
-// Auto-initialize PostgreSQL tables on startup, then auto-restore active Baileys sessions
-initPostgresTables()
-  .then(async () => {
-    await autoRestoreSavedSessions();
-  })
-  .catch(console.error);
+let initialized = false;
+let initialization: Promise<void> | undefined;
+export function initializeApplication(restoreWhatsApp = true) {
+  initialization ??= initPostgresTables().then(async () => {
+    initialized = true;
+    if (restoreWhatsApp && !localMaintenanceActive()) await autoRestoreSavedSessions();
+  });
+  return initialization;
+}
 
+app.use("/api/*", async (c, next) => {
+  if (!initialized && c.req.path !== "/api/health") return c.json({ success: false, message: "Aplikasi sedang diinisialisasi" }, 503);
+  await next();
+});
 // WhatsApp Gateway Routes
 app.route("/api/whatsapp", whatsappRoutes);
 // Referral & Marketing Routes
@@ -73,44 +118,27 @@ app.route("/api/plans", planRoutes);
 app.route("/api/platform-settings", platformSettingsRoutes);
 // Subscription & Invoices Routes
 app.route("/api/subscription", subscriptionRoutes);
+app.route("/api/payments/midtrans", midtransRoutes);
 // Platform Cashflow & Operations Routes
 app.route("/api/platform/cashflow", platformCashflowRoutes);
 // Local File Storage Upload Routes
 app.route("/api/upload", uploadRoutes);
 
-// Static Local Storage File Serving
-app.get("/uploads/*", async (c) => {
-  const baseDir = getUploadsBaseDir();
-  const relativePath = c.req.path.replace(/^\/uploads\//, "");
-  const resolvedPath = path.resolve(baseDir, relativePath);
-
-  if (!resolvedPath.startsWith(baseDir)) {
-    return c.text("Forbidden", 403);
-  }
-
-  const file = Bun.file(resolvedPath);
-  if (!(await file.exists())) {
-    return c.text("File tidak ditemukan", 404);
-  }
-  return new Response(file);
-});
+app.route("/uploads", fileRoutes);
 
 // 1. Health check
-app.get("/api/health", (c) => {
-  return c.json({
-    status: "ok",
-    runtime: "Bun",
-    framework: "Hono",
-    database: "PostgreSQL",
-    timestamp: new Date().toISOString(),
-    message: "Laundry Cleanique API is running smoothly on PostgreSQL!",
-  });
+app.get("/api/health", async c => {
+  try {
+    if (!initialized) return c.json({ status: "starting" }, 503);
+    await db.execute(sql`SELECT 1`);
+    return c.json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch { return c.json({ status: "unavailable" }, 503); }
 });
 
 // 2. Public Tracking Endpoint (No Auth Required)
 app.get("/api/track/:invoiceNo", async (c) => {
   try {
-    const rawInvoiceNo = c.req.param("invoiceNo")?.trim();
+    const rawInvoiceNo = routeParam(c, "invoiceNo")?.trim();
     if (!rawInvoiceNo) {
       return c.json({ success: false, message: "Nomor nota wajib diisi" }, 400);
     }
@@ -277,7 +305,7 @@ app.post("/api/services", authMiddleware, requireRole(["superadmin", "tenant_own
 app.put("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(services).where(eq(services.id, id));
     if (!existing) {
       return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
@@ -305,7 +333,7 @@ app.put("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_
 app.delete("/api/services/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(services).where(eq(services.id, id));
     if (!existing) {
       return c.json({ success: false, message: "Layanan tidak ditemukan" }, 404);
@@ -380,33 +408,23 @@ app.get("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_o
   try {
     const user = getUser(c);
     const branches = await db.select().from(tenants).where(eq(tenants.userId, user.userId));
-    return c.json({ success: true, data: branches });
+    const [owner] = await db.select({ tier: users.tier }).from(users).where(eq(users.id, user.userId));
+    const [plan] = await db.select().from(plans).where(eq(plans.code, "premium"));
+    return c.json({ success: true, data: branches, maxBranches: owner?.tier === "premium" ? Math.min(5, plan?.maxBranches ?? 0) : 1 });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
 });
 
-// 2c. Add New Branch (Gated to Premium tier)
-app.post("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+app.post("/api/my-branches", authMiddleware, requireRole(["tenant_owner"]), async (c) => {
+  const parsed = branchInput.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Nama, telepon dan alamat cabang wajib valid" }, 400);
   try {
-    const user = getUser(c);
-    const [foundUser] = await db.select().from(users).where(eq(users.id, user.userId));
-    const isPremium = foundUser?.tier === "premium" || foundUser?.metadata?.includes('"tier":"premium"');
-
-    if (!isPremium && user.role !== "superadmin") {
-      return c.json({
-        success: false,
-        code: "FEATURE_LOCKED_PREMIUM",
-        message: "Fitur penambahan cabang baru hanya tersedia pada Paket Premium (Coming Soon).",
-      }, 403);
-    }
-
-    return c.json({
-      success: false,
-      message: "Fitur pembuatan multi-cabang akan segera hadir pada rilis Paket Premium.",
-    }, 403);
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
+    const branch = await createOwnerBranch(getUser(c).userId, parsed.data);
+    return c.json({ success: true, data: branch }, 201);
+  } catch (err) {
+    console.warn("[branches] creation refused", { ownerId: getUser(c).userId, error: String(err) });
+    return c.json({ success: false, message: err instanceof Error ? err.message : "Cabang tidak dapat dibuat" }, 409);
   }
 });
 
@@ -414,7 +432,7 @@ app.post("/api/my-branches", authMiddleware, requireRole(["superadmin", "tenant_
 app.get("/api/tenants/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
     if (!tenant) {
@@ -474,40 +492,11 @@ app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) 
       city, bankName, bankAccountNumber, bankAccountName, qrisInfo, openingHours
     } = body;
 
-    const newUserId = `user-${Date.now()}`;
-    const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
-    await db.insert(users).values({
-      id: newUserId,
-      name: ownerName,
-      email: ownerEmail,
-      passwordHash: hashedPassword,
-      role: "tenant_owner",
-    });
+    const parsed = z.object({ ownerName:z.string().trim().min(1).max(120),ownerEmail:z.email().max(254),password:z.string().min(10).max(128),outletName:z.string().trim().min(1).max(120),phone:z.string().min(6).max(30),address:z.string().max(500),city:z.string().trim().min(1).max(120) }).safeParse(body);
+    if(!parsed.success)return c.json({success:false,message:"Data outlet harus lengkap; sandi minimal 10 karakter dan kota wajib diisi"},400);
+    const result=await registerNewTenant({ ...parsed.data,ownerName:parsed.data.ownerName,email:parsed.data.ownerEmail });
+    return c.json(result,result.success?201:409);
 
-    const newTenantId = `tenant-${Date.now()}`;
-    await db.insert(tenants).values({
-      id: newTenantId,
-      userId: newUserId,
-      outletName,
-      phone,
-      address,
-      city: city || null,
-      services: services ? (typeof services === "string" ? services : JSON.stringify(services)) : null,
-      bankName: bankName || null,
-      bankAccountNumber: bankAccountNumber || null,
-      bankAccountName: bankAccountName || null,
-      qrisInfo: qrisInfo || null,
-      ewalletName: body.ewalletName || null,
-      ewalletNumber: body.ewalletNumber || null,
-      ewalletAccountName: body.ewalletAccountName || null,
-      openingHours: openingHours ? (typeof openingHours === "string" ? openingHours : JSON.stringify(openingHours)) : null,
-    });
-
-    return c.json({
-      success: true,
-      message: "Tenant dan User Owner berhasil dibuat",
-      data: { tenantId: newTenantId, userId: newUserId },
-    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -516,7 +505,7 @@ app.post("/api/tenants", authMiddleware, requireRole(["superadmin"]), async (c) 
 app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== id) {
       const [tRow] = await db.select().from(tenants).where(eq(tenants.id, id));
@@ -571,8 +560,10 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
 
     // Hanya Super Admin yang boleh mengubah status aktif dan masa langganan secara langsung
     if (user.role === "superadmin") {
-      if (status !== undefined) updateData.status = status;
-      if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
+      const [existingBranch]=await db.select().from(tenants).where(eq(tenants.id,id));
+      if(!existingBranch)return c.json({success:false,message:"Cabang tidak ditemukan"},404);
+      if(subscriptionUntil!==undefined && subscriptionUntil!==existingBranch.subscriptionUntil)return c.json({success:false,message:"Perubahan masa aktif melalui billing"},409);
+      if(status!==undefined && status!==existingBranch.status) {if(!["active","inactive"].includes(status))return c.json({success:false,message:"Status tidak valid"},400); await changeLifecycle("branch",id,status,user.userId);}
     }
 
     await db.update(tenants).set(updateData).where(eq(tenants.id, id));
@@ -593,15 +584,12 @@ app.put("/api/tenants/:id", authMiddleware, requireRole(["superadmin", "tenant_o
 
 app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { status, subscriptionUntil } = body;
 
-    const updateData: any = {};
-    if (status !== undefined) updateData.status = status;
-    if (subscriptionUntil !== undefined) updateData.subscriptionUntil = subscriptionUntil;
-
-    await db.update(tenants).set(updateData).where(eq(tenants.id, id));
+    if (!["active", "inactive"].includes(status)) return c.json({ success: false, message: "Status tidak valid" }, 400);
+    await changeLifecycle("branch", id, status, getUser(c).userId);
     invalidateTenantAuthCache(id);
     return c.json({ success: true, message: "Status cabang / langganan berhasil diperbarui" });
   } catch (error: any) {
@@ -611,61 +599,30 @@ app.patch("/api/tenants/:id/status", authMiddleware, requireRole(["superadmin"])
 
 app.delete("/api/tenants/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
-    // Hapus child records terlebih dahulu agar tidak terkena constraint foreign key
-    await db.delete(waLogs).where(eq(waLogs.tenantId, id));
-    await db.delete(subscriptionEvents).where(eq(subscriptionEvents.tenantId, id));
-    await db.delete(marketingCommissions).where(eq(marketingCommissions.tenantId, id));
-    await db.delete(subscriptionInvoices).where(eq(subscriptionInvoices.tenantId, id));
-    await db.delete(referralCodeTenants).where(eq(referralCodeTenants.tenantId, id));
-    await db.delete(referralEvents).where(eq(referralEvents.tenantId, id));
-    await db.delete(expenses).where(eq(expenses.tenantId, id));
-    await db.delete(orders).where(eq(orders.tenantId, id));
-    await db.delete(customers).where(eq(customers.tenantId, id));
-    await db.delete(services).where(eq(services.tenantId, id));
-    await db.delete(shifts).where(eq(shifts.tenantId, id));
-    await db.update(users).set({ tenantId: null }).where(eq(users.tenantId, id));
-
-    await db.delete(tenants).where(eq(tenants.id, id));
+    const id = routeParam(c, "id");
+    await changeLifecycle("branch", id, "archive", getUser(c).userId);
     invalidateTenantAuthCache(id);
-    return c.json({ success: true, message: "Cabang dan seluruh data terkait berhasil dihapus" });
+    return c.json({ success: true, message: "Cabang diarsipkan; histori tetap tersimpan" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
 });
 
 // Authentication & Login (Validasi Status Aktif & Langganan Offline)
-app.post("/api/auth/login", async (c) => {
+app.post("/api/auth/login", bodyLimit({ maxSize: 16384 }), rateLimit({ max: 10, windowMs: 900000 }), async (c) => {
+  if (!validRequestOrigin(c)) return c.json({ success: false, message: "Origin tidak diizinkan" }, 403);
   try {
     const { email, password } = await c.req.json();
+    if (typeof email !== "string" || email.length > 254 || typeof password !== "string" || password.length > 128 || !password) return c.json({ success: false, message: "Email atau sandi tidak valid" }, 400);
     const foundUser = (await db.select().from(users).where(eq(users.email, email)))[0];
     if (!foundUser) {
       return c.json({ success: false, message: "Email atau kata sandi tidak ditemukan." }, 401);
     }
     let isPasswordValid = false;
-    try {
-      isPasswordValid = await Bun.password.verify(password, foundUser.passwordHash);
-    } catch {
-      isPasswordValid = foundUser.passwordHash === password;
+    if (typeof password === "string" && password.length <= 128 && /^\$(2[aby]|argon2(?:id|i|d))\$/.test(foundUser.passwordHash)) {
+      try { isPasswordValid = await Bun.password.verify(password, foundUser.passwordHash); } catch {}
     }
-
-    if (!isPasswordValid && foundUser.passwordHash === password) {
-      isPasswordValid = true;
-    }
-
-    if (!isPasswordValid) {
-      return c.json({ success: false, message: "Kata sandi yang Anda masukkan salah." }, 401);
-    }
-
-    // Auto-upgrade legacy plain-text password to secure bcrypt hash
-    if (!foundUser.passwordHash.startsWith("$2b$") && !foundUser.passwordHash.startsWith("$2a$")) {
-      try {
-        const upgradedHash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 10 });
-        await db.update(users).set({ passwordHash: upgradedHash }).where(eq(users.id, foundUser.id));
-      } catch (upErr) {
-        console.warn("[Auth] Password auto-hash upgrade notice:", upErr);
-      }
-    }
+    if (!isPasswordValid) return c.json({ success: false, message: "Email atau kata sandi tidak valid" }, 401);
 
     let userTenant = null;
     if (foundUser.tenantId) {
@@ -688,20 +645,25 @@ app.post("/api/auth/login", async (c) => {
       metadata: foundUser.metadata || null,
     };
 
-    if (foundUser.status === "inactive" && foundUser.role !== "superadmin") {
+    if (foundUser.status !== "active" || foundUser.archivedAt || foundUser.suspendedAt) {
       return c.json({
         success: false,
-        code: "ACCOUNT_INACTIVE",
+        code: "ACCOUNT_SUSPENDED",
         message: "Akun Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi langganan offline Anda.",
         user: userSummary,
       }, 403);
     }
 
-    // Periksa status aktif tenant untuk akun non-superadmin
-    if (userTenant && userTenant.status === "inactive" && foundUser.role !== "superadmin") {
+    if (foundUser.role === "tenant_owner" && (userTenant?.archivedAt || userTenant?.suspendedAt || userTenant?.status !== "active")) {
+      const candidates=await db.select().from(tenants).where(eq(tenants.userId,foundUser.id));
+      userTenant=candidates.find(branch=>branch.status==="active" && !branch.archivedAt && !branch.suspendedAt) || userTenant;
+      userSummary.tenantId=userTenant?.id || null;userSummary.tenantName=userTenant?.outletName || null;
+    }
+    // Periksa status aktif tenant untuk staf
+    if (userTenant && (userTenant.status !== "active" || userTenant.archivedAt || userTenant.suspendedAt) && foundUser.role === "staff") {
       return c.json({
         success: false,
-        code: "ACCOUNT_INACTIVE",
+        code: "ACCOUNT_SUSPENDED",
         message: "Outlet Anda berstatus NONAKTIF. Hubungi Super Admin untuk aktivasi.",
         user: userSummary,
       }, 403);
@@ -715,10 +677,7 @@ app.post("/api/auth/login", async (c) => {
         subDate = userTenant.subscriptionUntil;
       }
       if (subDate) {
-        const expDate = new Date(`${subDate}T23:59:59`);
-        if (!isNaN(expDate.getTime()) && expDate < new Date()) {
-          isExpired = true;
-        }
+        isExpired = !/^\d{4}-\d{2}-\d{2}$/.test(subDate) || subDate < today();
       } else {
         isExpired = true;
       }
@@ -734,19 +693,13 @@ app.post("/api/auth/login", async (c) => {
       tier: determinedTier,
     };
 
-    // Generate session token (HMAC-SHA256)
-    const token = await signToken({
-      userId: foundUser.id,
-      role: foundUser.role,
-      tenantId: userSummary.tenantId,
-      exp: Date.now() + 7 * 24 * 3600 * 1000,
-    });
+    if (isExpired && foundUser.role === "staff") return c.json({ success: false, code: "SUBSCRIPTION_EXPIRED", message: "Langganan berakhir; hubungi Owner untuk perpanjangan." }, 403);
+    await issueSession(c, foundUser.id);
 
     return c.json({
       success: true,
       message: isExpired ? "Login berhasil (Akun Memerlukan Langganan Aktif)" : "Login berhasil",
       user: enrichedUserSummary,
-      token,
     });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
@@ -754,9 +707,11 @@ app.post("/api/auth/login", async (c) => {
 });
 
 // Cek status masa aktif user secara realtime
-app.get("/api/auth/status", async (c) => {
+async function currentSessionStatus(c: Context) {
   try {
-    const userId = c.req.query("userId");
+    const actor = getUser(c);
+    const userId = c.req.query("userId") || actor.userId;
+    if (userId !== actor.userId && actor.role !== "superadmin") return c.json({ success: false, message: "Akses profil ditolak" }, 403);
     if (!userId) {
       return c.json({ success: false, message: "userId diperlukan" }, 400);
     }
@@ -772,16 +727,16 @@ app.get("/api/auth/status", async (c) => {
       userTenant = (await db.select().from(tenants).where(eq(tenants.userId, foundUser.id)))[0];
     }
 
+    if(foundUser.role === "tenant_owner" && actor.userId === foundUser.id && actor.tenantId) {
+      const [activeBranch]=await db.select().from(tenants).where(and(eq(tenants.id,actor.tenantId),eq(tenants.userId,foundUser.id)));
+      if(activeBranch)userTenant=activeBranch;
+    }
     let isExpired = false;
     let daysRemaining = 0;
     const subDate = foundUser.subscriptionUntil || userTenant?.subscriptionUntil;
     if (subDate) {
-      const expDate = new Date(`${subDate}T23:59:59`);
-      if (!isNaN(expDate.getTime())) {
-        const diffMs = expDate.getTime() - Date.now();
-        daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        isExpired = diffMs < 0;
-      }
+      isExpired = subDate < today();
+      daysRemaining = Math.ceil((Date.parse(subDate + "T00:00:00Z") - Date.parse(today() + "T00:00:00Z")) / 86400000);
     } else if (foundUser.role !== "superadmin") {
       isExpired = true;
     }
@@ -818,9 +773,12 @@ app.get("/api/auth/status", async (c) => {
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
-});
+}
+app.get("/api/auth/status", authMiddleware, currentSessionStatus);
+app.get("/api/auth/me", authMiddleware, currentSessionStatus);
 
-app.post("/api/auth/logout", async (c) => {
+app.post("/api/auth/logout", authMiddleware, async c => {
+  await revokeSession(c);
   return c.json({ success: true, message: "Logout berhasil" });
 });
 
@@ -870,67 +828,29 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
       notes,
     } = body;
 
-    const newUserId = `user-${Date.now()}`;
-    const hashedPassword = await Bun.password.hash(password || "123456", { algorithm: "bcrypt", cost: 10 });
-
-    let finalTenantId = tenantId || null;
-
-    // Jika membuat owner dengan outlet baru
-    if (role === "tenant_owner" && !finalTenantId && newOutletName?.trim()) {
-      finalTenantId = `tenant-${Date.now()}`;
-      await db.insert(tenants).values({
-        id: finalTenantId,
-        outletName: newOutletName.trim(),
-        userId: newUserId,
-        status: status || "active",
-        subscriptionUntil: subscriptionUntil || null,
-        phone: phone || null,
-      });
+    const parsed=z.object({name:z.string().trim().min(1).max(120),email:z.email().max(254).transform(v=>v.toLowerCase()),password:z.string().min(10).max(128),role:z.enum(["superadmin","tenant_owner","staff","marketing"]) }).safeParse(body);
+    if(!parsed.success)return c.json({success:false,message:"Identitas/role tidak valid; sandi minimal 10 karakter"},400);
+    if(parsed.data.role==="staff") {
+      if(typeof tenantId!=="string")return c.json({success:false,message:"Cabang staf diperlukan"},400);
+      const staff=await createBranchStaff(tenantId,getUser(c).userId,true,parsed.data);
+      return c.json({success:true,data:staff},201);
     }
-
-    await db.insert(users).values({
-      id: newUserId,
-      name,
-      email,
-      passwordHash: hashedPassword,
-      role: role || "staff",
-      status: status || "active",
-      subscriptionUntil: subscriptionUntil || null,
-      tenantId: finalTenantId,
+    if(parsed.data.role==="tenant_owner") {
+      if(tenantId)return c.json({success:false,message:"Pemindahan Owner membutuhkan review pembayaran dan histori; gunakan outlet baru"},409);
+      const result=await registerNewTenant({outletName:newOutletName,ownerName:parsed.data.name,email:parsed.data.email,password:parsed.data.password,phone:typeof phone==="string"?phone:"",city:body.city,address:body.address});
+      return c.json(result,result.success?201:409);
+    }
+    const newUserId=crypto.randomUUID();
+    const hash=await Bun.password.hash(parsed.data.password,{algorithm:"bcrypt",cost:12});
+    await db.transaction(async tx=>{
+      await tx.insert(users).values({id:newUserId,name:parsed.data.name,email:parsed.data.email,passwordHash:hash,role:parsed.data.role,status:"active"});
+      if(parsed.data.role==="marketing") {
+        if(typeof phone!=="string" || phone.length<6 || phone.length>30)throw new Error("Nomor marketing wajib valid");
+        await tx.insert(marketingProfiles).values({id:crypto.randomUUID(),userId:newUserId,phone,commissionRateDefault:0,notes:typeof notes==="string"?notes.slice(0,1000):null});
+      }
     });
+    return c.json({success:true,data:{id:newUserId,name:parsed.data.name,email:parsed.data.email,role:parsed.data.role,status:"active"}},201);
 
-    // If an existing tenant is specified and user is tenant_owner, link them
-    if (finalTenantId && role === "tenant_owner" && !newOutletName?.trim()) {
-      await db.update(tenants).set({ userId: newUserId }).where(eq(tenants.id, finalTenantId));
-    }
-
-    // Jika role marketing, buatkan profil marketing afiliasi
-    if (role === "marketing") {
-      const mpId = `mp-${Date.now()}`;
-      await db.insert(marketingProfiles).values({
-        id: mpId,
-        userId: newUserId,
-        phone: phone || null,
-        commissionRateDefault: commissionRateDefault ? Number(commissionRateDefault) : 5000,
-        totalEarned: 0,
-        totalWithdrawn: 0,
-        notes: notes || null,
-      });
-    }
-
-    return c.json({
-      success: true,
-      message: "Pengguna berhasil ditambahkan",
-      data: {
-        id: newUserId,
-        name,
-        email,
-        role: role || "staff",
-        status: status || "active",
-        subscriptionUntil: subscriptionUntil || null,
-        tenantId: finalTenantId,
-      },
-    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -939,7 +859,7 @@ app.post("/api/users", authMiddleware, requireRole(["superadmin"]), async (c) =>
 app.put("/api/users/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { name, email, role, password, tenantId, status, subscriptionUntil, tutorialCompleted, metadata } = body;
 
@@ -947,11 +867,15 @@ app.put("/api/users/:id", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Akses ditolak: Anda hanya dapat mengedit akun Anda sendiri" }, 403);
     }
 
+    const [existing]=await db.select().from(users).where(eq(users.id,id));
+    if(!existing)return c.json({success:false,message:"Akun tidak ditemukan"},404);
+    if(user.role==="superadmin" && ((role!==undefined && role!==existing.role) || (tenantId!==undefined && tenantId!==existing.tenantId) || (subscriptionUntil!==undefined && subscriptionUntil!==existing.subscriptionUntil)))return c.json({success:false,message:"Perubahan role/kepemilikan memerlukan review; masa aktif melalui billing"},409);
+    if(password!==undefined && password!=="" && (typeof password!=="string" || password.length<10 || password.length>128))return c.json({success:false,message:"Sandi minimal 10 karakter"},400);
     const updatePayload: any = {};
     if (name !== undefined) updatePayload.name = name;
     if (email !== undefined) updatePayload.email = email;
     if (password !== undefined && String(password).trim()) {
-      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
+      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 12 });
     }
     if (tutorialCompleted !== undefined) {
       updatePayload.tutorialCompleted = tutorialCompleted === true || tutorialCompleted === "true" ? "true" : "false";
@@ -963,16 +887,14 @@ app.put("/api/users/:id", authMiddleware, async (c) => {
     // Hanya superadmin yang boleh mengubah role, status, masa aktif, atau asosiasi tenant
     if (user.role === "superadmin") {
       if (role !== undefined) updatePayload.role = role;
-      if (status !== undefined) updatePayload.status = status;
+      if (status !== undefined && status !== existing.status) { if(!["active","inactive"].includes(status))return c.json({success:false,message:"Status tidak valid"},400); await changeLifecycle("user",id,status,user.userId); }
       if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
       if (tenantId !== undefined) updatePayload.tenantId = tenantId;
     }
 
     await db.update(users).set(updatePayload).where(eq(users.id, id));
 
-    if (user.role === "superadmin" && tenantId && role === "tenant_owner") {
-      await db.update(tenants).set({ userId: id }).where(eq(tenants.id, tenantId));
-    }
+
 
     return c.json({ success: true, message: "Data pengguna berhasil diperbarui" });
   } catch (error: any) {
@@ -993,24 +915,12 @@ app.post("/api/users/tutorial-complete", authMiddleware, async (c) => {
 
 app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { status, subscriptionUntil } = body;
 
-    const updatePayload: any = {};
-    if (status !== undefined) updatePayload.status = status;
-    if (subscriptionUntil !== undefined) updatePayload.subscriptionUntil = subscriptionUntil;
-
-    await db.update(users).set(updatePayload).where(eq(users.id, id));
-
-    // Sinkronkan ke tenant jika pengguna adalah pemilik tenant
-    if (status !== undefined || subscriptionUntil !== undefined) {
-      const tenantPayload: any = {};
-      if (status !== undefined) tenantPayload.status = status;
-      if (subscriptionUntil !== undefined) tenantPayload.subscriptionUntil = subscriptionUntil;
-      await db.update(tenants).set(tenantPayload).where(eq(tenants.userId, id));
-    }
-
+    if (!["active", "inactive"].includes(status)) return c.json({ success: false, message: "Status tidak valid" }, 400);
+    await changeLifecycle("user", id, status, getUser(c).userId);
     invalidateTenantAuthCache(undefined, id);
 
     return c.json({ success: true, message: `Status akun berhasil diperbarui (${status === "active" ? "Aktif" : "Nonaktif"})` });
@@ -1020,82 +930,13 @@ app.patch("/api/users/:id/status", authMiddleware, requireRole(["superadmin"]), 
 });
 
 // Perpanjang masa aktif pengguna (+X hari atau tanggal tertentu) - Khusus Superadmin
-app.post("/api/users/:id/extend", authMiddleware, requireRole(["superadmin"]), async (c) => {
-  try {
-    const id = c.req.param("id");
-    const body = await c.req.json();
-    const { days, newDate, activate = true } = body;
-
-    const targetUser = (await db.select().from(users).where(eq(users.id, id)))[0];
-    if (!targetUser) {
-      return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
-    }
-
-    let finalDate = "";
-
-    if (newDate) {
-      finalDate = newDate;
-    } else if (days !== undefined) {
-      const addDays = Number(days) || 0;
-      let baseDate = new Date();
-
-      // Jika saat ini masih aktif (belum kedaluwarsa), tambahkan dari tanggal expired saat ini
-      if (targetUser.subscriptionUntil) {
-        const currentExp = new Date(`${targetUser.subscriptionUntil}T23:59:59`);
-        if (!isNaN(currentExp.getTime()) && currentExp > new Date()) {
-          baseDate = new Date(targetUser.subscriptionUntil);
-        }
-      }
-
-      baseDate.setDate(baseDate.getDate() + addDays);
-      finalDate = baseDate.toISOString().slice(0, 10);
-    } else {
-      return c.json({ success: false, message: "Parameter days atau newDate wajib disertakan" }, 400);
-    }
-
-    const updatePayload: any = {
-      subscriptionUntil: finalDate,
-    };
-    if (activate) {
-      updatePayload.status = "active";
-    }
-
-    await db.update(users).set(updatePayload).where(eq(users.id, id));
-
-    // Sinkronkan ke cabang tenant jika ada
-    const tenantPayload: any = { subscriptionUntil: finalDate };
-    if (activate) tenantPayload.status = "active";
-    await db.update(tenants).set(tenantPayload).where(eq(tenants.userId, id));
-
-    const updatedUser = (await db.select().from(users).where(eq(users.id, id)))[0];
-    const userTenant = (await db.select().from(tenants).where(eq(tenants.userId, id)))[0];
-    if (userTenant) invalidateTenantAuthCache(userTenant.id);
-
-    return c.json({
-      success: true,
-      message: `Masa aktif ${targetUser.name} berhasil diperpanjang hingga ${finalDate}`,
-      newSubscriptionUntil: finalDate,
-      user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        status: updatedUser.status || "active",
-        subscriptionUntil: updatedUser.subscriptionUntil,
-        tenantId: userTenant ? userTenant.id : null,
-        tenantName: userTenant ? userTenant.outletName : null,
-      },
-    });
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
-  }
-});
+app.post("/api/users/:id/extend", authMiddleware, requireRole(["superadmin"]), c => c.json({success:false,message:"Gunakan konfirmasi billing dengan idempotency key agar perpanjangan dapat diaudit."},409));
 
 app.delete("/api/users/:id", authMiddleware, requireRole(["superadmin"]), async (c) => {
   try {
-    const id = c.req.param("id");
-    await db.delete(users).where(eq(users.id, id));
-    return c.json({ success: true, message: "Pengguna berhasil dihapus" });
+    const id = routeParam(c, "id");
+    await changeLifecycle("user", id, "archive", getUser(c).userId);
+    return c.json({ success: true, message: "Pengguna diarsipkan" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -1105,13 +946,13 @@ app.delete("/api/users/:id", authMiddleware, requireRole(["superadmin"]), async 
 app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
     const { newPassword } = body;
 
     if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 4) {
       return c.json(
-        { success: false, message: "Kata sandi baru minimal harus 4 karakter." },
+        { success: false, message: "Kata sandi baru minimal harus 10 karakter." },
         400
       );
     }
@@ -1138,7 +979,7 @@ app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
       }
     }
 
-    const hashedPassword = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 10 });
+    const hashedPassword = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 12 });
     await db
       .update(users)
       .set({ passwordHash: hashedPassword })
@@ -1156,10 +997,18 @@ app.post("/api/users/:id/reset-password", authMiddleware, async (c) => {
 // ==========================================
 // 2B. Staff Kasir Management per Outlet (Tenant Owner & Superadmin)
 // ==========================================
+app.use("/api/staff/*", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c, next) => {
+  const actor = getUser(c);
+  if (actor.role !== "superadmin") {
+    const [owner] = await db.select({ tier: users.tier }).from(users).where(eq(users.id, actor.userId));
+    if (owner?.tier !== "premium") return c.json({ success: false, message: "Paket Premium diperlukan" }, 403);
+  }
+  await next();
+});
 app.get("/api/tenants/:id/staff", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const tenantId = c.req.param("id");
+    const tenantId = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== tenantId) {
       return c.json({ success: false, message: "Akses ditolak untuk data cabang ini" }, 403);
@@ -1184,51 +1033,22 @@ app.get("/api/tenants/:id/staff", authMiddleware, async (c) => {
 });
 
 app.post("/api/tenants/:id/staff", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
+  const parsed = staffInput.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Nama/email harus valid dan sandi minimal 10 karakter" }, 400);
   try {
-    const user = getUser(c);
-    const tenantId = c.req.param("id");
-
-    if (user.role !== "superadmin" && user.tenantId !== tenantId) {
-      return c.json({ success: false, message: "Akses ditolak untuk cabang ini" }, 403);
-    }
-
-    const { name, email, password } = await c.req.json();
-    if (!name || !email || !password) {
-      return c.json({ success: false, message: "Nama, email, dan kata sandi wajib diisi" }, 400);
-    }
-    const cleanEmail = String(email).trim().toLowerCase();
-    const existing = (await db.select().from(users).where(eq(users.email, cleanEmail)))[0];
-    if (existing) {
-      return c.json({ success: false, message: "Email sudah terdaftar" }, 400);
-    }
-
-    const hashedPassword = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
-    const newStaffId = `user-${Date.now()}`;
-    await db.insert(users).values({
-      id: newStaffId,
-      name: String(name).trim(),
-      email: cleanEmail,
-      passwordHash: hashedPassword,
-      role: "staff",
-      status: "active",
-      tenantId,
-      createdAt: new Date().toISOString(),
-    });
-
-    return c.json({
-      success: true,
-      message: "Kasir/Staff baru berhasil ditambahkan",
-      data: { id: newStaffId, name, email: cleanEmail, role: "staff", tenantId },
-    });
-  } catch (error: any) {
-    return c.json({ success: false, message: error.message }, 500);
+    const actor = getUser(c);
+    const created = await createBranchStaff(routeParam(c, "id"), actor.userId, actor.role === "superadmin", parsed.data);
+    return c.json({ success: true, data: created }, 201);
+  } catch (error) {
+    console.warn("[staff] creation refused", { actorId: getUser(c).userId });
+    return c.json({ success: false, message: "Staf tidak dapat dibuat. Periksa kuota, email, dan akses cabang." }, 409);
   }
 });
 
 app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1238,8 +1058,8 @@ app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_
       return c.json({ success: false, message: "Akses ditolak: Staf bukan milik outlet Anda" }, 403);
     }
 
-    await db.delete(users).where(eq(users.id, id));
-    return c.json({ success: true, message: "Akun staf kasir berhasil dihapus" });
+    await changeLifecycle("user", id, "archive", getUser(c).userId);
+    return c.json({ success: true, message: "Akun staf diarsipkan" });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -1248,7 +1068,7 @@ app.delete("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_
 app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1277,7 +1097,7 @@ app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_own
       updatePayload.status = status === "active" ? "active" : "inactive";
     }
     if (password !== undefined && String(password).trim().length >= 4) {
-      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 10 });
+      updatePayload.passwordHash = await Bun.password.hash(String(password).trim(), { algorithm: "bcrypt", cost: 12 });
     }
 
     await db.update(users).set(updatePayload).where(eq(users.id, id));
@@ -1290,7 +1110,7 @@ app.put("/api/staff/:id", authMiddleware, requireRole(["superadmin", "tenant_own
 app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1303,10 +1123,10 @@ app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadm
     const body = await c.req.json();
     const { newPassword } = body;
     if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 4) {
-      return c.json({ success: false, message: "Kata sandi baru minimal 4 karakter" }, 400);
+      return c.json({ success: false, message: "Kata sandi baru minimal 10 karakter" }, 400);
     }
 
-    const passwordHash = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 10 });
+    const passwordHash = await Bun.password.hash(newPassword.trim(), { algorithm: "bcrypt", cost: 12 });
     await db.update(users).set({ passwordHash }).where(eq(users.id, id));
     return c.json({ success: true, message: "Kata sandi staf kasir berhasil direset" });
   } catch (error: any) {
@@ -1317,7 +1137,7 @@ app.post("/api/staff/:id/reset-password", authMiddleware, requireRole(["superadm
 app.patch("/api/staff/:id/status", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const target = (await db.select().from(users).where(eq(users.id, id)))[0];
     if (!target) return c.json({ success: false, message: "Pengguna tidak ditemukan" }, 404);
     if (target.role !== "staff") {
@@ -1328,7 +1148,7 @@ app.patch("/api/staff/:id/status", authMiddleware, requireRole(["superadmin", "t
     }
 
     const nextStatus = target.status === "active" ? "inactive" : "active";
-    await db.update(users).set({ status: nextStatus }).where(eq(users.id, id));
+    await changeLifecycle("user", id, nextStatus, user.userId);
     return c.json({ success: true, message: `Status staf berhasil diubah menjadi ${nextStatus}`, data: { status: nextStatus } });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
@@ -1573,7 +1393,7 @@ app.get("/api/shifts/history", authMiddleware, async (c) => {
 // ==========================================
 app.get("/api/orders/:id/wa-logs", authMiddleware, async (c) => {
   try {
-    const orderId = c.req.param("id");
+    const orderId = routeParam(c, "id");
     const logs = await db.select().from(waLogs).where(eq(waLogs.orderId, orderId)).orderBy(desc(waLogs.createdAt));
     return c.json({ success: true, data: logs });
   } catch (error: any) {
@@ -1584,7 +1404,7 @@ app.get("/api/orders/:id/wa-logs", authMiddleware, async (c) => {
 app.get("/api/tenants/:id/wa-logs", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const tenantId = c.req.param("id");
+    const tenantId = routeParam(c, "id");
 
     if (user.role !== "superadmin" && user.tenantId !== tenantId) {
       return c.json({ success: false, message: "Akses ditolak" }, 403);
@@ -1670,7 +1490,7 @@ app.post("/api/customers", authMiddleware, async (c) => {
 app.put("/api/customers/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(customers).where(eq(customers.id, id));
     if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
 
@@ -1697,7 +1517,7 @@ app.put("/api/customers/:id", authMiddleware, async (c) => {
 app.delete("/api/customers/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const [existing] = await db.select().from(customers).where(eq(customers.id, id));
     if (!existing) return c.json({ success: false, message: "Pelanggan tidak ditemukan" }, 404);
 
@@ -1767,9 +1587,11 @@ app.get("/api/orders", authMiddleware, async (c) => {
   }
 });
 
-async function generateOrderInvoiceNo(): Promise<string> {
-  const monthPrefix = `INV-${new Date().toISOString().slice(0, 7).replace("-", "")}-`;
-  const existingInvoices = await db
+async function generateOrderInvoiceNo(executor: Parameters<Parameters<typeof db.transaction>[0]>[0]): Promise<string> {
+  const monthPrefix = `INV-${today().slice(0, 7).replace("-", "")}-`;
+  // Serialize numbering in the same transaction as order and notification persistence.
+  await executor.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${monthPrefix}))`);
+  const existingInvoices = await executor
     .select({ invoiceNo: orders.invoiceNo })
     .from(orders)
     .where(like(orders.invoiceNo, `${monthPrefix}%`));
@@ -1800,8 +1622,12 @@ async function generateOrderInvoiceNo(): Promise<string> {
 
 app.post("/api/orders", authMiddleware, async (c) => {
   try {
+    return await db.transaction(async tx => {
     const user = getUser(c);
-    const body = await c.req.json();
+    const line = z.object({serviceType:z.string().trim().min(1).max(200),weightOrQty:z.number().positive().max(10000),pricePerUnit:z.number().int().min(0).max(100000000),unit:z.string().min(1).max(20)}).passthrough();
+    const parsed=z.object({tenantId:z.string().max(100).optional(),customerId:z.string().max(100).optional(),unit:z.string().max(20).optional(),durationHours:z.number().positive().max(10000).optional(),estimatedCompletionAt:z.string().max(40).nullable().optional(),totalAmount:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),items:z.array(line).min(1).max(50).optional(),serviceType:z.string().min(1).max(200).optional(),weightOrQty:z.number().positive().max(10000).optional(),pricePerUnit:z.number().int().min(0).max(100000000).optional(),paymentStatus:z.enum(["paid","unpaid"]).default("unpaid"),paymentMethod:z.enum(["cash","qris","transfer"]).default("cash"),notes:z.string().max(2000).optional(),newCustomer:z.object({name:z.string().trim().min(1).max(120),phone:z.string().trim().min(6).max(30),address:z.string().max(500).optional(),notes:z.string().max(1000).optional()}).optional()}).passthrough().safeParse(await c.req.json());
+    if(!parsed.success)return c.json({success:false,message:"Item, nominal, pembayaran, atau pelanggan tidak valid"},400);
+    const body=parsed.data;
     const tenantId = user.role === "superadmin" ? (body.tenantId || user.tenantId || "tenant-01") : user.tenantId;
     if (!tenantId) {
       return c.json({ success: false, message: "Tenant ID tidak valid" }, 400);
@@ -1813,7 +1639,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
         return c.json({ success: false, message: "Nama dan nomor telepon pelanggan baru wajib diisi" }, 400);
       }
       const newCust = {
-        id: `cust-${Date.now()}`,
+        id: crypto.randomUUID(),
         tenantId,
         name: String(body.newCustomer.name).trim(),
         phone: String(body.newCustomer.phone).trim(),
@@ -1821,7 +1647,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
         notes: body.newCustomer.notes ? String(body.newCustomer.notes).trim() : "",
         createdAt: new Date().toISOString(),
       };
-      await db.insert(customers).values(newCust);
+      await tx.insert(customers).values(newCust);
       customerId = newCust.id;
     }
 
@@ -1830,7 +1656,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
     }
 
     // Verify customer exists and belongs to the tenant
-    const custResults = await db.select().from(customers).where(eq(customers.id, customerId));
+    const custResults = await tx.select().from(customers).where(eq(customers.id, customerId));
     const cust = custResults[0];
     if (!cust) {
       return c.json({ success: false, message: "Data pelanggan tidak ditemukan" }, 404);
@@ -1843,7 +1669,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
     let finalWeightOrQty = Number(body.weightOrQty) || 0;
     let finalUnit = body.unit || "kg";
     let finalPricePerUnit = Number(body.pricePerUnit) || 0;
-    let finalTotalAmount = Number(body.totalAmount) || 0;
+    let finalTotalAmount = Math.round(finalWeightOrQty * finalPricePerUnit);
     let itemsJson: string | null = null;
 
     if (body.items && Array.isArray(body.items) && body.items.length > 0) {
@@ -1851,7 +1677,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
       finalServiceType = body.items.map((it: any) => it.serviceType).join(", ");
       finalTotalAmount = body.items.reduce(
         (sum: number, it: any) =>
-          sum + (Number(it.subtotal) || Number(it.weightOrQty) * Number(it.pricePerUnit)),
+          sum + (Math.round(Number(it.weightOrQty) * Number(it.pricePerUnit))),
         0
       );
       finalWeightOrQty = body.items.reduce(
@@ -1862,6 +1688,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
       finalPricePerUnit = body.items[0]?.pricePerUnit || 0;
     }
 
+    if (!Number.isFinite(finalWeightOrQty) || finalWeightOrQty<=0 || !Number.isSafeInteger(finalTotalAmount) || finalTotalAmount<0) throw new Error("Nominal/kuantitas pesanan tidak valid");
     // Calculate estimated completion SLA
     let estimatedCompletionAt = body.estimatedCompletionAt || null;
     if (!estimatedCompletionAt) {
@@ -1875,7 +1702,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
 
     if (paymentStatus === "paid") {
       paidAt = new Date().toISOString();
-      const openShifts = await db
+      const openShifts = await tx
         .select()
         .from(shifts)
         .where(and(eq(shifts.tenantId, tenantId), eq(shifts.status, "open")));
@@ -1885,14 +1712,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
 
     let invoiceNo = "";
     let newOrder: any = null;
-    let insertSuccess = false;
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    while (!insertSuccess && attempts < maxAttempts) {
-      attempts++;
-      invoiceNo = await generateOrderInvoiceNo();
-
+    invoiceNo = await generateOrderInvoiceNo(tx);
       newOrder = {
         id: `ord-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         tenantId,
@@ -1904,7 +1724,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
         pricePerUnit: finalPricePerUnit,
         totalAmount: finalTotalAmount,
         items: itemsJson,
-        status: body.status || "process",
+        status: "process",
         paymentStatus,
         paymentMethod: body.paymentMethod || "cash",
         notes: body.notes || "",
@@ -1914,29 +1734,13 @@ app.post("/api/orders", authMiddleware, async (c) => {
         estimatedCompletionAt,
       };
 
-      try {
-        await db.insert(orders).values(newOrder);
-        insertSuccess = true;
-      } catch (err: any) {
-        const isUniqueViolation =
-          err?.code === "23505" ||
-          err?.message?.includes("orders_invoice_no_key") ||
-          err?.message?.includes("unique constraint");
-
-        if (isUniqueViolation && attempts < maxAttempts) {
-          console.warn(`[OrderCreation] Collision on invoiceNo ${invoiceNo}, retrying (attempt ${attempts + 1})...`);
-          await new Promise((resolve) => setTimeout(resolve, 50 * attempts));
-          continue;
-        }
-        throw err;
-      }
-    }
+    await tx.insert(orders).values(newOrder);
 
     // -------------------------------------------------------------
     // Auto WhatsApp on Order Creation (Konfirmasi Pesanan / Struk Digital)
     // -------------------------------------------------------------
     let waData = null;
-    const tenantResults = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    const tenantResults = await tx.select().from(tenants).where(eq(tenants.id, tenantId));
     const tenant = tenantResults[0];
 
     if (cust && cust.phone) {
@@ -1993,43 +1797,8 @@ app.post("/api/orders", authMiddleware, async (c) => {
         waUrl: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`,
       };
 
-      let waStatus = "sent";
-      let waError = null;
-      const isBaileysReady = tenant?.waMode === "baileys" || getWhatsAppStatus(tenantId).status === "connected";
-      if (isBaileysReady) {
-        try {
-          const sendRes = await sendWhatsAppMessage(tenantId, cust.phone, messageText);
-          if (sendRes.success) {
-            (waData as any).autoSent = true;
-            waStatus = "sent";
-          } else {
-            waStatus = "failed";
-            waError = sendRes.error || "Gagal mengirim via Baileys";
-          }
-        } catch (waErr: any) {
-          console.error("[Baileys WA] Auto-send creation notice:", waErr);
-          waStatus = "failed";
-          waError = waErr?.message || "Baileys connection error";
-        }
-      }
-
-      // Record to wa_logs
-      try {
-        await db.insert(waLogs).values({
-          id: `walog-${Date.now()}`,
-          tenantId,
-          orderId: newOrder.id,
-          recipientPhone: cleanPhone,
-          recipientName: cust.name,
-          messagePreview: messageText.slice(0, 200),
-          status: waStatus,
-          mode: tenant?.waMode === "baileys" ? "baileys" : "manual",
-          errorMessage: waError,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (logErr) {
-        console.warn("[waLogs] Failed to insert log:", logErr);
-      }
+      await enqueueWaDelivery({ tenantId: tenantId, orderId: newOrder.id, phone: cleanPhone, name: cust.name, message: messageText, event: "created", automatic: tenant?.waMode === "baileys" || getWhatsAppStatus(tenantId).status === "connected" }, tx);
+      (waData as any).queued = tenant?.waMode === "baileys" || getWhatsAppStatus(tenantId).status === "connected";
     }
 
     return c.json({
@@ -2041,6 +1810,7 @@ app.post("/api/orders", authMiddleware, async (c) => {
       },
       waData,
     });
+    });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }
@@ -2049,11 +1819,13 @@ app.post("/api/orders", authMiddleware, async (c) => {
 // Update Order Status & Generate WhatsApp notification template
 app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
   try {
+    return await db.transaction(async tx => {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const { status } = await c.req.json();
+    if(!["process","washing","drying_ironing","ready","completed","cancelled"].includes(status))return c.json({success:false,message:"Status tidak valid"},400);
 
-    const existingResults = await db.select().from(orders).where(eq(orders.id, id));
+    const existingResults = await tx.select().from(orders).where(eq(orders.id, id)).for("update");
     const existing = existingResults[0];
     if (!existing) {
       return c.json({ success: false, message: "Order tidak ditemukan" }, 404);
@@ -2076,7 +1848,7 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
 
     if (paymentStatus === "paid" && existing.paymentStatus !== "paid") {
       updatePayload.paidAt = new Date().toISOString();
-      const openShifts = await db
+      const openShifts = await tx
         .select()
         .from(shifts)
         .where(and(eq(shifts.tenantId, existing.tenantId), eq(shifts.status, "open")));
@@ -2084,15 +1856,15 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
       updatePayload.paidShiftId = matchingShift ? matchingShift.id : null;
     }
 
-    await db
+    await tx
       .update(orders)
       .set(updatePayload)
       .where(eq(orders.id, id));
 
     // Get customer info for WA notification
-    const custResults = await db.select().from(customers).where(eq(customers.id, existing.customerId));
+    const custResults = await tx.select().from(customers).where(eq(customers.id, existing.customerId));
     const cust = custResults[0];
-    const tenantResults = await db.select().from(tenants).where(eq(tenants.id, existing.tenantId));
+    const tenantResults = await tx.select().from(tenants).where(eq(tenants.id, existing.tenantId));
     const tenant = tenantResults[0];
 
     // WhatsApp notification ONLY prepared and sent when status is "ready" (Siap Diambil)
@@ -2139,50 +1911,15 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
         waUrl: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`,
       };
 
-      // Auto-send via Baileys if tenant waMode is 'baileys' or connected and order is ready
-      let waStatus = "sent";
-      let waError = null;
-      const isBaileysReady = tenant?.waMode === "baileys" || getWhatsAppStatus(existing.tenantId).status === "connected";
-      if (isBaileysReady) {
-        try {
-          const sendRes = await sendWhatsAppMessage(existing.tenantId, cust.phone, messageText);
-          if (sendRes.success) {
-            (waData as any).autoSent = true;
-            waStatus = "sent";
-          } else {
-            waStatus = "failed";
-            waError = sendRes.error || "Gagal mengirim via Baileys";
-          }
-        } catch (waErr: any) {
-          console.error("[Baileys WA] Auto-send notice:", waErr);
-          waStatus = "failed";
-          waError = waErr?.message || "Baileys connection error";
-        }
-      }
-
-      // Record to wa_logs
-      try {
-        await db.insert(waLogs).values({
-          id: `walog-${Date.now()}`,
-          tenantId: existing.tenantId,
-          orderId: existing.id,
-          recipientPhone: cleanPhone,
-          recipientName: cust.name,
-          messagePreview: messageText.slice(0, 200),
-          status: waStatus,
-          mode: tenant?.waMode === "baileys" ? "baileys" : "manual",
-          errorMessage: waError,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (logErr) {
-        console.warn("[waLogs] Failed to insert log:", logErr);
-      }
+      await enqueueWaDelivery({ tenantId: existing.tenantId, orderId: existing.id, phone: cleanPhone, name: cust.name, message: messageText, event: "ready", automatic: tenant?.waMode === "baileys" || getWhatsAppStatus(existing.tenantId).status === "connected" }, tx);
+      (waData as any).queued = tenant?.waMode === "baileys" || getWhatsAppStatus(existing.tenantId).status === "connected";
     }
 
     return c.json({
       success: true,
       message: `Status order berhasil diubah menjadi ${status}`,
       waData,
+    });
     });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
@@ -2193,7 +1930,7 @@ app.patch("/api/orders/:id/status", authMiddleware, async (c) => {
 app.patch("/api/orders/:id/payment", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const { paymentStatus, paymentMethod } = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
@@ -2246,7 +1983,7 @@ app.patch("/api/orders/:id/payment", authMiddleware, async (c) => {
 app.put("/api/orders/:id", authMiddleware, async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const body = await c.req.json();
 
     const existingResults = await db.select().from(orders).where(eq(orders.id, id));
@@ -2344,7 +2081,7 @@ app.delete(
   async (c) => {
     try {
       const user = getUser(c);
-      const id = c.req.param("id");
+      const id = routeParam(c, "id");
 
       const existingResults = await db.select().from(orders).where(eq(orders.id, id));
       const existing = existingResults[0];
@@ -2410,7 +2147,7 @@ app.post("/api/expenses", authMiddleware, requireRole(["superadmin", "tenant_own
       category: body.category || (type === "income" ? "Penjualan Retail" : "Lain-lain"),
       amount: Number(body.amount) || 0,
       notes: body.notes || "",
-      expenseDate: body.expenseDate || new Date().toISOString().slice(0, 10),
+      expenseDate: body.expenseDate || today(),
       rentDurationMonths: body.rentDurationMonths ? Number(body.rentDurationMonths) : null,
       rentStartDate: body.rentStartDate || null,
       isAutoGenerated: body.isAutoGenerated === "true" ? "true" : "false",
@@ -2477,7 +2214,7 @@ app.get("/api/reports/business-health", authMiddleware, requireRole(["superadmin
 app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
     const applyAll = c.req.query("applyAll") === "true" || id === "all";
 
     if (id !== "all" && user.role !== "superadmin" && user.tenantId !== id) {
@@ -2523,7 +2260,7 @@ app.put("/api/tenants/:id/expense-settings", authMiddleware, requireRole(["super
 app.delete("/api/expenses/:id", authMiddleware, requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const id = c.req.param("id");
+    const id = routeParam(c, "id");
 
     const [existing] = await db.select().from(expenses).where(eq(expenses.id, id));
     if (!existing) {
@@ -2616,6 +2353,7 @@ app.get("/api/stats/cashflow", authMiddleware, requireRole(["superadmin", "tenan
 // -------------------------------------------------------------
 app.post(
   "/api/ai/chat",
+  bodyLimit({ maxSize: 16384 }),
   authMiddleware,
   rateLimit({ max: 30, windowMs: 60 * 1000 }),
   async (c) => {
@@ -2624,7 +2362,7 @@ app.post(
       const body = await c.req.json();
       const { message, history } = body;
 
-      if (!message || typeof message !== "string" || !message.trim()) {
+      if (!message || typeof message !== "string" || !message.trim() || message.length > 2000 || (history !== undefined && (!Array.isArray(history) || history.length > 6 || history.some((m: any) => !m || typeof m.content !== "string" || m.content.length > 2000 || !["user","model","assistant"].includes(m.role))))) {
         return c.json({ success: false, message: "Pesan tidak boleh kosong" }, 400);
       }
 
@@ -2652,7 +2390,22 @@ app.post(
 );
 
 const port = Number(process.env.PORT) || 5000;
-console.log(`🚀 Laundry Cleanique API listening on port ${port} (PostgreSQL)`);
+if (import.meta.main) {
+  await initializeApplication();
+  setInterval(() => { if (!localMaintenanceActive()) void processWaQueue().catch(() => console.error("[wa-queue] worker failed")); }, 5000).unref();
+  setInterval(async () => {
+    if (localMaintenanceActive()) return;
+    try {
+      const { runTrialReminderCheck } = await import("./jobs/trialReminder");
+      await runTrialReminderCheck();
+      await expireSubscriptionInvoices();
+      await db.delete(authSessions).where(sql`${authSessions.expiresAt} < now()`);
+      const { reconcilePendingPayments } = await import("./services/subscriptionPayments");
+      await reconcilePendingPayments();
+    } catch { console.error("[maintenance] scheduled work failed"); }
+  }, 60000).unref();
+  console.info("[startup] application ready", { port });
+}
 
 export { app };
 export default {

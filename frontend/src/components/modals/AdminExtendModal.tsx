@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   CreditCard,
@@ -12,7 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Tenant } from "../../types";
-import { authHeaders } from "../../utils/api";
+import { authHeaders, uploadFile } from "../../utils/api";
 import { useToast } from "../common/ToastContext";
 
 interface AdminExtendModalProps {
@@ -29,15 +29,29 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
   onSuccess,
 }) => {
   const toast = useToast();
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const [selectedPlan, setSelectedPlan] = useState("pro");
+  useEffect(()=>{if(isOpen && tenant){setSelectedPlan(tenant.tier === "premium" ? "premium" : "pro");setRequestKey(crypto.randomUUID());}},[isOpen,tenant?.id]);
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [notes, setNotes] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [proofUrl, setProofUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [quote, setQuote] = useState<{ finalPrice: number; referralDiscountPerMonth: number } | null>(null);
+  useEffect(() => {
+    if (!isOpen || !tenant) return;
+    const controller = new AbortController(); setQuote(null);
+    fetch(`/api/subscription/pricing?tenantId=${encodeURIComponent(tenant.id)}&planId=${selectedPlan}`, { headers: authHeaders(), signal: controller.signal })
+      .then(res => res.json()).then(res => { if (res.success && !controller.signal.aborted) setQuote(res.data); })
+      .catch(() => { if (!controller.signal.aborted) toast.error("Harga tidak tersedia", "Coba buka kembali form perpanjangan."); });
+    return () => controller.abort();
+  }, [isOpen, tenant?.id, selectedPlan]);
+
   if (!isOpen || !tenant) return null;
 
-  const hasReferral = Boolean(tenant.referralCodeId || tenant.source === "referral");
-  const pricePerMonth = hasReferral ? 55000 : 60000;
+  const hasReferral = (quote?.referralDiscountPerMonth ?? 0) > 0;
+  const pricePerMonth = quote?.finalPrice ?? 0;
   const totalAmount = pricePerMonth * durationMonths;
 
   const currentExpiry = tenant.subscriptionUntil || new Date().toISOString().slice(0, 10);
@@ -57,16 +71,19 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
         headers: authHeaders(),
         body: JSON.stringify({
           tenantId: tenant.id,
+          planId: selectedPlan,
           durationMonths,
+          idempotencyKey: requestKey,
           notes,
           paymentProofUrl: proofUrl,
         }),
       });
       const json = await res.json();
       if (json.success) {
+        if (json.data?.activationStatus !== "active") { toast.error("Pembayaran tercatat; aktivasi tertahan", "Tinjau status invoice sebelum mengonfirmasi masa aktif."); onSuccess(); onClose(); return; }
         toast.success(
           "Perpanjangan Berhasil!",
-          `Masa aktif ${tenant.outletName} diperpanjang hingga ${json.data?.newExpiry || estimatedNewExpiry}. Kas masuk tercatat Rp ${totalAmount.toLocaleString("id-ID")}.`
+          `Masa aktif ${tenant.outletName} diperpanjang hingga ${json.data?.newExpiry || estimatedNewExpiry}. Kas masuk tercatat Rp ${Number(json.data?.totalAmount || 0).toLocaleString("id-ID")}.`
         );
         onSuccess();
         onClose();
@@ -127,13 +144,14 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
               </span>
             ) : (
               <span className="font-semibold text-zinc-600 bg-zinc-200/60 px-2 py-0.5 rounded">
-                Tanpa Referral (Tarif Rp 60.000/bln)
+                Tanpa referral tambahan
               </span>
             )}
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm">Paket setelah pembayaran<select className="border rounded p-2 ml-2" value={selectedPlan} onChange={e=>{setSelectedPlan(e.target.value);setRequestKey(crypto.randomUUID());}}><option value="pro">Pro</option><option value="premium">Premium</option></select></label><p className="text-xs">Perubahan paket tanpa prorata. Kuota aktif diperiksa sebelum invoice dibuat; pembayaran tidak membuka blokir admin.</p>
           {/* Pilihan Durasi */}
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-2">
@@ -141,10 +159,10 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { months: 1, label: "1 Bulan" },
-                { months: 3, label: "3 Bulan" },
-                { months: 6, label: "6 Bulan" },
-                { months: 12, label: "1 Tahun" },
+                { months: 1, label: "1 periode (30 hari)" },
+                { months: 3, label: "3 periode (30 hari)" },
+                { months: 6, label: "6 periode (30 hari)" },
+                { months: 12, label: "12 periode (360 hari)" },
               ].map((opt) => (
                 <button
                   type="button"
@@ -165,7 +183,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
           {/* Rincian Kalkulasi Harga & Tanggal Baru */}
           <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-2">
             <div className="flex justify-between items-center text-zinc-600">
-              <span>Tarif Bulanan:</span>
+              <span>Tarif periode (30 hari)an:</span>
               <span className="font-semibold">Rp {pricePerMonth.toLocaleString("id-ID")}</span>
             </div>
             <div className="flex justify-between items-center text-zinc-600">
@@ -186,13 +204,8 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 Link Bukti Transfer (Opsional)
               </label>
-              <input
-                type="text"
-                placeholder="Link / URL bukti transfer"
-                value={proofUrl}
-                onChange={(e) => setProofUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input aria-label="Berkas bukti transfer admin" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" disabled={uploading || loading} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await uploadFile(file,"payments");if(!result.success || !result.data?.url)throw new Error(result.message);setProofUrl(result.data.url);}catch(error){toast.error("Upload gagal",error instanceof Error?error.message:"Coba kembali");}finally{setUploading(false);}}} />
+              {proofUrl && <p className="text-xs text-emerald-700">Berkas privat siap dilampirkan.</p>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -219,7 +232,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading || !quote}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
             >
               {loading ? (

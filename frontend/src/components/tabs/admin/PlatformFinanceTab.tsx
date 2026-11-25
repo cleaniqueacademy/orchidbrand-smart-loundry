@@ -1,3 +1,4 @@
+import { businessDateKey } from "../../../utils/businessDate";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
@@ -18,7 +19,7 @@ import {
   X,
   ShieldCheck,
 } from "lucide-react";
-import { authHeaders } from "../../../utils/api";
+import { api } from "../../../utils/api";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
 import { SubscriptionInvoicesTab } from "./SubscriptionInvoicesTab";
@@ -57,6 +58,7 @@ export const PlatformFinanceTab: React.FC = () => {
     totalTransactions: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -70,36 +72,33 @@ export const PlatformFinanceTab: React.FC = () => {
     category: "server",
     amount: "",
     description: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: businessDateKey(new Date()),
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchCashflow = async () => {
+  const fetchCashflow = async (signal?: AbortSignal) => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch("/api/platform/cashflow", {
-        headers: authHeaders(),
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setRecords(json.data.records || []);
-        setSummary(json.data.summary || {
-          totalIncome: 0,
-          totalExpense: 0,
-          netProfit: 0,
-          totalTransactions: 0,
-        });
+      const json = await api.get<{ success: boolean; data?: { records: PlatformCashflowRecord[]; summary: CashflowSummary }; message?: string }>("/api/platform/cashflow", { signal });
+      if (signal?.aborted) return;
+      if (!json.success || !json.data || !Array.isArray(json.data.records) || !json.data.summary) {
+        throw new Error(json.message || "Data arus kas tidak dapat dimuat.");
       }
-    } catch (err: any) {
-      toast.error("Gagal Memuat Arus Kas", err.message);
+      setRecords(json.data.records);
+      setSummary(json.data.summary);
+    } catch (err: unknown) {
+      if (!signal?.aborted) setLoadError(err instanceof Error ? err.message : "Gagal menghubungi server.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCashflow();
+    const controller = new AbortController();
+    fetchCashflow(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const handleCreateExpense = async (e: React.FormEvent) => {
@@ -116,19 +115,14 @@ export const PlatformFinanceTab: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/platform/cashflow", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
+      const json = await api.post<{ success: boolean; message?: string }>("/api/platform/cashflow", {
           type: "expense",
           category: expenseForm.category,
           amount: numAmount,
           description: expenseForm.description,
           date: expenseForm.date,
           notes: expenseForm.notes,
-        }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success("Pengeluaran Dicatat", "Pengeluaran platform berhasil ditambahkan ke arus kas.");
         setIsModalOpen(false);
@@ -136,7 +130,7 @@ export const PlatformFinanceTab: React.FC = () => {
           category: "server",
           amount: "",
           description: "",
-          date: new Date().toISOString().slice(0, 10),
+          date: businessDateKey(new Date()),
           notes: "",
         });
         fetchCashflow();
@@ -161,16 +155,16 @@ export const PlatformFinanceTab: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/platform/cashflow/${rec.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      const json = await res.json();
+      const json = await api.delete<{ success: boolean; message?: string }>(`/api/platform/cashflow/${encodeURIComponent(rec.id)}`);
       if (json.success) {
         toast.success("Catatan Dihapus", "Data kas berhasil dihapus");
         fetchCashflow();
+      } else {
+        toast.error("Gagal Menghapus", json.message || "Catatan tidak dapat dihapus.");
       }
-    } catch {}
+    } catch (err: unknown) {
+      toast.error("Gagal Menghapus", err instanceof Error ? err.message : "Gagal menghubungi server.");
+    }
   };
 
   const filteredRecords = records.filter((r) => {
@@ -225,6 +219,14 @@ export const PlatformFinanceTab: React.FC = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <p className="font-semibold">Gagal Memuat Arus Kas</p>
+          <p>{loadError}</p>
+          <button type="button" onClick={() => fetchCashflow()} className="mt-2 underline font-semibold">Coba lagi</button>
+        </div>
+      )}
+
       {activeSubTab === "invoices" ? (
         <SubscriptionInvoicesTab onVerifySuccess={fetchCashflow} />
       ) : (
@@ -254,7 +256,7 @@ export const PlatformFinanceTab: React.FC = () => {
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-emerald-950 mt-2.5 tracking-tight">
-                Rp {summary.totalIncome.toLocaleString("id-ID")}
+                {loading || loadError ? "—" : `Rp ${summary.totalIncome.toLocaleString("id-ID")}`}
               </div>
               <p className="text-[11px] text-emerald-700/90 font-medium mt-1 truncate">
                 Dari perpanjangan masa aktif outlet
@@ -270,7 +272,7 @@ export const PlatformFinanceTab: React.FC = () => {
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold text-rose-950 mt-2.5 tracking-tight">
-                Rp {summary.totalExpense.toLocaleString("id-ID")}
+                {loading || loadError ? "—" : `Rp ${summary.totalExpense.toLocaleString("id-ID")}`}
               </div>
               <p className="text-[11px] text-rose-700/90 font-medium mt-1 truncate">
                 Server, komisi referral, kuota WA, dll.
@@ -286,7 +288,7 @@ export const PlatformFinanceTab: React.FC = () => {
                 </div>
               </div>
               <div className={`text-xl sm:text-2xl font-bold tracking-tight mt-2.5 ${summary.netProfit >= 0 ? "text-zinc-900" : "text-rose-700"}`}>
-                Rp {summary.netProfit.toLocaleString("id-ID")}
+                {loading || loadError ? "—" : `Rp ${summary.netProfit.toLocaleString("id-ID")}`}
               </div>
               <p className="text-[11px] text-blue-700 font-medium mt-1 truncate">
                 Saldo kas platform saat ini
@@ -363,6 +365,8 @@ export const PlatformFinanceTab: React.FC = () => {
                     <td className="py-4 px-3 text-right"><div className="h-4 bg-zinc-200 rounded w-8 ml-auto" /></td>
                   </tr>
                 ))
+              ) : loadError ? (
+                <tr><td colSpan={7} className="py-12 text-center text-rose-700">Data arus kas belum tersedia. Gunakan tombol Coba lagi.</td></tr>
               ) : filteredRecords.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-zinc-400">

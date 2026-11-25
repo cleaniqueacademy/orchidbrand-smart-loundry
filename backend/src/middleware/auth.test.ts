@@ -72,7 +72,7 @@ describe("auth middleware & token helpers", () => {
     expect(await verifyToken("invalid.base64.dot.too.many")).toBeNull();
   });
 
-  it("authMiddleware mengizinkan request dengan Bearer token yang sah", async () => {
+  it("authMiddleware menolak token Bearer lama setelah cutover sesi", async () => {
     const app = new Hono();
     app.use("/protected/*", authMiddleware);
     app.get("/protected/me", (c) => {
@@ -92,11 +92,9 @@ describe("auth middleware & token helpers", () => {
       },
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.user.userId).toBe("user-tester");
-    expect(body.user.role).toBe("superadmin");
+    expect(body.success).toBe(false);
   });
 
   it("authMiddleware mengembalikan 401 jika header Authorization tidak ada", async () => {

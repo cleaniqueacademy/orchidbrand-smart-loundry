@@ -61,9 +61,9 @@ interface TenantPricingInfo {
 }
 
 const DEFAULT_PRICING: TenantPricingInfo = {
-  basePrice: 60000,
+  basePrice: 0,
   discountAmount: 0,
-  finalPrice: 60000,
+  finalPrice: 0,
   plan: { name: "Paket Bulanan" },
 };
 
@@ -86,9 +86,9 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
 
   const [paymentInfo, setPaymentInfo] = useState<PlatformPaymentInfo>({
     platformName: "Laundry Cleanique",
-    bankName: "BCA",
-    bankAccountNumber: "8830-1928-3341",
-    bankAccountName: "PT CLEANIQUE SISTEM DIGITAL",
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountName: "",
     qrisInfo: "",
     supportPhone: DEFAULT_ADMIN_PHONE,
   });
@@ -176,7 +176,7 @@ export const InactiveAccountModal: React.FC<InactiveAccountModalProps> = ({
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-  }).format(pricing?.finalPrice || 60000);
+  }).format(pricing?.finalPrice || 0);
 
   const referralNotice =
     pricing?.discountAmount > 0

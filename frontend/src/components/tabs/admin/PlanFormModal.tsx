@@ -3,6 +3,12 @@ import { X, Loader2, AlertCircle } from "lucide-react";
 import { api } from "../../../utils/api";
 import { Plan } from "../../../types";
 
+function toLocalDateTime(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 interface PlanFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,6 +28,10 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
     description: "",
     durationMonths: 1,
     pricePerMonth: 150000,
+    promotionAmount: 0,
+    promotionStartsAt: "",
+    promotionEndsAt: "",
+    maxBranches: 1,
     maxWaNumbers: 1,
     maxStaff: 3,
     aiTokenQuotaDaily: 100,
@@ -40,7 +50,11 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
         name: plan.name,
         description: plan.description || "",
         durationMonths: plan.durationMonths || 1,
-        pricePerMonth: plan.pricePerMonth || 150000,
+        pricePerMonth: plan.pricePerMonth,
+        promotionAmount: plan.promotionAmount ?? 0,
+        promotionStartsAt: toLocalDateTime(plan.promotionStartsAt),
+        promotionEndsAt: toLocalDateTime(plan.promotionEndsAt),
+        maxBranches: plan.maxBranches ?? 1,
         maxWaNumbers: plan.maxWaNumbers || 1,
         maxStaff: plan.maxStaff || 3,
         aiTokenQuotaDaily: plan.aiTokenQuotaDaily || 100,
@@ -55,6 +69,10 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
         description: "",
         durationMonths: 1,
         pricePerMonth: 150000,
+    promotionAmount: 0,
+    promotionStartsAt: "",
+    promotionEndsAt: "",
+    maxBranches: 1,
         maxWaNumbers: 1,
         maxStaff: 3,
         aiTokenQuotaDaily: 100,
@@ -73,13 +91,16 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
     setErrorMsg(null);
 
     try {
+      const payload = { ...formData, promotionStartsAt: formData.promotionStartsAt ? new Date(formData.promotionStartsAt).toISOString() : null, promotionEndsAt: formData.promotionEndsAt ? new Date(formData.promotionEndsAt).toISOString() : null };
+      let result;
       if (plan) {
         // Edit
-        await api.put(`/api/plans/${plan.id}`, formData);
+        result = await api.put<{ success: boolean; message?: string }>(`/api/plans/${plan.id}`, payload);
       } else {
         // Create
-        await api.post("/api/plans", formData);
+        result = await api.post<{ success: boolean; message?: string }>("/api/plans", payload);
       }
+      if (!result.success) throw new Error(result.message || "Gagal menyimpan paket");
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -117,6 +138,22 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
             </div>
           )}
 
+          <fieldset className="space-y-2 border border-slate-200 rounded-xl p-3">
+            <legend className="text-xs font-bold px-1">Promo dan kuota cabang</legend>
+            <label className="block text-xs">Potongan promo per bulan (Rp)
+              <input type="number" min={0} max={formData.pricePerMonth} value={formData.promotionAmount} onChange={e => setFormData({ ...formData, promotionAmount: Number(e.target.value) })} className="w-full border rounded-lg p-2" />
+            </label>
+            <label className="block text-xs">Awal promo (waktu lokal)
+              <input type="datetime-local" value={formData.promotionStartsAt} onChange={e => setFormData({ ...formData, promotionStartsAt: e.target.value })} className="w-full border rounded-lg p-2" />
+            </label>
+            <label className="block text-xs">Akhir promo (waktu lokal)
+              <input type="datetime-local" value={formData.promotionEndsAt} onChange={e => setFormData({ ...formData, promotionEndsAt: e.target.value })} className="w-full border rounded-lg p-2" />
+            </label>
+            <p className="text-xs text-slate-500">Kosongkan kedua waktu untuk menonaktifkan promo. Diskon referral diterapkan setelah promo.</p>
+            <label className="block text-xs">Maksimum cabang (termasuk cabang utama)
+              <input type="number" min={1} max={5} value={formData.maxBranches} onChange={e => setFormData({ ...formData, maxBranches: Number(e.target.value) })} className="w-full border rounded-lg p-2" />
+            </label>
+          </fieldset>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">

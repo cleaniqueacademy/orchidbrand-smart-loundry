@@ -1,3 +1,4 @@
+import { businessDateKey } from "../../utils/businessDate";
 import React, { useState, useMemo } from "react";
 import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Store, CheckCircle2, Calculator } from "lucide-react";
 import { CashflowStats, Expense, Order, DateFilterPreset, Role, Tenant } from "../../types";
@@ -67,7 +68,7 @@ export const CashflowTab: React.FC<CashflowTabProps> = ({
         id: `ord-${ord.id}`,
         source: "order",
         type: "income",
-        date: (ord.completedAt || ord.createdAt).slice(0, 10),
+        date: businessDateKey(ord.paidAt || ord.completedAt || ord.createdAt),
         tenantId: ord.tenantId,
         category: ord.status === "completed" ? "Laundry Selesai" : "Pelunasan Cucian",
         notes: `${ord.invoiceNo} • ${ord.customer?.name || "Pelanggan"} (${ord.serviceType})`,

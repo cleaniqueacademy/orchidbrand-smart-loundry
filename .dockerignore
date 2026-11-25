@@ -3,3 +3,11 @@
 **/dist
 **/*.log
 backend/data/*.db*
+
+**/.env
+**/.env.*
+!**/.env.example
+**/auth_info_baileys
+**/data
+**/users.local.txt
+docs

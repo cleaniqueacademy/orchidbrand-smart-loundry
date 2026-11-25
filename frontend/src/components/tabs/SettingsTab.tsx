@@ -32,6 +32,7 @@ import { BranchManagementSection } from "./BranchManagementSection";
 import { PremiumFeatureLock } from "../common/PremiumFeatureLock";
 
 interface SettingsTabProps {
+  onSelectBranch?: (id: string) => void;
   tenant?: Tenant | null;
   currentUser?: User | null;
   currentUserRole?: string;
@@ -92,6 +93,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onOpenWhatsAppModal,
   waStatus = "disconnected",
   setActiveTab,
+  onSelectBranch,
 }) => {
   const toast = useToast();
   type SettingsSubTab = "profil" | "layanan" | "staf" | "printer" | "cabang";
@@ -695,6 +697,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       {/* === TAB: MANAJEMEN CABANG === */}
       {settingsTab === "cabang" && (
         <BranchManagementSection
+          onSelectBranch={onSelectBranch}
           currentTenant={resolvedTenant || tenant}
           isLocked={isBranchLocked}
           onLearnMore={() => setActiveTab && setActiveTab("subscription")}

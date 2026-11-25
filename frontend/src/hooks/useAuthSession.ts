@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Role, Tenant } from "../types";
 import { useToast } from "../components/common/ToastContext";
 import { useConfirm } from "../components/common/ConfirmContext";
@@ -13,7 +13,7 @@ function readSavedUser(): User | null {
     if (!saved) return null;
     const u = JSON.parse(saved);
     // Validasi wajib ada id dan role yang benar
-    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff"].includes(u.role)) {
+    if (!u || !u.id || !u.email || !["superadmin", "tenant_owner", "staff", "marketing"].includes(u.role)) {
       localStorage.removeItem(AUTH_KEY);
       return null;
     }
@@ -47,7 +47,7 @@ export function useAuthSession() {
       if (saved) {
         const u = JSON.parse(saved);
         if (u && (u.role === "tenant_owner" || u.role === "staff") && u.tenantId) {
-          return u.tenantId;
+          return u.role === "tenant_owner" ? localStorage.getItem("cleanique_active_branch") || u.tenantId : u.tenantId;
         }
         if (u && u.role === "superadmin") {
           return "all";
@@ -57,6 +57,19 @@ export function useAuthSession() {
     return "tenant-01";
   });
 
+  useEffect(() => {
+    localStorage.removeItem("cleanique_token");
+    const controller = new AbortController();
+    fetch("/api/auth/me", { headers: authHeaders(), signal: controller.signal }).then(async response => {
+      if (controller.signal.aborted) return;
+      if (response.status === 401) { setCurrentUser(null); localStorage.removeItem(AUTH_KEY); return; }
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success && !controller.signal.aborted) { setCurrentUser(result.user); setCurrentUserRole(result.user.role); localStorage.setItem(AUTH_KEY, JSON.stringify(result.user)); }
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   const handleLoginSuccess = (user: User) => {
     try {
       localStorage.setItem(AUTH_KEY, JSON.stringify(user));
@@ -64,6 +77,7 @@ export function useAuthSession() {
       console.error(e);
     }
     toast.success("Login Berhasil", `Selamat datang kembali, ${user.name}!`);
+    localStorage.removeItem("cleanique_active_branch");
     setCurrentUser(user);
     setCurrentUserRole(user.role);
     if ((user.role === "tenant_owner" || user.role === "staff") && user.tenantId) {
@@ -85,13 +99,16 @@ export function useAuthSession() {
 
     if (!confirmed) return;
 
-    toast.info("Mengeluarkan Akun...", "Sesi Anda telah diakhiri.");
+    toast.info("Mengeluarkan Akun...", "Mencabut sesi server.");
     try {
       await fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         headers: authHeaders(),
+        credentials: "include",
       });
-    } catch {}
+    } catch (e) {
+      console.warn("Gagal mencabut sesi di server, melanjutkan pembersihan sesi lokal:", e);
+    }
     // Clear localStorage
     try {
       localStorage.removeItem(AUTH_KEY);
@@ -99,6 +116,7 @@ export function useAuthSession() {
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith("cleanique_")) localStorage.removeItem(key);
       });
+      setCurrentUser(null);
     } catch (e) {
       console.error(e);
     }
@@ -116,13 +134,14 @@ export function useAuthSession() {
       // Staff locked to assigned branch
       return;
     }
+    localStorage.setItem("cleanique_active_branch", id);
     setTenantId(id);
   };
 
   const refreshUserSession = async (): Promise<boolean> => {
     if (!currentUser) return false;
     try {
-      const res = await fetch(`${API_BASE}/auth/status?userId=${currentUser.id}`, {
+      const res = await fetch(`${API_BASE}/auth/me`, {
         headers: authHeaders(),
       });
       const data = await res.json();

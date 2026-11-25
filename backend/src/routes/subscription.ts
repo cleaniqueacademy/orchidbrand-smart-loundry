@@ -1,3 +1,8 @@
+import { z } from "zod";
+import { presentInvoice } from "../services/subscriptionService";
+import { recordPaymentAdjustment } from "../services/financialReview";
+import { resolveSession } from "../services/sessions";
+import { setOwnerReferral } from "../services/ownerReferral";
 import { Hono } from "hono";
 import { db } from "../db/index";
 import {
@@ -24,6 +29,12 @@ import {
 } from "../services/subscriptionService";
 import { validateCode, recordCommission } from "../services/referralService";
 import { runTrialReminderCheck } from "../jobs/trialReminder";
+import { checkoutSubscriptionQris } from "../services/subscriptionQris";
+import { QrisCheckoutError } from "../services/qrisPayload";
+import { rateLimit } from "../middleware/rateLimit";
+import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices, expireSubscriptionInvoices } from "../services/invoiceLifecycle";
+import { invoiceLifecycleEvents } from "../db/schema";
+import { recordManualReceipt } from "../services/subscriptionService";
 
 const subscriptionRoutes = new Hono();
 
@@ -33,27 +44,20 @@ const subscriptionRoutes = new Hono();
  */
 subscriptionRoutes.get("/pricing", async (c) => {
   try {
-    let tenantId = c.req.query("tenantId");
-
-    // Jika tenantId tidak ada di query, coba ambil dari Bearer token jika dikirimkan
-    if (!tenantId) {
-      const authHeader = c.req.header("Authorization");
-      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-      if (token) {
-        try {
-          const payload = await verifyToken(token);
-          if (payload?.tenantId) {
-            tenantId = payload.tenantId;
-          }
-        } catch {}
-      }
+    const session = await resolveSession(c);
+    let tenantId = session?.user.role === "tenant_owner" ? session.user.tenantId || undefined : undefined;
+    const requested = c.req.query("tenantId");
+    if (requested) {
+      const [branch] = await db.select().from(tenants).where(eq(tenants.id, requested));
+      if (!session || !branch || (session.user.role !== "superadmin" && (session.user.role !== "tenant_owner" || branch.userId !== session.user.id))) return c.json({ success: false, message: "Akses quote ditolak" }, 403);
+      tenantId = requested;
     }
-
     const planId = c.req.query("planId");
     const referralCode = c.req.query("referralCode");
 
     const calculation = await getApplicablePrice(tenantId || undefined, planId, referralCode);
-    return c.json({ success: true, data: calculation });
+    const { commission: _commission, ...quote }=calculation;
+    return c.json({ success: true, data: quote });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }
@@ -63,6 +67,53 @@ subscriptionRoutes.get("/pricing", async (c) => {
 // Rute Terproteksi Autentikasi
 // ---------------------------------------------------------------------------
 subscriptionRoutes.use("*", authMiddleware);
+
+subscriptionRoutes.post("/invoices/:id/cancel", requireRole(["superadmin", "tenant_owner"]), async c => {
+  const parsed = z.object({ reason: z.string().trim().min(10).max(1000), acknowledgeSavedQris: z.boolean().default(false) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Alasan pembatalan lengkap diperlukan." }, 422);
+  try {
+    const actor = getUser(c);
+    const invoice = await cancelSubscriptionInvoice(c.req.param("id")!, actor.userId, actor.role === "superadmin", parsed.data.reason, parsed.data.acknowledgeSavedQris);
+    return c.json({ success: true, data: presentInvoice(invoice) });
+  } catch (error) {
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Invoice belum dapat dibatalkan." }, 409);
+  }
+});
+
+subscriptionRoutes.post("/invoices/:id/received", requireRole(["superadmin"]), async c => {
+  const parsed = z.object({ reference: z.string().trim().min(6).max(120), amount: z.number().int().positive(), receivedAt: z.string().max(40), notes: z.string().trim().min(10).max(2000) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ success: false, message: "Data penerimaan pembayaran tidak valid." }, 422);
+  try {
+    const receipt = await recordManualReceipt(c.req.param("id")!, getUser(c).userId, parsed.data);
+    return c.json({ success: true, message: "Penerimaan dicatat. Aktivasi atau koreksi tetap memerlukan review admin.", data: receipt });
+  } catch (error) {
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Penerimaan belum dapat dicatat." }, 409);
+  }
+});
+
+subscriptionRoutes.get("/invoices/:id/events", requireRole(["superadmin", "tenant_owner"]), async c => {
+  const actor = getUser(c);
+  const [invoice] = await db.select().from(subscriptionInvoices).where(and(eq(subscriptionInvoices.id, c.req.param("id")!), actor.role === "superadmin" ? undefined : eq(subscriptionInvoices.userId, actor.userId)));
+  if (!invoice) return c.json({ success: false, message: "Invoice tidak ditemukan." }, 404);
+  c.header("Cache-Control", "private, no-store");
+  const events = await db.select().from(invoiceLifecycleEvents).where(eq(invoiceLifecycleEvents.invoiceId, invoice.id)).orderBy(invoiceLifecycleEvents.createdAt, invoiceLifecycleEvents.id);
+  return c.json({ success: true, data: events.map(event => ({ id: event.id, eventType: event.eventType, createdAt: event.createdAt, ...(actor.role === "superadmin" ? { actorId: event.actorId, details: event.details } : {}) })) });
+});
+
+subscriptionRoutes.get("/invoices/:id/qris", requireRole(["superadmin", "tenant_owner"]), rateLimit({ max: 20, windowMs: 60000, keyGenerator: c => `subscription-qris:${getUser(c).userId}` }), async c => {
+  c.header("Cache-Control", "private, no-store, max-age=0");
+  try {
+    const actor = getUser(c);
+    const id = c.req.param("id");
+    if (!id) return c.json({ success: false, message: "Invoice tidak ditemukan." }, 404);
+    const data = await checkoutSubscriptionQris(id, actor.userId, actor.role === "superadmin");
+    return c.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof QrisCheckoutError) return c.json({ success: false, message: error.message }, error.status);
+    console.error("[subscription-qris] generation failed", { invoiceId: c.req.param("id") });
+    return c.json({ success: false, message: "QRIS belum dapat dibuat. Silakan coba lagi atau hubungi admin." }, 500);
+  }
+});
 
 /**
  * 2. GET /api/subscription/summary
@@ -99,10 +150,12 @@ subscriptionRoutes.get("/summary", async (c) => {
  * 3. POST /api/subscription/invoices
  * Buat invoice perpanjangan langganan
  */
-subscriptionRoutes.post("/invoices", async (c) => {
+subscriptionRoutes.post("/invoices", requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
-    const body = await c.req.json();
+    const input = z.object({tenantId:z.string().max(100).optional(),planId:z.string().min(1).max(100).optional(),durationMonths:z.union([z.literal(1),z.literal(3),z.literal(6),z.literal(12)]).default(1),referralCode:z.string().trim().max(80).optional(),idempotencyKey:z.string().regex(/^[a-zA-Z0-9-]{16,80}$/).optional()}).safeParse(await c.req.json());
+    if(!input.success)return c.json({success:false,message:"Parameter invoice tidak valid"},400);
+    const body=input.data;
     const tenantId = user.tenantId || body.tenantId;
 
     if (!tenantId) {
@@ -113,8 +166,9 @@ subscriptionRoutes.post("/invoices", async (c) => {
       tenantId,
       userId: user.userId,
       planId: body.planId,
-      durationMonths: Number(body.durationMonths) || 1,
+      durationMonths: body.durationMonths === undefined ? 1 : Number(body.durationMonths),
       referralCode: body.referralCode,
+      idempotencyKey: typeof body.idempotencyKey === "string" ? `${user.userId}:${body.idempotencyKey}` : undefined,
     });
 
     return c.json({
@@ -123,7 +177,8 @@ subscriptionRoutes.post("/invoices", async (c) => {
       data: result,
     });
   } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
+    if (err instanceof ActiveInvoiceError) return c.json({ success: false, code: "ACTIVE_INVOICE", message: err.message, data: { invoice: presentInvoice(err.invoice) } }, 409);
+    return c.json({ success: false, message: err.message }, 409);
   }
 });
 
@@ -131,7 +186,7 @@ subscriptionRoutes.post("/invoices", async (c) => {
  * 4. POST /api/subscription/invoices/:id/proof
  * Unggah bukti pembayaran
  */
-subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
+subscriptionRoutes.post("/invoices/:id/proof", requireRole(["superadmin", "tenant_owner"]), async (c) => {
   try {
     const user = getUser(c);
     const id = c.req.param("id");
@@ -151,17 +206,17 @@ subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
     }
 
     const [invoice] = await db
-      .select({ tenantId: subscriptionInvoices.tenantId })
+      .select({ tenantId: subscriptionInvoices.tenantId, userId: subscriptionInvoices.userId })
       .from(subscriptionInvoices)
       .where(eq(subscriptionInvoices.id, id));
     if (!invoice) {
       return c.json({ success: false, message: "Invoice tidak ditemukan" }, 404);
     }
-    if (user.role !== "superadmin" && invoice.tenantId !== user.tenantId) {
+    if (user.role !== "superadmin" && invoice.userId !== user.userId) {
       return c.json({ success: false, message: "Akses ditolak: invoice bukan milik outlet Anda" }, 403);
     }
 
-    const updated = await uploadPaymentProof(id, proofUrl, invoice.tenantId);
+    const updated = await uploadPaymentProof(id, proofUrl, invoice.tenantId, user.userId);
     return c.json({
       success: true,
       message: "Bukti pembayaran berhasil diunggah dan sedang menunggu verifikasi admin.",
@@ -179,6 +234,8 @@ subscriptionRoutes.post("/invoices/:id/proof", async (c) => {
 subscriptionRoutes.get("/invoices", async (c) => {
   try {
     const user = getUser(c);
+    if (user.role === "superadmin") await expireSubscriptionInvoices();
+    else await expireOwnerInvoices(user.userId);
     const status = c.req.query("status");
 
     let query = db
@@ -192,6 +249,8 @@ subscriptionRoutes.get("/invoices", async (c) => {
         durationMonths: subscriptionInvoices.durationMonths,
         originalAmount: subscriptionInvoices.originalAmount,
         discountAmount: subscriptionInvoices.discountAmount,
+        promotionDiscountAmount: subscriptionInvoices.promotionDiscountAmount,
+        referralDiscountAmount: subscriptionInvoices.referralDiscountAmount,
         finalAmount: subscriptionInvoices.finalAmount,
         status: subscriptionInvoices.status,
         paymentProofUrl: subscriptionInvoices.paymentProofUrl,
@@ -200,6 +259,12 @@ subscriptionRoutes.get("/invoices", async (c) => {
         rejectionReason: subscriptionInvoices.rejectionReason,
         periodStart: subscriptionInvoices.periodStart,
         periodEnd: subscriptionInvoices.periodEnd,
+        expiresAt: subscriptionInvoices.expiresAt,
+        activationStatus: subscriptionInvoices.activationStatus,
+        activationReason: subscriptionInvoices.activationReason,
+        qrisIssuedAt: subscriptionInvoices.qrisIssuedAt,
+        invalidatedAt: subscriptionInvoices.invalidatedAt,
+        invalidationReason: subscriptionInvoices.invalidationReason,
         createdAt: subscriptionInvoices.createdAt,
         outletName: tenants.outletName,
         userName: users.name,
@@ -219,14 +284,14 @@ subscriptionRoutes.get("/invoices", async (c) => {
 
     // Jika bukan superadmin, hanya lihat invoice milik tenant-nya sendiri
     if (user.role !== "superadmin") {
-      filtered = filtered.filter((r) => r.tenantId === user.tenantId);
+      filtered = filtered.filter((r) => r.userId === user.userId);
     }
 
     if (status) {
       filtered = filtered.filter((r) => r.status === status);
     }
 
-    return c.json({ success: true, data: filtered });
+    return c.json({ success: true, data: filtered.map(presentInvoice) });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }
@@ -250,7 +315,9 @@ subscriptionRoutes.get("/invoices/:id", async (c) => {
       return c.json({ success: false, message: "Invoice tidak ditemukan" }, 404);
     }
 
-    return c.json({ success: true, data: found });
+    const actor = getUser(c);
+    if (actor.role !== "superadmin" && found.userId !== actor.userId) return c.json({ success: false, message: "Akses invoice ditolak" }, 403);
+    return c.json({ success: true, data: presentInvoice(found) });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }
@@ -272,7 +339,7 @@ subscriptionRoutes.put(
       const result = await verifySubscriptionInvoice(id, user.userId);
       return c.json({
         success: true,
-        message: "Invoice berhasil diverifikasi dan masa aktif langganan telah diperpanjang.",
+        message: result.invoice.activationStatus === "active" ? "Invoice lunas; masa aktif telah diperpanjang." : "Pembayaran tercatat; aktivasi memerlukan review admin.",
         data: result,
       });
     } catch (err: any) {
@@ -329,342 +396,54 @@ subscriptionRoutes.post(
     }
   }
 );
-/**
- * 10. POST /api/subscription/admin-extend
- * Superadmin langsung memperpanjang masa aktif tenant setelah menerima transfer:
- * - Mendeteksi apakah tenant memiliki kode referral (Rp 55.000 / bln) atau tidak (Rp 60.000 / bln)
- * - Memperpanjang subscriptionUntil outlet
- * - Mengubah isTrial = 'false' dan status = 'active'
- * - Otomatis mencatat kas masuk platform (platformCashflow)
- */
-subscriptionRoutes.post(
-  "/admin-extend",
-  requireRole(["superadmin"]),
-  async (c) => {
-    try {
-      const user = getUser(c);
-      const body = await c.req.json();
-      const {
-        tenantId,
-        durationMonths = 1,
-        notes = "",
-        paymentProofUrl = "",
-      } = body;
-
-      if (!tenantId) {
-        return c.json({ success: false, message: "Tenant ID wajib diisi" }, 400);
-      }
-
-      const tenantRows = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-      const targetTenant = tenantRows[0];
-      if (!targetTenant) {
-        return c.json({ success: false, message: "Tenant tidak ditemukan" }, 404);
-      }
-
-      const months = Math.max(1, Number(durationMonths) || 1);
-
-      // Cek apakah tenant punya referral code
-      let hasReferral = false;
-      let refCodeName: string | null = null;
-      let refCodeId: string | null = null;
-      if (targetTenant.referralCodeId) {
-        hasReferral = true;
-        const refRows = await db.select().from(referralCodes).where(eq(referralCodes.id, targetTenant.referralCodeId)).limit(1);
-        if (refRows[0]) {
-          refCodeName = refRows[0].code;
-          refCodeId = refRows[0].id;
-        }
-      }
-
-      // Harga: 55.000 jika referral, 60.000 jika normal
-      const pricePerMonth = hasReferral ? 55000 : 60000;
-      const totalAmount = pricePerMonth * months;
-
-      // Hitung perpanjangan tanggal
-      const nowStr = today();
-      const currentExpiry = targetTenant.subscriptionUntil || nowStr;
-      const baseDate = currentExpiry > nowStr ? new Date(`${currentExpiry}T00:00:00`) : new Date();
-      const newExpiry = addDays(months * 30, baseDate);
-
-      // Update tenant
-      await db
-        .update(tenants)
-        .set({
-          subscriptionUntil: newExpiry,
-          isTrial: "false",
-          status: "active",
-        })
-        .where(eq(tenants.id, tenantId));
-
-      // Update owner user jika ada
-      if (targetTenant.userId) {
-        await db
-          .update(users)
-          .set({
-            subscriptionUntil: newExpiry,
-            isTrial: "false",
-            status: "active",
-          })
-          .where(eq(users.id, targetTenant.userId));
-      }
-
-      invalidateTenantAuthCache(tenantId);
-
-      // Catat komisi marketing jika tenant terhubung referral code
-      if (refCodeId) {
-        await recordCommission({
-          referralCodeId: refCodeId,
-          subscriptionInvoiceId: null,
-          baseAmount: totalAmount,
-          tenantId: targetTenant.id,
-          durationMonths: months,
-        });
-      }
-
-      // Catat Kas Masuk Platform
-      const cashflowEntry = {
-        id: newId("pcf"),
-        type: "income",
-        category: "subscription",
-        amount: totalAmount,
-        date: today(),
-        tenantId: targetTenant.id,
-        referralCode: refCodeName,
-        durationMonths: months,
-        description: `Perpanjangan ${targetTenant.outletName} (${months} bln${hasReferral ? ` - Ref: ${refCodeName}` : ""})`,
-        proofUrl: paymentProofUrl ? String(paymentProofUrl).trim() : null,
-        notes: notes ? String(notes).trim() : null,
-        createdByUserId: user.userId,
-        createdAt: new Date().toISOString(),
-      };
-      await db.insert(platformCashflow).values(cashflowEntry);
-
-      return c.json({
-        success: true,
-        message: `Masa aktif ${targetTenant.outletName} berhasil diperpanjang hingga ${newExpiry}. Kas masuk tercatat Rp ${totalAmount.toLocaleString("id-ID")}.`,
-        data: {
-          tenantId,
-          outletName: targetTenant.outletName,
-          hasReferral,
-          referralCode: refCodeName,
-          durationMonths: months,
-          totalAmount,
-          newExpiry,
-          cashflowId: cashflowEntry.id,
-        },
-      });
-    } catch (err: any) {
-      return c.json({ success: false, message: err.message }, 500);
-    }
-  }
-);
-
-/**
- * 11. POST /api/subscription/apply-referral
- * Menerapkan (atau mengganti) kode referral pada outlet tertentu.
- * Bisa dipanggil oleh tenant_owner (untuk outlet miliknya) atau superadmin.
- */
-subscriptionRoutes.post("/apply-referral", async (c) => {
+/** Administrative payment confirmation shares pricing and atomic activation with invoices. */
+subscriptionRoutes.post("/admin-extend", requireRole(["superadmin"]), async c => {
   try {
-    const user = getUser(c);
+    const actor = getUser(c);
     const body = await c.req.json();
-    const targetTenantId = body.tenantId || user.tenantId;
-
-    if (!targetTenantId) {
-      return c.json({ success: false, message: "ID Outlet (tenantId) diperlukan" }, 400);
-    }
-
-    if (user.role !== "superadmin" && user.tenantId !== targetTenantId) {
-      return c.json(
-        { success: false, message: "Akses ditolak: Anda hanya dapat mengatur outlet Anda sendiri" },
-        403
-      );
-    }
-
-    const { referralCode } = body;
-    if (!referralCode || !String(referralCode).trim()) {
-      return c.json({ success: false, message: "Kode referral wajib diisi" }, 400);
-    }
-
-    const [targetTenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.id, targetTenantId))
-      .limit(1);
-
-    if (!targetTenant) {
-      return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
-    }
-
-    const cleanCode = String(referralCode).trim().toUpperCase();
-    const valRes = await validateCode(cleanCode, targetTenant.id);
-    if (!valRes.valid || !valRes.code) {
-      return c.json(
-        {
-          success: false,
-          message: valRes.message || "Kode referral tidak valid atau sudah tidak aktif",
-        },
-        400
-      );
-    }
-
-    const newCode = valRes.code;
-
-    // Jika tenant sudah menggunakan kode ini
-    if (targetTenant.referralCodeId === newCode.id) {
-      return c.json({
-        success: true,
-        message: `Kode referral '${newCode.code}' sudah aktif pada outlet ini.`,
-        data: {
-          referralCode: newCode.code,
-          tenantId: targetTenant.id,
-          discountType: newCode.discountType,
-          discountValue: newCode.discountValue,
-        },
-      });
-    }
-
-    // Jika sebelumnya ada kode lama yang berbeda, kurangi kuota kode lama jika > 0
-    if (targetTenant.referralCodeId && targetTenant.referralCodeId !== newCode.id) {
-      await db
-        .update(referralCodes)
-        .set({
-          currentUsage: sql`GREATEST(0, ${referralCodes.currentUsage} - 1)`,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(referralCodes.id, targetTenant.referralCodeId));
-    }
-
-    // Tambahkan kuota pada kode baru
-    await db
-      .update(referralCodes)
-      .set({
-        currentUsage: sql`${referralCodes.currentUsage} + 1`,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(referralCodes.id, newCode.id));
-
-    // Update tenant
-    await db
-      .update(tenants)
-      .set({
-        referralCodeId: newCode.id,
-        source: "referral",
-      })
-      .where(eq(tenants.id, targetTenant.id));
-
-    // Hubungkan marketing profile ke akun user jika belum terhubung
-    if (newCode.marketingProfileId) {
-      const [ownerUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, targetTenant.userId))
-        .limit(1);
-
-      if (ownerUser && !ownerUser.marketingUserId) {
-        await db
-          .update(users)
-          .set({ marketingUserId: newCode.marketingProfileId })
-          .where(eq(users.id, ownerUser.id));
-      }
-    }
-
-    // Catat referral event
-    try {
-      await db.insert(referralEvents).values({
-        id: newId("refevt"),
-        referralCodeId: newCode.id,
-        tenantId: targetTenant.id,
-        eventType: "tenant_applied",
-        metadata: JSON.stringify({
-          outletName: targetTenant.outletName,
-          appliedByUserId: user.userId,
-          appliedAt: new Date().toISOString(),
-        }),
-        createdAt: new Date().toISOString(),
-      });
-    } catch (eventErr: any) {
-      console.warn("Gagal mencatat event referral:", eventErr.message);
-    }
-
-    invalidateTenantAuthCache(targetTenant.id);
-
-    return c.json({
-      success: true,
-      message: `Kode referral '${newCode.code}' berhasil diterapkan! Tarif perpanjangan outlet kini hemat menjadi Rp 55.000/bulan.`,
-      data: {
-        referralCode: newCode.code,
-        tenantId: targetTenant.id,
-        discountType: newCode.discountType,
-        discountValue: newCode.discountValue,
-      },
-    });
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
+    if (typeof body.tenantId !== "string") return c.json({ success: false, message: "Tenant ID diperlukan" }, 400);
+    if (typeof body.idempotencyKey !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(body.idempotencyKey)) return c.json({ success: false, message: "Idempotency key diperlukan" }, 400);
+    const [branch] = await db.select().from(tenants).where(eq(tenants.id, body.tenantId));
+    if (!branch) return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
+    const [owner] = await db.select().from(users).where(eq(users.id, branch.userId));
+    const { invoice } = await createSubscriptionInvoice({ tenantId: branch.id, userId: actor.userId,
+      planId: body.planId || (owner?.tier === "premium" ? "premium" : "pro"), durationMonths: body.durationMonths ?? 1, idempotencyKey: `admin:${actor.userId}:${body.idempotencyKey}` });
+    if (invoice.status !== "paid" && body.paymentProofUrl) await uploadPaymentProof(invoice.id, body.paymentProofUrl, invoice.tenantId, actor.userId);
+    if (invoice.status !== "paid") await db.update(subscriptionInvoices).set({ status: "pending_verification",
+      notes: typeof body.notes === "string" ? body.notes : "Verifikasi langsung oleh admin",
+    }).where(and(eq(subscriptionInvoices.id, invoice.id), eq(subscriptionInvoices.status, "unpaid")));
+    const result = await verifySubscriptionInvoice(invoice.id, actor.userId);
+    return c.json({ success: true, data: { tenantId: branch.id, totalAmount: invoice.finalAmount, newExpiry: result.tenant.subscriptionUntil, activationStatus: result.invoice.activationStatus } });
+  } catch (error) {
+    console.error("[subscription] admin confirmation failed", { actorId: getUser(c).userId });
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Perpanjangan gagal" }, 400);
   }
 });
 
-/**
- * 12. POST /api/subscription/remove-referral
- * Mencopot kode referral dari outlet (kembali ke tarif normal Rp 60.000/bulan).
- */
-subscriptionRoutes.post("/remove-referral", async (c) => {
-  try {
-    const user = getUser(c);
-    const body = await c.req.json();
-    const targetTenantId = body.tenantId || user.tenantId;
-
-    if (!targetTenantId) {
-      return c.json({ success: false, message: "ID Outlet (tenantId) diperlukan" }, 400);
-    }
-
-    if (user.role !== "superadmin" && user.tenantId !== targetTenantId) {
-      return c.json(
-        { success: false, message: "Akses ditolak: Anda hanya dapat mengatur outlet Anda sendiri" },
-        403
-      );
-    }
-
-    const [targetTenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.id, targetTenantId))
-      .limit(1);
-
-    if (!targetTenant) {
-      return c.json({ success: false, message: "Outlet tidak ditemukan" }, 404);
-    }
-
-    if (!targetTenant.referralCodeId) {
-      return c.json({ success: true, message: "Outlet tidak memiliki kode referral aktif." });
-    }
-
-    // Kurangi kuota kode referral jika > 0
-    await db
-      .update(referralCodes)
-      .set({
-        currentUsage: sql`GREATEST(0, ${referralCodes.currentUsage} - 1)`,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(referralCodes.id, targetTenant.referralCodeId));
-
-    // Lepas referral dari tenant
-    await db
-      .update(tenants)
-      .set({
-        referralCodeId: null,
-      })
-      .where(eq(tenants.id, targetTenant.id));
-
-    invalidateTenantAuthCache(targetTenant.id);
-
-    return c.json({
-      success: true,
-      message: "Kode referral berhasil dicopot. Tarif perpanjangan kembali ke tarif standar Rp 60.000/bulan.",
-    });
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 500);
-  }
+for (const action of ["apply-referral", "remove-referral"] as const) {
+  subscriptionRoutes.post(`/${action}`, requireRole(["superadmin", "tenant_owner"]), async c => {
+    try {
+      const actor = getUser(c), body = await c.req.json();
+      const tenantId = actor.role === "superadmin" ? body.tenantId : actor.tenantId;
+      if (typeof tenantId !== "string") return c.json({ success: false, message: "Cabang diperlukan" }, 400);
+      const code = action === "remove-referral" ? null : body.referralCode;
+      if (code !== null && (typeof code !== "string" || !code.trim() || code.length > 80)) return c.json({ success: false, message: "Kode tidak valid" }, 400);
+      const result = await setOwnerReferral(tenantId, actor.userId, actor.role === "superadmin", code);
+      return c.json({ success: true, data: result, message: "Referral billing Owner diperbarui" });
+    } catch (error) { return c.json({ success: false, message: error instanceof Error ? error.message : "Referral gagal diperbarui" }, 409); }
+  });
+}
+subscriptionRoutes.post("/invoices/:id/retry-activation", requireRole(["superadmin"]), async c => {
+  const { retryInvoiceActivation } = await import("../services/subscriptionService");
+  try { return c.json({ success: true, data: await retryInvoiceActivation(c.req.param("id")!) }); }
+  catch { return c.json({ success: false, message: "Aktivasi masih memerlukan review" }, 409); }
 });
-
+subscriptionRoutes.post("/invoices/:id/adjustments", requireRole(["superadmin"]), async c => {
+  try { return c.json({success:true,data:await recordPaymentAdjustment(c.req.param("id")!,getUser(c).userId,await c.req.json())}); }
+  catch(error){return c.json({success:false,message:error instanceof Error?error.message:"Penyesuaian gagal"},409);}
+});
+subscriptionRoutes.post("/invoices/:id/review-activation", requireRole(["superadmin"]), async c => {
+  try { const { reviewInvoiceActivation }=await import("../services/subscriptionService"); return c.json({success:true,data:await reviewInvoiceActivation(c.req.param("id")!,getUser(c).userId,await c.req.json())}); }
+  catch(error){return c.json({success:false,message:error instanceof Error?error.message:"Review gagal"},409);}
+});
 export default subscriptionRoutes;
