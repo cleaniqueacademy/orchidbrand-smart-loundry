@@ -203,4 +203,27 @@ test("owner can cancel pending_verification before receipt and admin can reopen 
   const reopened = await reopenReviewInvoice(second.id, adminId);
   expect(reopened.status).toBe("unpaid");
   expect(reopened.expiresAt).not.toBeNull();
+
+  const third = await bill(a);
+  await db
+    .update(subscriptionInvoices)
+    .set({
+      status: "paid",
+      activationStatus: "pending_review",
+      activationReason: "expired_or_legacy_invoice",
+      entitlementTier: "pro",
+    })
+    .where(eq(subscriptionInvoices.id, third.id));
+
+  const app = new Hono().route("/api/subscription", subscriptionRoutes);
+  const adminSession = await createSession(adminId);
+  const reviewListRes = await app.request("/api/subscription/invoices?status=review_required", {
+    headers: { Cookie: `cleanique_session=${adminSession.token}` },
+  });
+  expect(reviewListRes.status).toBe(200);
+  const reviewList = await reviewListRes.json();
+  const matched = reviewList.data.find((inv: any) => inv.id === third.id);
+  expect(matched).toBeDefined();
+  expect(matched.activationStatus).toBe("pending_review");
+  expect(matched.entitlementTier).toBe("pro");
 });

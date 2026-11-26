@@ -269,8 +269,10 @@ subscriptionRoutes.get("/invoices", async (c) => {
         periodStart: subscriptionInvoices.periodStart,
         periodEnd: subscriptionInvoices.periodEnd,
         expiresAt: subscriptionInvoices.expiresAt,
+        entitlementTier: subscriptionInvoices.entitlementTier,
         activationStatus: subscriptionInvoices.activationStatus,
         activationReason: subscriptionInvoices.activationReason,
+        activationReviewNotes: subscriptionInvoices.activationReviewNotes,
         qrisIssuedAt: subscriptionInvoices.qrisIssuedAt,
         invalidatedAt: subscriptionInvoices.invalidatedAt,
         invalidationReason: subscriptionInvoices.invalidationReason,
@@ -296,7 +298,11 @@ subscriptionRoutes.get("/invoices", async (c) => {
       filtered = filtered.filter((r) => r.userId === user.userId);
     }
 
-    if (status) {
+    if (status === "review_required") {
+      filtered = filtered.filter(
+        (r) => r.status === "review_required" || (r.status === "paid" && !["active", "refunded"].includes(r.activationStatus || "")),
+      );
+    } else if (status) {
       filtered = filtered.filter((r) => r.status === status);
     }
 

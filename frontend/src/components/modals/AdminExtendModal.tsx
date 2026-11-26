@@ -11,7 +11,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { Tenant } from "../../types";
+import { ACCOUNT_TIERS, Tenant } from "../../types";
 import { authHeaders, uploadFile } from "../../utils/api";
 import { useToast } from "../common/ToastContext";
 
@@ -151,17 +151,43 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm">Paket setelah pembayaran<select className="border rounded p-2 ml-2" value={selectedPlan} onChange={e=>{setSelectedPlan(e.target.value);setRequestKey(crypto.randomUUID());}}><option value="pro">Pro</option><option value="premium">Premium</option></select></label><p className="text-xs">Perubahan paket tanpa prorata. Kuota aktif diperiksa sebelum invoice dibuat; pembayaran tidak membuka blokir admin.</p>
+          <div>
+            <label htmlFor="admin-extend-plan" className="block text-xs font-semibold text-zinc-700 mb-1.5">
+              Paket setelah pembayaran *
+            </label>
+            <select
+              id="admin-extend-plan"
+              className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              value={selectedPlan}
+              onChange={(e) => {
+                setSelectedPlan(e.target.value);
+                setRequestKey(crypto.randomUUID());
+              }}
+            >
+              <option value="pro">Pro (Paket Aktif)</option>
+              <option
+                value="premium"
+                disabled={ACCOUNT_TIERS.premium.isComingSoon && tenant.tier !== "premium"}
+              >
+                {ACCOUNT_TIERS.premium.isComingSoon && tenant.tier !== "premium"
+                  ? "Premium (Segera Hadir)"
+                  : "Premium"}
+              </option>
+            </select>
+            <p className="text-[11px] text-zinc-500 mt-1.5">
+              Perubahan paket tanpa prorata. Kuota aktif diperiksa sebelum invoice dibuat; pembayaran tidak membuka blokir admin.
+            </p>
+          </div>
           {/* Pilihan Durasi */}
           <div>
             <label className="block text-xs font-semibold text-zinc-700 mb-2">
               Pilih Durasi Perpanjangan *
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { months: 1, label: "1 periode (30 hari)" },
-                { months: 3, label: "3 periode (30 hari)" },
-                { months: 6, label: "6 periode (30 hari)" },
+                { months: 3, label: "3 periode (90 hari)" },
+                { months: 6, label: "6 periode (180 hari)" },
                 { months: 12, label: "12 periode (360 hari)" },
               ].map((opt) => (
                 <button
@@ -183,7 +209,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
           {/* Rincian Kalkulasi Harga & Tanggal Baru */}
           <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-2">
             <div className="flex justify-between items-center text-zinc-600">
-              <span>Tarif periode (30 hari)an:</span>
+              <span>Tarif per periode (30 hari):</span>
               <span className="font-semibold">Rp {pricePerMonth.toLocaleString("id-ID")}</span>
             </div>
             <div className="flex justify-between items-center text-zinc-600">
@@ -202,9 +228,9 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Link Bukti Transfer (Opsional)
+                Bukti Transfer (Opsional)
               </label>
-              <input aria-label="Berkas bukti transfer admin" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" disabled={uploading || loading} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await uploadFile(file,"payments");if(!result.success || !result.data?.url)throw new Error(result.message);setProofUrl(result.data.url);}catch(error){toast.error("Upload gagal",error instanceof Error?error.message:"Coba kembali");}finally{setUploading(false);}}} />
+              <input aria-label="Berkas bukti transfer admin" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" disabled={uploading || loading} className="block w-full text-xs text-zinc-600 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-200/80 file:text-zinc-700 hover:file:bg-zinc-200 cursor-pointer" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await uploadFile(file,"payments");if(!result.success || !result.data?.url)throw new Error(result.message);setProofUrl(result.data.url);}catch(error){toast.error("Upload gagal",error instanceof Error?error.message:"Coba kembali");}finally{setUploading(false);}}} />
               {proofUrl && <p className="text-xs text-emerald-700">Berkas privat siap dilampirkan.</p>}
             </div>
             <div>

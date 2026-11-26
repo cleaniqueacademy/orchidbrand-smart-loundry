@@ -219,12 +219,46 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
     finally { setPaymentBusy(null); }
   };
 
-  const getStatusBadge = (status: SubscriptionInvoice["status"]) => {
-    switch (status) {
-      case "expired": return <span className="text-xs font-semibold text-zinc-600">Kedaluwarsa</span>;
-      case "cancelled": return <span className="text-xs font-semibold text-zinc-600">Dibatalkan</span>;
-      case "review_required": return <span className="text-xs font-semibold text-amber-800">Perlu review admin</span>;
+  const getStatusBadge = (inv: SubscriptionInvoice) => {
+    const effectiveStatus =
+      ["unpaid", "rejected"].includes(inv.status) && inv.expiresAt && Date.parse(inv.expiresAt) <= Date.now()
+        ? "expired"
+        : inv.status;
+
+    switch (effectiveStatus) {
+      case "expired":
+        return (
+          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-zinc-100 text-zinc-700 border border-zinc-200 rounded-full">
+            Kedaluwarsa
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-full">
+            Dibatalkan
+          </span>
+        );
+      case "review_required":
+        return (
+          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
+            Perlu Review Admin
+          </span>
+        );
       case "paid":
+        if (inv.activationStatus === "pending_review") {
+          return (
+            <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
+              Lunas · Menunggu Aktivasi
+            </span>
+          );
+        }
+        if (inv.activationStatus === "refunded") {
+          return (
+            <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-zinc-100 text-zinc-700 border border-zinc-200 rounded-full">
+              Dana Dikembalikan
+            </span>
+          );
+        }
         return (
           <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-semibold px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
             Lunas &amp; Aktif
@@ -565,10 +599,10 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                         {(inv.promotionDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Promo: -Rp {inv.promotionDiscountAmount?.toLocaleString("id-ID")}</div>}
                         {(inv.referralDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Referral: -Rp {inv.referralDiscountAmount?.toLocaleString("id-ID")}</div>}
                       </td>
-                      <td className="py-2.5 px-3.5 min-w-[140px] whitespace-nowrap">
-                        {getStatusBadge(["unpaid", "rejected"].includes(inv.status) && inv.expiresAt && Date.parse(inv.expiresAt) <= Date.now() ? "expired" : inv.status)}
-                        {inv.activationStatus === "refunded" && <p className="text-xs text-zinc-600">Dana dikembalikan; langganan tidak diaktifkan.</p>}
-                        {inv.activationStatus === "pending_review" && <div className="text-[11px] text-amber-800">Pembayaran tercatat; aktivasi menunggu review admin.</div>}
+                      <td className="py-2.5 px-3.5 min-w-[140px]">
+                        {getStatusBadge(inv)}
+                        {inv.activationStatus === "refunded" && <p className="text-[11px] text-zinc-600 mt-1">Dana dikembalikan; langganan tidak diaktifkan.</p>}
+                        {inv.activationStatus === "pending_review" && <p className="text-[11px] text-amber-800 mt-1">Pembayaran tercatat; aktivasi menunggu review admin.</p>}
                         {["unpaid","rejected"].includes(inv.status) && <div className="text-[10px] mt-1 text-zinc-500">{inv.expiresAt ? `Batas bayar: ${new Date(inv.expiresAt).toLocaleString("id-ID",{timeZone:"Asia/Jakarta"})} WIB` : "Invoice lama: hubungi admin untuk review"}</div>}
                       </td>
                       <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
@@ -605,8 +639,18 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
                               <span>⚡ Booster WA</span>
                             </a>
                           </div>
+                        ) : inv.status === "paid" ? (
+                          inv.activationStatus === "pending_review" ? (
+                            <span className="text-amber-700 font-semibold text-xs">Menunggu review admin</span>
+                          ) : inv.activationStatus === "refunded" ? (
+                            <span className="text-zinc-600 font-semibold text-xs">Dana dikembalikan</span>
+                          ) : (
+                            <span className="text-emerald-700 font-semibold text-xs">Terverifikasi &amp; Aktif</span>
+                          )
+                        ) : inv.status === "cancelled" ? (
+                          <span className="text-zinc-500 font-semibold text-xs">Dibatalkan</span>
                         ) : (
-                          <span className="text-zinc-600 font-semibold text-xs">{inv.status === "paid" ? "Terverifikasi" : "Hubungi admin jika sudah membayar"}</span>
+                          <span className="text-zinc-600 font-semibold text-xs">Hubungi admin jika sudah membayar</span>
                         )}
                       </td>
                     </tr>

@@ -426,8 +426,10 @@ export interface SubscriptionInvoice {
   invalidatedAt?: string | null;
   invalidationReason?: string | null;
   expiresAt?: string | null;
+  entitlementTier?: string | null;
   activationStatus?: string;
   activationReason?: string | null;
+  activationReviewNotes?: string | null;
   id: string;
   invoiceNo: string;
   tenantId: string;

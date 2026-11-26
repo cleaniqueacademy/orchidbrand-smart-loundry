@@ -15,13 +15,25 @@ import {
   ShieldCheck,
   Check,
   Loader2,
+  ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 import { paymentStatusLabel } from "../../../utils/paymentStatus";
 import { api } from "../../../utils/api";
 import { InvoiceTimeline } from "../subscription/InvoiceTimeline";
-import { SubscriptionInvoice } from "../../../types";
+import { ACCOUNT_TIERS, SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
+
+const ACTIVATION_REASON_LABELS: Record<string, string> = {
+  ownership_changed: "Kepemilikan cabang berubah",
+  owner_suspended_or_archived: "Owner atau cabang diblokir/diarsipkan",
+  expired_or_legacy_invoice: "Masa berlaku atau invoice lama perlu ditinjau",
+  legacy_terms_require_review: "Paket invoice lama perlu dikonfirmasi",
+  quota_requires_review: "Kuota cabang melebihi paket",
+  staff_quota_requires_review: "Kuota staf melebihi paket",
+  plan_unavailable: "Paket tidak tersedia",
+};
 
 interface SubscriptionInvoicesTabProps {
   onVerifySuccess?: () => void;
@@ -84,12 +96,49 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
   const [reviewTier, setReviewTier] = useState("pro");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [showRefundPanel, setShowRefundPanel] = useState(false);
   const [adjusting, setAdjusting] = useState<SubscriptionInvoice | null>(null);
   const [adjustmentKey, setAdjustmentKey] = useState(() => crypto.randomUUID());
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
   const [commissionCorrection, setCommissionCorrection] = useState("0");
   const [adjustmentNotes, setAdjustmentNotes] = useState("");
   const [adjustmentBusy, setAdjustmentBusy] = useState(false);
+
+  const openReviewModal = (inv: SubscriptionInvoice) => {
+    setReviewing(inv);
+    setReviewTier(inv.entitlementTier === "premium" ? "premium" : "pro");
+    setReviewNotes("");
+  };
+
+  const openAdjustmentModal = (inv: SubscriptionInvoice) => {
+    setShowRefundPanel(false);
+    setAdjusting(inv);
+    setAdjustmentKey(crypto.randomUUID());
+    setAdjustmentAmount(String(inv.finalAmount));
+    setCommissionCorrection("0");
+    setAdjustmentNotes("");
+  };
+
+  const retryActivation = async (inv: SubscriptionInvoice) => {
+    setRetryingId(inv.id);
+    try {
+      const result = await api.post<{ success: boolean; message?: string }>(
+        `/api/subscription/invoices/${encodeURIComponent(inv.id)}/retry-activation`,
+      );
+      if (!result.success) {
+        toast.error("Aktivasi masih tertahan", result.message || "Gunakan Tinjau Aktivasi untuk mengonfirmasi paket & alasan.");
+      } else {
+        toast.success("Langganan diaktifkan", `Invoice #${inv.invoiceNo} berhasil diaktifkan.`);
+        onVerifySuccess?.();
+      }
+      await fetchInvoices();
+    } catch (error) {
+      toast.error("Aktivasi belum dapat diproses", error instanceof Error ? error.message : "Gunakan Tinjau Aktivasi.");
+    } finally {
+      setRetryingId(null);
+    }
+  };
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -154,7 +203,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           <strong className="text-emerald-700">Rp {invoice.finalAmount.toLocaleString("id-ID")}</strong> untuk outlet{" "}
           <strong>{invoice.outletName || "Outlet Laundry"}</strong>?
           <br /><br />
-          Penerimaan dicatat di buku kas. Masa aktif diperpanjang <strong>{invoice.durationMonths} periode 30 hari</strong> setelah validasi akun, kepemilikan, dan kuota lolos.
+          Penerimaan dicatat di buku kas. Masa aktif diperpanjang <strong>{invoice.durationMonths} periode ({invoice.durationMonths * 30} hari)</strong> setelah validasi akun, kepemilikan, dan kuota lolos.
         </span>
       ),
       confirmText: "Ya, Verifikasi & Aktifkan",
@@ -271,22 +320,30 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       #{inv.invoiceNo} · {inv.outletName || "Outlet"} ({inv.userName || inv.ownerName || "-"})
                     </p>
                     <p className="text-[11px] text-zinc-600">
-                      {({
-                        ownership_changed: "Kepemilikan cabang berubah",
-                        owner_suspended_or_archived: "Owner atau cabang diblokir/diarsipkan",
-                        expired_or_legacy_invoice: "Masa berlaku atau invoice lama perlu ditinjau",
-                        legacy_terms_require_review: "Paket invoice lama perlu dikonfirmasi",
-                        quota_requires_review: "Kuota cabang melebihi paket",
-                        staff_quota_requires_review: "Kuota staf melebihi paket",
-                        plan_unavailable: "Paket tidak tersedia",
-                      } as Record<string, string>)[inv.activationReason || ""] || (inv.status === "paid" ? "Pembayaran lunas, aktivasi menunggu proses ulang." : "Tagihan lama/duplikat perlu dibuka kembali (24 jam) atau dibatalkan.")}
+                      {ACTIVATION_REASON_LABELS[inv.activationReason || ""] ||
+                        (inv.status === "paid"
+                          ? "Pembayaran lunas, aktivasi menunggu proses ulang."
+                          : "Tagihan lama/duplikat perlu dibuka kembali (24 jam) atau dibatalkan.")}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {inv.status === "paid" ? (
                       <>
-                        <button type="button" className="text-blue-700 font-semibold underline cursor-pointer" onClick={async () => { const result = await api.post<{ success: boolean }>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi</button>
-                        <button type="button" className="text-zinc-700 font-semibold underline cursor-pointer" onClick={() => { setReviewing(inv); setReviewNotes(""); }}>Tinjau aktivasi</button>
+                        <button
+                          type="button"
+                          disabled={retryingId === inv.id}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold cursor-pointer disabled:opacity-50"
+                          onClick={() => void retryActivation(inv)}
+                        >
+                          {retryingId === inv.id ? "Memproses..." : "Proses Ulang"}
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold cursor-pointer"
+                          onClick={() => openReviewModal(inv)}
+                        >
+                          Tinjau Aktivasi
+                        </button>
                       </>
                     ) : (
                       <>
@@ -321,8 +378,19 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           </div>
 
           <button
+            type="button"
+            onClick={() => setShowRefundPanel((prev) => !prev)}
+            aria-expanded={showRefundPanel}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-semibold text-zinc-700 transition cursor-pointer"
+          >
+            <span>Jurnal Refund</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showRefundPanel ? "rotate-180" : ""}`} />
+          </button>
+
+          <button
+            type="button"
             onClick={fetchInvoices}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
             title="Muat Ulang"
           >
             <RefreshCw className="w-4 h-4" />
@@ -330,24 +398,44 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
         </div>
       </div>
 
-      {reviewing && <form className="border rounded p-4 space-y-2" onSubmit={async e=>{e.preventDefault();setReviewBusy(true);try{const result=await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${reviewing.id}/review-activation`,{tier:reviewTier,notes:reviewNotes});if(!result.success)throw new Error(result.message);setReviewing(null);await fetchInvoices();}catch(error){toast.error("Review gagal",error instanceof Error?error.message:"Coba kembali");}finally{setReviewBusy(false);}}}>
-        <p className="font-semibold">Keputusan aktivasi {reviewing.invoiceNo}</p><p className="text-sm">Konfirmasi pembayaran dan paket yang dijanjikan. Harga invoice tetap. Status blokir, kepemilikan, dan kuota tetap wajib diselesaikan.</p>
-        <label>Paket yang disetujui<select value={reviewTier} onChange={e=>setReviewTier(e.target.value)} className="border p-2 ml-2"><option value="pro">Pro</option><option value="premium">Premium</option></select></label>
-        <label className="block">Alasan dan referensi pemeriksaan<textarea required minLength={10} maxLength={2000} value={reviewNotes} onChange={e=>setReviewNotes(e.target.value)} className="block border p-2 w-full" /></label><button disabled={reviewBusy} className="border p-2" type="submit">Simpan keputusan</button><button type="button" className="p-2" onClick={()=>setReviewing(null)}>Batal</button>
-      </form>}
-      {adjusting && <form className="p-4 border rounded-xl space-y-3" onSubmit={async e => {
-        e.preventDefault(); setAdjustmentBusy(true);
-        try { const result = await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${adjusting.id}/adjustments`, { requestKey:adjustmentKey, amount:Number(adjustmentAmount), commissionAmount:Number(commissionCorrection), type:"refund", notes:adjustmentNotes });
-          if (!result.success) throw new Error(result.message); toast.success("Jurnal refund tersimpan"); setAdjusting(null); await fetchInvoices();
-        } catch(error) { toast.error("Jurnal gagal", error instanceof Error ? error.message : "Coba kembali"); } finally { setAdjustmentBusy(false); }
-      }}>
-        <p className="font-semibold">Jurnal refund {adjusting.invoiceNo}</p><p className="text-sm">Catat setelah transfer refund dilakukan. Sertakan referensi transfer dan keputusan masa aktif dalam catatan.</p>
-        <label className="block">Nominal refund (Rp)<input required type="number" min="1" step="1" value={adjustmentAmount} onChange={e=>setAdjustmentAmount(e.target.value)} className="border p-2 ml-2" /></label>
-        <label className="block">Koreksi komisi (Rp)<input required type="number" min="0" step="1" value={commissionCorrection} onChange={e=>setCommissionCorrection(e.target.value)} className="border p-2 ml-2" /></label>
-        <label className="block">Catatan dan referensi transfer<textarea required minLength={10} maxLength={2000} value={adjustmentNotes} onChange={e=>setAdjustmentNotes(e.target.value)} className="block border p-2 w-full" /></label>
-        <button disabled={adjustmentBusy} type="submit" className="border p-2 rounded">Simpan jurnal refund</button><button type="button" onClick={()=>setAdjusting(null)} className="p-2">Batal</button>
-      </form>}
-      <details><summary>Jurnal refund dan pembayaran ganda</summary><div className="flex flex-wrap gap-2 p-2">{invoices.filter(inv=>["paid", "review_required"].includes(inv.status)).map(inv=><button key={inv.id} className="border p-2 rounded text-xs" onClick={()=>{setAdjusting(inv);setAdjustmentKey(crypto.randomUUID());setAdjustmentAmount("");setCommissionCorrection("0");setAdjustmentNotes("");}}>{inv.invoiceNo}</button>)}</div></details>
+      {showRefundPanel && (
+        <div className="p-4 rounded-2xl border border-zinc-200 bg-zinc-50/90 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold text-zinc-900">Jurnal Refund &amp; Pembayaran Ganda</p>
+              <p className="text-[11px] text-zinc-500">Pilih invoice lunas atau perlu review untuk mencatat pengembalian dana / koreksi komisi.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRefundPanel(false)}
+              className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {invoices.some((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded") ? (
+            <div className="flex flex-wrap gap-2">
+              {invoices
+                .filter((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded")
+                .map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    onClick={() => openAdjustmentModal(inv)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:bg-blue-50/70 text-xs font-semibold text-zinc-800 transition cursor-pointer"
+                  >
+                    <span className="font-mono">#{inv.invoiceNo}</span>
+                    <span className="text-zinc-400">·</span>
+                    <span className="text-zinc-600">{inv.outletName || "Outlet"}</span>
+                    <span className="text-blue-700">Rp {inv.finalAmount.toLocaleString("id-ID")}</span>
+                  </button>
+                ))}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-500">Belum ada tagihan lunas yang dapat dicatatkan jurnal refund pada daftar ini.</p>
+          )}
+        </div>
+      )}
       {/* Filter Tabs Status */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
@@ -466,18 +554,45 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                         <span className="text-slate-400 italic">Belum diunggah</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 min-w-[130px] whitespace-nowrap">
-                      {["expired", "cancelled", "review_required"].includes(inv.status) ? <span className="text-xs font-semibold text-zinc-700">{({expired:"Kedaluwarsa",cancelled:"Dibatalkan",review_required:"Perlu review admin"} as Record<string,string>)[inv.status]}</span> : inv.status === "paid" ? (
-                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-                          Lunas
-                        </span>
+                    <td className="py-3.5 px-4 min-w-[160px]">
+                      {inv.status === "paid" ? (
+                        inv.activationStatus === "pending_review" ? (
+                          <div>
+                            <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              Lunas · Perlu Review
+                            </span>
+                            <p className="text-[10px] text-amber-800 mt-1 leading-snug">
+                              {ACTIVATION_REASON_LABELS[inv.activationReason || ""] || "Aktivasi menunggu review admin"}
+                            </p>
+                          </div>
+                        ) : inv.activationStatus === "refunded" ? (
+                          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
+                            Lunas · Refund
+                          </span>
+                        ) : (
+                          <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Lunas &amp; Aktif
+                          </span>
+                        )
                       ) : inv.status === "pending_verification" ? (
                         <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          Menunggu
+                          Menunggu Verifikasi
+                        </span>
+                      ) : inv.status === "review_required" ? (
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                          Perlu Review Admin
                         </span>
                       ) : inv.status === "rejected" ? (
                         <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
                           Ditolak
+                        </span>
+                      ) : inv.status === "expired" ? (
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          Kedaluwarsa
+                        </span>
+                      ) : inv.status === "cancelled" ? (
+                        <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          Dibatalkan
                         </span>
                       ) : (
                         <span className="whitespace-nowrap shrink-0 inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -489,6 +604,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       {inv.status === "pending_verification" ? (
                         <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                           <button
+                            type="button"
                             onClick={() => handleVerify(inv)}
                             className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all inline-flex items-center gap-1 shadow-sm cursor-pointer"
                           >
@@ -496,6 +612,7 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                             <span>Verifikasi</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleOpenRejectModal(inv)}
                             className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
                           >
@@ -512,6 +629,27 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                         </div>
                       ) : (
                         <div className="flex flex-wrap items-center justify-end gap-2">
+                          {inv.status === "paid" && inv.activationStatus === "pending_review" && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={retryingId === inv.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold cursor-pointer disabled:opacity-50"
+                                onClick={() => void retryActivation(inv)}
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>{retryingId === inv.id ? "Memproses..." : "Proses Ulang"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-semibold cursor-pointer"
+                                onClick={() => openReviewModal(inv)}
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                <span>Tinjau Aktivasi</span>
+                              </button>
+                            </>
+                          )}
                           {inv.status === "review_required" && (
                             <button
                               type="button"
@@ -529,6 +667,15 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                           >
                             Catat Mutasi
                           </button>
+                          {["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded" && (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-amber-700 hover:underline cursor-pointer"
+                              onClick={() => openAdjustmentModal(inv)}
+                            >
+                              Refund
+                            </button>
+                          )}
                           {["unpaid", "rejected", "review_required", "expired"].includes(inv.status) && (
                             <button
                               type="button"
@@ -538,8 +685,8 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                               Batalkan
                             </button>
                           )}
-                          {inv.status === "paid" && (
-                            <span className="text-slate-500 text-[11px]">Pembayaran tercatat</span>
+                          {inv.status === "paid" && inv.activationStatus === "active" && (
+                            <span className="text-emerald-700 font-semibold text-[11px]">Aktif</span>
                           )}
                         </div>
                       )}
@@ -756,6 +903,189 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       <span>Konfirmasi Tolak</span>
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Keputusan Tinjau Aktivasi */}
+      {reviewing && (
+        <div role="dialog" aria-modal="true" aria-label={`Keputusan aktivasi ${reviewing.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900">Keputusan Aktivasi · #{reviewing.invoiceNo}</h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  {reviewing.outletName || "Outlet"} ({reviewing.userName || reviewing.ownerName || "-"}) · Rp {reviewing.finalAmount.toLocaleString("id-ID")}
+                </p>
+              </div>
+              <button type="button" disabled={reviewBusy} onClick={() => setReviewing(null)} className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl p-3">
+              Konfirmasi pembayaran dan paket yang disetujui untuk mengaktifkan masa berlaku ({reviewing.durationMonths} periode / {reviewing.durationMonths * 30} hari). Harga invoice tetap; status blokir, kepemilikan, dan kuota tetap wajib terpenuhi.
+            </p>
+            <form
+              className="space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setReviewBusy(true);
+                try {
+                  const result = await api.post<{ success: boolean; message?: string }>(
+                    `/api/subscription/invoices/${encodeURIComponent(reviewing.id)}/review-activation`,
+                    { tier: reviewTier, notes: reviewNotes },
+                  );
+                  if (!result.success) throw new Error(result.message);
+                  toast.success("Aktivasi Dikonfirmasi", `Invoice #${reviewing.invoiceNo} berhasil ditinjau.`);
+                  setReviewing(null);
+                  await fetchInvoices();
+                  onVerifySuccess?.();
+                } catch (error) {
+                  toast.error("Review gagal", error instanceof Error ? error.message : "Coba kembali");
+                } finally {
+                  setReviewBusy(false);
+                }
+              }}
+            >
+              <label className="block text-xs font-semibold text-zinc-700">
+                Paket yang Disetujui
+                <select
+                  value={reviewTier}
+                  onChange={(e) => setReviewTier(e.target.value)}
+                  disabled={!!reviewing.entitlementTier}
+                  className="mt-1 block w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-zinc-100 cursor-pointer"
+                >
+                  <option value="pro">Pro (Paket Aktif)</option>
+                  <option
+                    value="premium"
+                    disabled={ACCOUNT_TIERS.premium.isComingSoon && reviewing.entitlementTier !== "premium"}
+                  >
+                    {ACCOUNT_TIERS.premium.isComingSoon && reviewing.entitlementTier !== "premium"
+                      ? "Premium (Segera Hadir)"
+                      : "Premium"}
+                  </option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-zinc-700">
+                Alasan &amp; Referensi Pemeriksaan
+                <textarea
+                  required
+                  minLength={10}
+                  maxLength={2000}
+                  rows={3}
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="Contoh: Pembayaran Rp 60.000 terkonfirmasi di mutasi bank, invoice lama valid untuk diaktifkan sebagai Paket Pro."
+                  className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+                <button type="button" disabled={reviewBusy} onClick={() => setReviewing(null)} className="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:bg-zinc-100 cursor-pointer">
+                  Batal
+                </button>
+                <button disabled={reviewBusy} type="submit" className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 cursor-pointer">
+                  {reviewBusy ? "Menyimpan..." : "Simpan Keputusan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Jurnal Refund / Pembayaran Ganda */}
+      {adjusting && (
+        <div role="dialog" aria-modal="true" aria-label={`Jurnal refund ${adjusting.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900">Jurnal Refund · #{adjusting.invoiceNo}</h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  {adjusting.outletName || "Outlet"} · Tagihan Rp {adjusting.finalAmount.toLocaleString("id-ID")}
+                </p>
+              </div>
+              <button type="button" disabled={adjustmentBusy} onClick={() => setAdjusting(null)} className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl p-3">
+              Catat setelah transfer pengembalian dana selesai dilakukan. Sertakan referensi transfer dan keputusan masa aktif dalam catatan.
+            </p>
+            <form
+              className="space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setAdjustmentBusy(true);
+                try {
+                  const result = await api.post<{ success: boolean; message?: string }>(
+                    `/api/subscription/invoices/${encodeURIComponent(adjusting.id)}/adjustments`,
+                    {
+                      requestKey: adjustmentKey,
+                      amount: Number(adjustmentAmount),
+                      commissionAmount: Number(commissionCorrection),
+                      type: "refund",
+                      notes: adjustmentNotes,
+                    },
+                  );
+                  if (!result.success) throw new Error(result.message);
+                  toast.success("Jurnal refund tersimpan");
+                  setAdjusting(null);
+                  await fetchInvoices();
+                  onVerifySuccess?.();
+                } catch (error) {
+                  toast.error("Jurnal gagal", error instanceof Error ? error.message : "Coba kembali");
+                } finally {
+                  setAdjustmentBusy(false);
+                }
+              }}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-zinc-700">
+                  Nominal Refund (Rp)
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                    className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs tabular-nums outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-zinc-700">
+                  Koreksi Komisi (Rp)
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={commissionCorrection}
+                    onChange={(e) => setCommissionCorrection(e.target.value)}
+                    className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs tabular-nums outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs font-semibold text-zinc-700">
+                Catatan &amp; Referensi Transfer
+                <textarea
+                  required
+                  minLength={10}
+                  maxLength={2000}
+                  rows={3}
+                  value={adjustmentNotes}
+                  onChange={(e) => setAdjustmentNotes(e.target.value)}
+                  placeholder="Contoh: Refund transfer ganda via BCA Ref TF-261125-002; masa aktif dikembalikan ke sebelumnya."
+                  className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+                <button type="button" disabled={adjustmentBusy} onClick={() => setAdjusting(null)} className="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:bg-zinc-100 cursor-pointer">
+                  Batal
+                </button>
+                <button disabled={adjustmentBusy} type="submit" className="rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 cursor-pointer">
+                  {adjustmentBusy ? "Menyimpan..." : "Simpan Jurnal Refund"}
                 </button>
               </div>
             </form>
