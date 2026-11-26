@@ -198,7 +198,16 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
 
 
   const cancelInvoice = async (invoice: SubscriptionInvoice) => {
-    const approved = await confirm({ title: "Batalkan tagihan?", description: "Pembatalan menutup tagihan di aplikasi. QRIS yang sudah diunduh mungkin masih dapat dibayar di bank. Jangan bayar QRIS lama. Jika sudah membayar, hubungi admin untuk mencatat penerimaannya.", confirmText: "Ya, batalkan tagihan", cancelText: "Kembali", variant: "danger" });
+    const hasProof = invoice.status === "pending_verification" || !!invoice.paymentProofUrl;
+    const approved = await confirm({
+      title: "Batalkan tagihan?",
+      description: hasProof
+        ? "Tagihan ini sudah memiliki bukti pembayaran yang sedang menunggu pemeriksaan. Jika Anda sudah mentransfer dana, JANGAN batalkan—hubungi admin agar pembayaran diperiksa. Batalkan hanya jika salah unggah bukti atau belum melakukan transfer."
+        : "Pembatalan menutup tagihan di aplikasi. QRIS yang sudah diunduh mungkin masih dapat dibayar di bank. Jangan bayar QRIS lama. Jika sudah membayar, hubungi admin untuk mencatat penerimaannya.",
+      confirmText: "Ya, batalkan tagihan",
+      cancelText: "Kembali",
+      variant: "danger",
+    });
     if (!approved) return;
     setPaymentBusy(invoice.id);
     try {

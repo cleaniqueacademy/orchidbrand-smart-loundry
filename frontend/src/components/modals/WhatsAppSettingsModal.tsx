@@ -434,12 +434,36 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
 
               {/* State: CONNECTING (Khusus Owner / Admin) */}
               {!isStaff && waData.status === "connecting" && (
-                <div className="py-8 text-center space-y-3">
+                <div className="py-6 text-center space-y-3">
                   <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
                   <div className="font-semibold text-zinc-800 text-xs">
                     Menghubungkan ke WhatsApp...
                   </div>
-                  <p className="text-[11px] text-zinc-400">Kode QR akan muncul dalam beberapa detik.</p>
+                  <p className="text-[11px] text-zinc-500">Kode QR atau status aktif akan muncul dalam beberapa detik (maks. 45 detik).</p>
+                  {waData.lastError && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 max-w-sm mx-auto">
+                      {waData.lastError}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onConnect(true)}
+                      disabled={loading}
+                      className="px-3.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                      <span>Muat Ulang Koneksi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectConfirm}
+                      disabled={loading}
+                      className="px-3.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      Batalkan / Reset Sesi
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -455,6 +479,11 @@ export const WhatsAppSettingsModal: React.FC<WhatsAppSettingsModalProps> = ({
                       Hubungkan nomor WhatsApp kasir/outlet untuk mengirimkan pesan notifikasi cucian selesai dan nota secara langsung.
                     </p>
                   </div>
+                  {waData.lastError && (
+                    <p role="alert" className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 max-w-sm mx-auto">
+                      {waData.lastError}
+                    </p>
+                  )}
 
                   <button
                     onClick={() => onConnect(false)}

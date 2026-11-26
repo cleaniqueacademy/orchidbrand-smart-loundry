@@ -452,6 +452,8 @@ export interface SubscriptionInvoice {
   createdAt: string;
   outletName?: string;
   ownerName?: string;
+  userName?: string | null;
+  userEmail?: string | null;
   planName?: string;
 }
 

@@ -24,10 +24,15 @@ import { PlatformSettings } from "../../../types";
 import { QrisPreviewModal } from "../../modals/QrisPreviewModal";
 import {
   getDirectImageUrl,
-  isGoogleDriveUrl,
-  parseGoogleDriveFileId,
-  getFallbackDriveThumbnailUrl,
 } from "../../../utils/googleDriveUtils";
+
+interface QrisStatusInfo {
+  valid: boolean;
+  merchantName?: string;
+  merchantCity?: string;
+  currency?: string;
+  error?: string;
+}
 
 export const PlatformSettingsTab: React.FC = () => {
   const [formData, setFormData] = useState<Partial<PlatformSettings>>({
@@ -49,6 +54,7 @@ export const PlatformSettingsTab: React.FC = () => {
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(
     null
   );
+  const [qrisStatus, setQrisStatus] = useState<QrisStatusInfo | null>(null);
   const [isQrisPreviewOpen, setIsQrisPreviewOpen] = useState(false);
   const [uploadingQris, setUploadingQris] = useState(false);
 
@@ -80,10 +86,10 @@ export const PlatformSettingsTab: React.FC = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ success: boolean; data: PlatformSettings }>("/api/platform-settings");
+      const res = await api.get<{ success: boolean; data: PlatformSettings; qrisStatus?: QrisStatusInfo }>("/api/platform-settings");
       if (res.success && res.data) {
-        const sanitized = { ...res.data };
-        setFormData(sanitized);
+        setFormData({ ...res.data });
+        if (res.qrisStatus) setQrisStatus(res.qrisStatus);
       }
     } catch (err) {
       console.error("Gagal memuat setting:", err);
@@ -102,8 +108,9 @@ export const PlatformSettingsTab: React.FC = () => {
     setStatusMsg(null);
 
     try {
-      const res = await api.put<{ success: boolean; message: string }>("/api/platform-settings", formData);
+      const res = await api.put<{ success: boolean; message: string; qrisStatus?: QrisStatusInfo }>("/api/platform-settings", formData);
       if (res.success) {
+        if (res.qrisStatus) setQrisStatus(res.qrisStatus);
         setStatusMsg({ type: "success", text: "Pengaturan platform berhasil diperbarui!" });
       } else {
         setStatusMsg({ type: "error", text: res.message || "Gagal memperbarui pengaturan." });
@@ -250,32 +257,39 @@ export const PlatformSettingsTab: React.FC = () => {
           </div>
 
           <div className="space-y-3 pt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Tautan QRIS Platform (Google Drive / URL Gambar)
+                  Gambar QRIS Statis Platform (QRIS Saurus)
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Mendukung link share Google Drive (file gambar QRIS) atau URL gambar langsung (.png, .jpg).
+                  Unggah gambar QRIS statis resmi (PNG/JPG/WEBP) atau gunakan QRIS bawaan. Backend memvalidasi CRC/IDR dan otomatis mengisi nominal setiap tagihan.
                 </p>
               </div>
-              {formData.qrisInfo && isGoogleDriveUrl(formData.qrisInfo) && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  Google Drive Terdeteksi
-                </span>
+              {qrisStatus && (
+                qrisStatus.valid ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    QRIS Saurus Aktif · {qrisStatus.merchantName} ({qrisStatus.currency || "IDR"})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                    {qrisStatus.error || "QRIS belum valid"}
+                  </span>
+                )
               )}
             </div>
 
             <div className="relative">
               <input
                 type="text"
-                placeholder="Unggah gambar QRIS statis merchant platform"
+                placeholder="/qris.png atau path upload lokal QRIS"
                 value={formData.qrisInfo || ""}
                 onChange={(e) => setFormData({ ...formData, qrisInfo: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
-              <p className="mt-2 text-xs text-slate-600">QRIS Saurus membaca gambar QRIS statis ini untuk membuat QR bernominal sesuai invoice. Gunakan upload PNG, JPG, atau WEBP; tautan gambar eksternal tidak didukung untuk pembuatan QR.</p>
+              <p className="mt-2 text-xs text-slate-600">Tidak ada setting tambahan terpisah: QRIS Saurus otomatis memproses gambar ini menjadi QR bernominal ketika Owner membuat tagihan baru.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-0.5">
@@ -345,13 +359,6 @@ export const PlatformSettingsTab: React.FC = () => {
                       className="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-200"
                       onError={(e) => {
                         const target = e.currentTarget;
-                        if (isGoogleDriveUrl(formData.qrisInfo || "")) {
-                          const fallback = getFallbackDriveThumbnailUrl(formData.qrisInfo || "");
-                          if (target.src !== fallback) {
-                            target.src = fallback;
-                            return;
-                          }
-                        }
                         if (target.src !== window.location.origin + "/qris.png") {
                           target.src = "/qris.png";
                         }
@@ -364,24 +371,13 @@ export const PlatformSettingsTab: React.FC = () => {
                   </div>
                   <div className="flex-1 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                     <p className="font-semibold text-slate-800 dark:text-slate-200">
-                      Tampilan QRIS ini akan muncul di modal perpanjangan langganan tenant & akun nonaktif.
+                      QRIS statis ini dibaca QRIS Saurus untuk membuat QR bernominal pada halaman pembayaran Owner.
                     </p>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      {isGoogleDriveUrl(formData.qrisInfo) ? (
-                        <>
-                          <strong className="text-amber-600 dark:text-amber-400">Penting:</strong> Pastikan setelan berbagi di Google Drive telah diubah ke <span className="font-medium text-slate-700 dark:text-slate-300">&ldquo;Siapa saja yang memiliki link (Pelihat / Viewer)&rdquo;</span> agar gambar dapat dimuat oleh semua pengguna tanpa perlu login Google.
-                        </>
-                      ) : (
-                        "Pastikan URL gambar dapat diakses secara publik dan tidak memerlukan autentikasi khusus."
-                      )}
+                      {qrisStatus?.valid
+                        ? `Merchant terdeteksi: ${qrisStatus.merchantName}${qrisStatus.merchantCity ? ` (${qrisStatus.merchantCity})` : ""} · Mata uang ${qrisStatus.currency || "IDR"}.`
+                        : "Klik Simpan Pengaturan Platform setelah mengganti gambar agar CRC & data merchant divalidasi ulang oleh backend."}
                     </p>
-                    {isGoogleDriveUrl(formData.qrisInfo) && (
-                      <div className="pt-1">
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded font-mono break-all">
-                          ID: {parseGoogleDriveFileId(formData.qrisInfo) || "-"}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -389,7 +385,7 @@ export const PlatformSettingsTab: React.FC = () => {
               <div className="p-3.5 bg-slate-50/60 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
                 <QrCode className="w-4 h-4 text-slate-400 shrink-0" />
                 <span>
-                  Belum ada QRIS yang diatur. Anda dapat menyalin tautan share Google Drive foto QRIS outlet Anda ke input di atas.
+                  Belum ada QRIS yang diatur. Unggah gambar PNG/JPG/WEBP atau pilih QRIS Statis Bawaan (/qris.png) di atas.
                 </span>
               </div>
             )}
@@ -525,7 +521,7 @@ export const PlatformSettingsTab: React.FC = () => {
         isOpen={isQrisPreviewOpen}
         onClose={() => setIsQrisPreviewOpen(false)}
         qrisUrl={formData.qrisInfo === "/qris.png" ? "/qris.png" : getDirectImageUrl(formData.qrisInfo || "")}
-        merchantName="LAUNDRY CLEANIQUE"
+        merchantName={qrisStatus?.merchantName || "LAUNDRY CLEANIQUE"}
         downloadFileName="QRIS-Laundry-Cleanique.png"
       />
     </div>

@@ -54,6 +54,18 @@ _Avoid_: aktivasi pembayaran
 Penetapan bahwa Penerimaan Pembayaran Langganan telah terbukti melalui catatan resmi penyedia pembayaran atau verifikasi admin atas penerimaan transfer manual.
 _Avoid_: bukti screenshot (sebagai konfirmasi otomatis)
 
+**Batas Pembayaran**:
+Batas waktu 24 jam sejak Invoice Langganan diterbitkan bagi Owner untuk menyelesaikan pembayaran atau mengunggah bukti. Melewati Batas Pembayaran mengubah tagihan yang belum dibayar menjadi Invoice Kedaluwarsa.
+_Avoid_: batas verifikasi admin
+
+**Estimasi Pemeriksaan Admin**:
+Target waktu penanganan oleh admin (1×24 jam) setelah Owner mengunggah bukti pembayaran. Melewati estimasi ini tidak otomatis membatalkan Invoice Langganan atau menghapus bukti yang telah dikirim.
+_Avoid_: kedaluwarsa otomatis bukti
+
+**Pencatatan Mutasi Khusus**:
+Pencatatan penerimaan dana oleh admin berdasarkan mutasi bank atau merchant untuk kasus pengecualian (seperti dana masuk pada Invoice Kedaluwarsa, tagihan dibatalkan, selisih nominal, atau pembayaran ganda), terpisah dari verifikasi rutin bukti transfer yang menunggu persetujuan.
+_Avoid_: verifikasi rutin (untuk mutasi pengecualian)
+
 **Aktivasi Langganan**:
 Pemberian periode akses Paket Langganan kepada Owner dan Cabang yang tercakup setelah pembayaran dikonfirmasi dan ketentuan langganan terpenuhi.
 _Avoid_: settlement (untuk pemberian akses)

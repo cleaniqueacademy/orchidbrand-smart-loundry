@@ -55,7 +55,8 @@ describe.skipIf(!enabled)("Premium release with isolated PostgreSQL", () => {
     expect(denied.status).toBe(403);
     const [staffUser] = await db.select().from(users).where(eq(users.role,"staff"));
     const staffToken = (await createSession(staffUser.id)).token;
-    const staff = await app.request("/probe", { headers: { Cookie: `cleanique_session=${staffToken}`, "X-Tenant-Id": selected.id } });
+    const otherBranch = branches.find(branch => branch.id !== staffUser.tenantId)!;
+    const staff = await app.request("/probe", { headers: { Cookie: `cleanique_session=${staffToken}`, "X-Tenant-Id": otherBranch.id } });
     expect(staff.status).toBe(403);
   });
   test("snapshot pricing, owner activation and side effects are atomic on repeated verification", async () => {

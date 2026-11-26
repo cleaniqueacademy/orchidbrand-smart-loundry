@@ -27,6 +27,20 @@ interface SubscriptionInvoicesTabProps {
   onVerifySuccess?: () => void;
 }
 
+function defaultWibDateTimeInput(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
 export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = ({
   onVerifySuccess,
 }) => {
@@ -38,6 +52,28 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
   const [receiptTime, setReceiptTime] = useState("");
   const [receiptNotes, setReceiptNotes] = useState("");
   const [receiptBusy, setReceiptBusy] = useState(false);
+  const [showAttentionList, setShowAttentionList] = useState(false);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
+  const openReceiptModal = (inv: SubscriptionInvoice) => {
+    setReceiving(inv);
+    setReceiptReference("");
+    setReceiptAmount(String(inv.finalAmount));
+    setReceiptTime(defaultWibDateTimeInput());
+    setReceiptNotes("");
+  };
+  const reopenInvoice = async (invoice: SubscriptionInvoice) => {
+    setReopeningId(invoice.id);
+    try {
+      const result = await api.post<{ success: boolean; message?: string }>(`/api/subscription/invoices/${encodeURIComponent(invoice.id)}/reopen`, {});
+      if (!result.success) throw new Error(result.message || "Gagal membuka kembali tagihan.");
+      toast.success("Tagihan Dibuka Kembali", result.message || "Batas waktu 24 jam baru telah ditetapkan.");
+      await fetchInvoices();
+    } catch (error) {
+      toast.error("Gagal Membuka Kembali", error instanceof Error ? error.message : "Coba lagi nanti.");
+    } finally {
+      setReopeningId(null);
+    }
+  };
   const cancelInvoice = async (invoice: SubscriptionInvoice) => {
     const ok = await confirm({ title: "Batalkan tagihan ini?", description: "Pastikan tidak ada penerimaan dana yang belum dicatat. Pembatalan lokal tidak membatalkan QRIS yang sudah disimpan di bank atau e-wallet.", confirmText: "Konfirmasi pembatalan", variant: "danger" });
     if (!ok) return;
@@ -182,17 +218,91 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
     return (
       inv.invoiceNo.toLowerCase().includes(q) ||
       (inv.outletName && inv.outletName.toLowerCase().includes(q)) ||
-      (inv.ownerName && inv.ownerName.toLowerCase().includes(q))
+      (inv.ownerName && inv.ownerName.toLowerCase().includes(q)) ||
+      (inv.userName && inv.userName.toLowerCase().includes(q)) ||
+      (inv.userEmail && inv.userEmail.toLowerCase().includes(q))
     );
   });
 
+  const attentionInvoices = invoices.filter(
+    (inv) => inv.status === "review_required" || (inv.status === "paid" && !["active", "refunded"].includes(inv.activationStatus || ""))
+  );
+
   return (
     <div className="space-y-5">
-      {invoices.filter(inv => inv.status === "review_required" || inv.status === "paid" && !["active", "refunded"].includes(inv.activationStatus || "")).map(inv => <div key={inv.id} className="p-4 border border-amber-300 rounded-xl bg-amber-50 space-y-2">
-        <p className="font-semibold">{inv.invoiceNo}: {inv.status === "paid" ? "pembayaran lunas, aktivasi tertahan" : "masa berlaku perlu ditinjau"}</p>
-        <p className="text-sm">{({ownership_changed:"Kepemilikan cabang berubah",owner_suspended_or_archived:"Owner atau cabang diblokir/diarsipkan",expired_or_legacy_invoice:"Masa berlaku atau invoice lama perlu ditinjau",legacy_terms_require_review:"Paket invoice lama perlu dikonfirmasi",quota_requires_review:"Kuota cabang melebihi paket",staff_quota_requires_review:"Kuota staf melebihi paket",plan_unavailable:"Paket tidak tersedia"} as Record<string,string>)[inv.activationReason || ""] || "Aktivasi menunggu proses ulang"}. Periksa status akun, kepemilikan, masa berlaku dan kuota.</p>
-        {inv.status === "paid" && <><button className="underline" onClick={async () => { const result = await api.post<{success:boolean}>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi setelah koreksi</button><button className="underline ml-3" onClick={()=>{setReviewing(inv);setReviewNotes("");}}>Tinjau aktivasi setelah penerimaan dipastikan</button></>}
-      </div>)}
+      {attentionInvoices.length > 0 && (
+        <div className="p-4 border border-amber-300 rounded-2xl bg-amber-50/90 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-amber-950">
+                  {attentionInvoices.length} tagihan memerlukan pemeriksaan atau tindak lanjut admin
+                </p>
+                <p className="text-[11px] text-amber-800">
+                  Termasuk tagihan lama sebelum batas waktu otomatis atau aktivasi yang tertahan.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("review_required")}
+                className="px-3 py-1.5 rounded-lg bg-amber-900 hover:bg-amber-950 text-white text-xs font-semibold transition cursor-pointer"
+              >
+                Tab Perlu Review
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAttentionList((prev) => !prev)}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100/50 text-amber-900 text-xs font-semibold transition cursor-pointer"
+              >
+                {showAttentionList ? "Tutup Daftar" : `Lihat Rincian (${attentionInvoices.length})`}
+              </button>
+            </div>
+          </div>
+
+          {showAttentionList && (
+            <div className="space-y-2 pt-2 border-t border-amber-200/80">
+              {attentionInvoices.map((inv) => (
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white/80 border border-amber-200 rounded-xl px-3 py-2 text-xs">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-zinc-900">
+                      #{inv.invoiceNo} · {inv.outletName || "Outlet"} ({inv.userName || inv.ownerName || "-"})
+                    </p>
+                    <p className="text-[11px] text-zinc-600">
+                      {({
+                        ownership_changed: "Kepemilikan cabang berubah",
+                        owner_suspended_or_archived: "Owner atau cabang diblokir/diarsipkan",
+                        expired_or_legacy_invoice: "Masa berlaku atau invoice lama perlu ditinjau",
+                        legacy_terms_require_review: "Paket invoice lama perlu dikonfirmasi",
+                        quota_requires_review: "Kuota cabang melebihi paket",
+                        staff_quota_requires_review: "Kuota staf melebihi paket",
+                        plan_unavailable: "Paket tidak tersedia",
+                      } as Record<string, string>)[inv.activationReason || ""] || (inv.status === "paid" ? "Pembayaran lunas, aktivasi menunggu proses ulang." : "Tagihan lama/duplikat perlu dibuka kembali (24 jam) atau dibatalkan.")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {inv.status === "paid" ? (
+                      <>
+                        <button type="button" className="text-blue-700 font-semibold underline cursor-pointer" onClick={async () => { const result = await api.post<{ success: boolean }>(`/api/subscription/invoices/${inv.id}/retry-activation`); if (!result.success) toast.error("Aktivasi belum dapat diproses"); await fetchInvoices(); }}>Proses ulang aktivasi</button>
+                        <button type="button" className="text-zinc-700 font-semibold underline cursor-pointer" onClick={() => { setReviewing(inv); setReviewNotes(""); }}>Tinjau aktivasi</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" disabled={reopeningId === inv.id} className="text-blue-700 font-semibold underline cursor-pointer disabled:opacity-50" onClick={() => void reopenInvoice(inv)}>
+                          {reopeningId === inv.id ? "Membuka..." : "Buka 24 Jam"}
+                        </button>
+                        <button type="button" className="text-rose-700 font-semibold underline cursor-pointer" onClick={() => void cancelInvoice(inv)}>Batalkan</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Verifikasi Tagihan Langganan</h2>
@@ -238,21 +348,6 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
         <button disabled={adjustmentBusy} type="submit" className="border p-2 rounded">Simpan jurnal refund</button><button type="button" onClick={()=>setAdjusting(null)} className="p-2">Batal</button>
       </form>}
       <details><summary>Jurnal refund dan pembayaran ganda</summary><div className="flex flex-wrap gap-2 p-2">{invoices.filter(inv=>["paid", "review_required"].includes(inv.status)).map(inv=><button key={inv.id} className="border p-2 rounded text-xs" onClick={()=>{setAdjusting(inv);setAdjustmentKey(crypto.randomUUID());setAdjustmentAmount("");setCommissionCorrection("0");setAdjustmentNotes("");}}>{inv.invoiceNo}</button>)}</div></details>
-      {receiving && <form className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3" onSubmit={async event => {
-        event.preventDefault();setReceiptBusy(true);
-        try { const result=await api.post<{success:boolean;message?:string}>(`/api/subscription/invoices/${encodeURIComponent(receiving.id)}/received`, {reference:receiptReference,amount:Number(receiptAmount),receivedAt:new Date(receiptTime+"+07:00").toISOString(),notes:receiptNotes});if(!result.success)throw new Error(result.message);toast.success("Dana masuk tercatat",result.message);setReceiving(null);await fetchInvoices();onVerifySuccess?.(); }
-        catch(error){toast.error("Pencatatan gagal",error instanceof Error?error.message:"Coba lagi nanti.");}finally{setReceiptBusy(false);}
-      }}>
-        <h3 className="font-semibold">Catat penerimaan dana · {receiving.invoiceNo}</h3>
-        <p className="text-sm text-zinc-600">Gunakan setelah memeriksa riwayat merchant atau mutasi rekening. Pencatatan ini tidak memindahkan uang dan tidak langsung mengaktifkan langganan.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm text-zinc-700">Referensi unik bank/merchant<input required minLength={6} maxLength={120} value={receiptReference} onChange={e=>setReceiptReference(e.target.value)} placeholder="BANK:RRN123456" className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
-          <label className="text-sm text-zinc-700">Nominal yang benar-benar diterima<input type="number" required min={1} step={1} value={receiptAmount} onChange={e=>setReceiptAmount(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
-          <label className="text-sm text-zinc-700">Waktu pembayaran (WIB)<input type="datetime-local" required value={receiptTime} onChange={e=>setReceiptTime(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
-          <label className="text-sm text-zinc-700">Catatan pemeriksaan<textarea required minLength={10} maxLength={2000} value={receiptNotes} onChange={e=>setReceiptNotes(e.target.value)} className="mt-1 block w-full rounded-lg border border-zinc-300 p-2" /></label>
-        </div>
-        <div className="flex gap-3"><button disabled={receiptBusy} type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{receiptBusy?"Menyimpan…":"Simpan penerimaan untuk review"}</button><button type="button" disabled={receiptBusy} onClick={()=>setReceiving(null)} className="text-sm font-semibold text-zinc-600">Tutup</button></div>
-      </form>}
       {/* Filter Tabs Status */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
@@ -335,9 +430,14 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                       <div className="font-bold text-slate-900 dark:text-white">
                         {inv.outletName || "Outlet Laundry"}
                       </div>
-                      <div className="text-[11px] text-slate-500">
-                        {inv.ownerName || "-"}
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                        {inv.userName || inv.ownerName || "-"}
                       </div>
+                      {inv.userEmail && (
+                        <div className="text-[10px] text-slate-400">
+                          {inv.userEmail}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">
                       {inv.durationMonths} periode ({inv.durationMonths * 30} hari)
@@ -385,16 +485,12 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="mb-2 flex flex-wrap justify-end gap-2">
-                        <button type="button" className="text-xs font-semibold text-blue-700 underline" onClick={() => {setReceiving(inv);setReceiptReference("");setReceiptAmount(String(inv.finalAmount));setReceiptTime("");setReceiptNotes("");}}>Catat dana masuk</button>
-                        {["unpaid","rejected","pending_verification","review_required","expired"].includes(inv.status) && <button type="button" className="text-xs font-semibold text-rose-700 underline" onClick={() => cancelInvoice(inv)}>Batalkan</button>}
-                      </div>
+                    <td className="py-3.5 px-4 text-right space-y-1.5">
                       {inv.status === "pending_verification" ? (
-                        <div className="inline-flex items-center gap-2">
+                        <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleVerify(inv)}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all inline-flex items-center gap-1 shadow-sm"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all inline-flex items-center gap-1 shadow-sm cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Verifikasi</span>
@@ -406,9 +502,46 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Tolak</span>
                           </button>
+                          <button
+                            type="button"
+                            className="px-2.5 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-rose-700 font-semibold text-[11px] cursor-pointer"
+                            onClick={() => cancelInvoice(inv)}
+                          >
+                            Batalkan
+                          </button>
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-xs">{inv.status === "paid" ? "Pembayaran tercatat" : "Belum dikonfirmasi"}</span>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {inv.status === "review_required" && (
+                            <button
+                              type="button"
+                              disabled={reopeningId === inv.id}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold cursor-pointer disabled:opacity-50"
+                              onClick={() => void reopenInvoice(inv)}
+                            >
+                              {reopeningId === inv.id ? "Membuka..." : "Buka 24 Jam"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-blue-700 hover:underline cursor-pointer"
+                            onClick={() => openReceiptModal(inv)}
+                          >
+                            Catat Mutasi
+                          </button>
+                          {["unpaid", "rejected", "review_required", "expired"].includes(inv.status) && (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-rose-700 hover:underline cursor-pointer"
+                              onClick={() => cancelInvoice(inv)}
+                            >
+                              Batalkan
+                            </button>
+                          )}
+                          {inv.status === "paid" && (
+                            <span className="text-slate-500 text-[11px]">Pembayaran tercatat</span>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -418,6 +551,113 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           </table>
         </div>
       </div>
+
+      {/* Modal Catat Mutasi / Penerimaan Dana Khusus */}
+      {receiving && (
+        <div role="dialog" aria-modal="true" aria-label={`Catat mutasi dana ${receiving.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-lg w-full border border-zinc-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900">Catat Mutasi Dana · #{receiving.invoiceNo}</h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  {receiving.outletName || "Outlet"} · Tagihan Rp {receiving.finalAmount.toLocaleString("id-ID")}
+                </p>
+              </div>
+              <button type="button" disabled={receiptBusy} onClick={() => setReceiving(null)} className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl p-3">
+              Gunakan untuk pencatatan mutasi pengecualian (dana masuk pada tagihan kedaluwarsa/dibatalkan, selisih nominal, atau pembayaran ganda). Tidak langsung mengaktifkan langganan.
+            </p>
+            <form
+              className="space-y-3"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                setReceiptBusy(true);
+                try {
+                  const result = await api.post<{ success: boolean; message?: string }>(
+                    `/api/subscription/invoices/${encodeURIComponent(receiving.id)}/received`,
+                    {
+                      reference: receiptReference,
+                      amount: Number(receiptAmount),
+                      receivedAt: new Date(receiptTime + "+07:00").toISOString(),
+                      notes: receiptNotes,
+                    }
+                  );
+                  if (!result.success) throw new Error(result.message);
+                  toast.success("Mutasi dana tercatat", result.message);
+                  setReceiving(null);
+                  await fetchInvoices();
+                  onVerifySuccess?.();
+                } catch (error) {
+                  toast.error("Pencatatan gagal", error instanceof Error ? error.message : "Coba lagi nanti.");
+                } finally {
+                  setReceiptBusy(false);
+                }
+              }}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-zinc-700">
+                  No. Referensi Mutasi Bank / Merchant
+                  <input
+                    required
+                    minLength={6}
+                    maxLength={120}
+                    value={receiptReference}
+                    onChange={(e) => setReceiptReference(e.target.value)}
+                    placeholder="Contoh: BCA-261125-001"
+                    className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs font-mono"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-zinc-700">
+                  Nominal Diterima (Rp)
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    step={1}
+                    value={receiptAmount}
+                    onChange={(e) => setReceiptAmount(e.target.value)}
+                    className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs tabular-nums"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs font-semibold text-zinc-700">
+                Waktu Pembayaran (WIB)
+                <input
+                  type="datetime-local"
+                  required
+                  value={receiptTime}
+                  onChange={(e) => setReceiptTime(e.target.value)}
+                  className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-zinc-700">
+                Catatan Pemeriksaan
+                <textarea
+                  required
+                  minLength={10}
+                  maxLength={2000}
+                  rows={3}
+                  value={receiptNotes}
+                  onChange={(e) => setReceiptNotes(e.target.value)}
+                  placeholder="Contoh: Dana masuk sesuai mutasi BCA tanggal 26 Nov, siap ditinjau untuk aktivasi."
+                  className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-xs"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+                <button type="button" disabled={receiptBusy} onClick={() => setReceiving(null)} className="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:bg-zinc-100 cursor-pointer">
+                  Batal
+                </button>
+                <button disabled={receiptBusy} type="submit" className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 cursor-pointer">
+                  {receiptBusy ? "Menyimpan..." : "Simpan Catatan Mutasi"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Preview Bukti Transfer */}
       {previewImage && (

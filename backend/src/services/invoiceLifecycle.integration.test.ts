@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, client, initPostgresTables } from "../db";
 import { users, tenants, plans, subscriptionInvoices, invoiceLifecycleEvents, manualPaymentReceipts, platformCashflow, storedFiles } from "../db/schema";
 import { createSubscriptionInvoice, recordManualReceipt, reviewInvoiceActivation, retryInvoiceActivation, uploadPaymentProof, verifySubscriptionInvoice } from "./subscriptionService";
-import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices } from "./invoiceLifecycle";
+import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices, reopenReviewInvoice } from "./invoiceLifecycle";
 import { applyGatewayEvent, checkoutInvoice } from "./subscriptionPayments";
 import { GatewayRejectedError } from "./midtransClient";
 import { checkoutSubscriptionQris } from "./subscriptionQris";
@@ -185,4 +185,22 @@ test("HTTP invoice conflict, lifecycle privacy and receipt permissions remain en
   expect((await app.request(`/api/subscription/invoices/${first.id}/received`, { method: "POST", headers, body: JSON.stringify(input) })).status).toBe(403);
   const received = await app.request(`/api/subscription/invoices/${first.id}/received`, { method: "POST", headers: { ...headers, Cookie: `cleanique_session=${adminSession.token}`, "X-CSRF-Token": adminSession.csrfToken }, body: JSON.stringify(input) });
   expect(received.status).toBe(200);
+});
+test("owner can cancel pending_verification before receipt and admin can reopen review_required invoice", async () => {
+  const a = await lifecycleOwner(), first = await bill(a), adminId = await admin();
+  const proof = `/uploads/payments/2026-11/${crypto.randomUUID()}.png`;
+  await db.insert(storedFiles).values({ path: proof, ownerId: a.id, category: "payments" });
+  await uploadPaymentProof(first.id, proof, a.branchId, a.id);
+  const cancelled = await cancelSubscriptionInvoice(first.id, a.id, false, "Salah unggah bukti pembayaran.", true);
+  expect(cancelled.status).toBe("cancelled");
+  expect(cancelled.paymentProofUrl).toBe(proof);
+
+  const second = await bill(a);
+  await db.update(subscriptionInvoices).set({ expiresAt: null }).where(eq(subscriptionInvoices.id, second.id));
+  await expireOwnerInvoices(a.id);
+  const [reviewRow] = await db.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, second.id));
+  expect(reviewRow.status).toBe("review_required");
+  const reopened = await reopenReviewInvoice(second.id, adminId);
+  expect(reopened.status).toBe("unpaid");
+  expect(reopened.expiresAt).not.toBeNull();
 });

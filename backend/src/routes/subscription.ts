@@ -32,7 +32,7 @@ import { runTrialReminderCheck } from "../jobs/trialReminder";
 import { checkoutSubscriptionQris } from "../services/subscriptionQris";
 import { QrisCheckoutError } from "../services/qrisPayload";
 import { rateLimit } from "../middleware/rateLimit";
-import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices, expireSubscriptionInvoices } from "../services/invoiceLifecycle";
+import { ActiveInvoiceError, cancelSubscriptionInvoice, expireOwnerInvoices, expireSubscriptionInvoices, reopenReviewInvoice } from "../services/invoiceLifecycle";
 import { invoiceLifecycleEvents } from "../db/schema";
 import { recordManualReceipt } from "../services/subscriptionService";
 
@@ -77,6 +77,15 @@ subscriptionRoutes.post("/invoices/:id/cancel", requireRole(["superadmin", "tena
     return c.json({ success: true, data: presentInvoice(invoice) });
   } catch (error) {
     return c.json({ success: false, message: error instanceof Error ? error.message : "Invoice belum dapat dibatalkan." }, 409);
+  }
+});
+
+subscriptionRoutes.post("/invoices/:id/reopen", requireRole(["superadmin"]), async c => {
+  try {
+    const invoice = await reopenReviewInvoice(c.req.param("id")!, getUser(c).userId);
+    return c.json({ success: true, message: "Tagihan dibuka kembali dengan batas waktu 24 jam.", data: presentInvoice(invoice) });
+  } catch (error) {
+    return c.json({ success: false, message: error instanceof Error ? error.message : "Tagihan belum dapat dibuka kembali." }, 409);
   }
 });
 

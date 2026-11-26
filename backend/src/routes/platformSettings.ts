@@ -5,7 +5,18 @@ import { eq } from "drizzle-orm";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/rbac";
 import { loadPlatformQris } from "../services/subscriptionQris";
-import { QrisCheckoutError } from "../services/qrisPayload";
+import { QrisCheckoutError, validateStaticQris } from "../services/qrisPayload";
+
+async function inspectPlatformQris(qrisInfo: string | null | undefined) {
+  if (!qrisInfo) return { valid: false as const, error: "QRIS belum dikonfigurasi." };
+  try {
+    const payload = await loadPlatformQris(qrisInfo);
+    const merchant = validateStaticQris(payload);
+    return { valid: true as const, currency: "IDR" as const, ...merchant };
+  } catch (error) {
+    return { valid: false as const, error: error instanceof Error ? error.message : "QRIS belum valid." };
+  }
+}
 
 const platformSettingsRoutes = new Hono();
 
@@ -80,7 +91,7 @@ platformSettingsRoutes.get("/", requireRole(["superadmin"]), async (c) => {
     }
 
 
-    return c.json({ success: true, data: settings });
+    return c.json({ success: true, data: settings, qrisStatus: await inspectPlatformQris(settings.qrisInfo) });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);
   }
@@ -157,6 +168,7 @@ platformSettingsRoutes.put("/", requireRole(["superadmin"]), async (c) => {
       success: true,
       message: "Pengaturan platform berhasil diperbarui",
       data: result,
+      qrisStatus: await inspectPlatformQris(result.qrisInfo),
     });
   } catch (err: any) {
     return c.json({ success: false, message: err.message }, 500);

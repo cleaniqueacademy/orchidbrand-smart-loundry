@@ -42,6 +42,8 @@ export function useWhatsAppGateway(tenantId: string) {
             // If just transitioned to connected from qrcode
             if (prev.status === "qrcode" && json.data.status === "connected") {
               toast.success("WhatsApp Terhubung!", `Nomor ${json.data.connectedUser?.id || ""} siap digunakan via Baileys.`);
+            } else if (prev.status === "connecting" && json.data.status === "disconnected" && json.data.lastError) {
+              toast.error("Koneksi WhatsApp Gagal", json.data.lastError);
             }
             return json.data;
           });
@@ -77,15 +79,17 @@ export function useWhatsAppGateway(tenantId: string) {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ tenantId, forceRefresh }),
+        signal: AbortSignal.timeout(15_000),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ success: false, message: `Respons server tidak valid (HTTP ${res.status})` }));
       if (json.success) {
         await fetchStatus();
       } else {
         toast.error("Gagal Menghubungkan WA", json.message || "Terjadi kesalahan pada server");
       }
     } catch (err: any) {
-      toast.error("Kesalahan Jaringan", err.message || "Gagal menghubungi server");
+      const msg = err?.name === "TimeoutError" ? "Permintaan koneksi ke server timeout. Coba muat ulang." : (err?.message || "Gagal menghubungi server");
+      toast.error("Koneksi WhatsApp Gagal", msg);
     } finally {
       setLoading(false);
     }

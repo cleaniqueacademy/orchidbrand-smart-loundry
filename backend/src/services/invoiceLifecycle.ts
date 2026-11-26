@@ -70,16 +70,41 @@ export async function cancelSubscriptionInvoice(invoiceId: string, actorId: stri
     await lockBillingOwner(tx, known.userId);
     const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
     if (invoice.status === "cancelled") return invoice;
-    if (!(["unpaid", "rejected"].includes(invoice.status) || (isAdmin && ["review_required", "pending_verification", "expired"].includes(invoice.status)))) throw new Error("Invoice ini tidak dapat dibatalkan.");
-    if (!isAdmin && (invoice.paymentProofUrl || invoice.paymentProofUploadedAt)) throw new Error("Bukti pembayaran sudah tercatat. Hubungi admin untuk meninjaunya.");
+    if (!(["unpaid", "rejected", "pending_verification"].includes(invoice.status) || (isAdmin && ["review_required", "expired"].includes(invoice.status)))) throw new Error("Invoice ini tidak dapat dibatalkan.");
     const [attempt] = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.invoiceId, invoice.id), inArray(paymentAttempts.status, ["creating", "pending", "paid"])));
     if (attempt) throw new Error("Pembayaran gateway belum selesai atau sudah diterima. Rekonsiliasi dahulu; pembatalan lokal tidak membatalkan transaksi penyedia.");
     const receipts = await tx.select().from(manualPaymentReceipts).where(eq(manualPaymentReceipts.invoiceId, invoice.id));
     const refunds = await tx.select().from(paymentAdjustments).where(eq(paymentAdjustments.invoiceId, invoice.id));
     if (receipts.reduce((sum, receipt) => sum + receipt.amount, 0) > refunds.reduce((sum, refund) => sum + refund.amount, 0)) throw new Error("Ada dana yang sudah diterima. Selesaikan review atau catat refund yang sudah dilakukan sebelum membatalkan.");
     if (invoice.qrisIssuedAt && !acknowledgeSavedQris) throw new Error("Konfirmasi bahwa QRIS yang sudah disimpan mungkin masih dapat dibayar di bank.");
-    const [updated] = await tx.update(subscriptionInvoices).set({ status: "cancelled", invalidatedAt: new Date().toISOString(), invalidationReason: "cancelled_by_user" }).where(eq(subscriptionInvoices.id, invoice.id)).returning();
-    await invoiceEvent(tx, invoice.id, "cancelled", actorId, { reason: reason.trim(), savedQrisMayRemainPayable: !!invoice.qrisIssuedAt }, `cancelled:${invoice.id}`);
+    const [updated] = await tx.update(subscriptionInvoices).set({ status: "cancelled", invalidatedAt: new Date().toISOString(), invalidationReason: isAdmin ? "cancelled_by_admin" : "cancelled_by_user" }).where(eq(subscriptionInvoices.id, invoice.id)).returning();
+    await invoiceEvent(tx, invoice.id, "cancelled", actorId, { reason: reason.trim(), savedQrisMayRemainPayable: !!invoice.qrisIssuedAt, hadUploadedProof: !!(invoice.paymentProofUrl || invoice.paymentProofUploadedAt) }, `cancelled:${invoice.id}`);
+    return updated;
+  });
+}
+
+/** Admin reopens a review_required invoice (e.g. legacy_expiry_missing) with a fresh 24h deadline if no other active invoice exists. */
+export async function reopenReviewInvoice(invoiceId: string, adminId: string) {
+  const [known] = await db.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId));
+  if (!known) throw new Error("Invoice tidak ditemukan.");
+  return db.transaction(async tx => {
+    await lockBillingOwner(tx, known.userId);
+    const [invoice] = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.id, invoiceId)).for("update");
+    if (!invoice || invoice.status !== "review_required") throw new Error("Hanya tagihan berstatus Perlu Review yang dapat dibuka kembali.");
+    const ownerInvoices = await tx.select().from(subscriptionInvoices).where(eq(subscriptionInvoices.userId, invoice.userId));
+    const hasAnotherActive = ownerInvoices.some(row => row.id !== invoice.id && (activeInvoiceStatuses.includes(row.status) || (row.status === "paid" && !["active", "refunded"].includes(row.activationStatus))));
+    if (hasAnotherActive) throw new Error("Owner masih memiliki tagihan aktif lain. Selesaikan atau batalkan tagihan aktif tersebut terlebih dahulu.");
+    const receipts = await tx.select().from(manualPaymentReceipts).where(eq(manualPaymentReceipts.invoiceId, invoice.id));
+    if (receipts.length > 0) throw new Error("Tagihan sudah memiliki catatan mutasi dana. Selesaikan melalui review aktivasi.");
+    const nextStatus = invoice.paymentProofUrl ? "pending_verification" : "unpaid";
+    const expiresAt = new Date(Date.now() + 86400000).toISOString();
+    const [updated] = await tx.update(subscriptionInvoices).set({
+      status: nextStatus,
+      expiresAt,
+      invalidatedAt: null,
+      invalidationReason: null,
+    }).where(eq(subscriptionInvoices.id, invoice.id)).returning();
+    await invoiceEvent(tx, invoice.id, "reopened_by_admin", adminId, { nextStatus, expiresAt });
     return updated;
   });
 }

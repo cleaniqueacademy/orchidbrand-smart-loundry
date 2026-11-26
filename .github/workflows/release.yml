@@ -39,5 +39,5 @@ jobs:
       - run: bun run --cwd frontend build
       - run: bun run --cwd backend typecheck
       - run: bun run --cwd backend build
-      - run: bun test backend/src/services/qrisPayload.test.ts backend/src/services/releaseGating.test.ts backend/src/services/subscriptionQris.integration.test.ts backend/src/services/invoiceLifecycle.integration.test.ts
+      - run: bun test backend/src/services/qrisPayload.test.ts backend/src/services/releaseGating.test.ts backend/src/services/whatsapp.test.ts backend/src/services/subscriptionQris.integration.test.ts backend/src/services/invoiceLifecycle.integration.test.ts
       - run: bun test backend/src/utils backend/src/middleware/auth.test.ts backend/src/services/subscriptionPricing.test.ts backend/src/services/planConfiguration.test.ts backend/src/services/premiumRelease.integration.test.ts backend/src/services/subscriptionPayments.integration.test.ts backend/src/services/productionV1.integration.test.ts backend/src/services/storageService.test.ts backend/src/routes/upload.test.ts backend/src/jobs/trialReminder.test.ts

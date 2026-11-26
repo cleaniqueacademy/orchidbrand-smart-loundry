@@ -95,8 +95,25 @@ export function SubscriptionPaymentPanel({ invoice, destination, gatewayEnabled,
       {payable && <p className="text-xs text-zinc-600">Batas pembayaran: {new Date(invoice.expiresAt!).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB · Sisa {Math.max(0, Math.floor((Date.parse(invoice.expiresAt!) - now) / 3600000))} jam {Math.max(0, Math.floor((Date.parse(invoice.expiresAt!) - now) / 60000) % 60)} menit</p>}
     </div>}
     {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-    {invoice && !payable ? <div role="status" className="text-sm text-zinc-700">
-      {invoice.status === "paid" ? (invoice.activationStatus === "active" ? "Pembayaran diterima dan langganan aktif." : invoice.activationStatus === "refunded" ? "Dana sudah dikembalikan; langganan tidak diaktifkan. Buat tagihan baru untuk berlangganan kembali." : "Pembayaran sudah tercatat. Aktivasi menunggu pemeriksaan admin; Anda tidak perlu membayar ulang.") : invoice.status === "pending_verification" ? "Bukti pembayaran sedang diperiksa admin. Anda tidak perlu membayar ulang." : invoice.status === "review_required" ? "Tagihan memerlukan pemeriksaan admin. Jangan membayar ulang sebelum statusnya dipastikan." : invoice.status === "cancelled" ? "Tagihan dibatalkan. Jangan gunakan QRIS tagihan ini. Anda dapat membuat tagihan baru melalui Perpanjang Langganan." : "Tagihan kedaluwarsa. Jangan gunakan QRIS lama. Jika sudah membayar, hubungi admin; jika belum, buat tagihan baru."}
+    {invoice && !payable ? <div role="status" className="text-sm text-zinc-700 space-y-1.5">
+      {invoice.status === "paid" ? (
+        <p>{invoice.activationStatus === "active" ? "Pembayaran diterima dan langganan aktif." : invoice.activationStatus === "refunded" ? "Dana sudah dikembalikan; langganan tidak diaktifkan. Buat tagihan baru untuk berlangganan kembali." : "Pembayaran sudah tercatat. Aktivasi menunggu pemeriksaan admin; Anda tidak perlu membayar ulang."}</p>
+      ) : invoice.status === "pending_verification" ? (
+        <>
+          <p className="font-medium text-zinc-900">Bukti pembayaran sedang diperiksa admin. Anda tidak perlu membayar ulang.</p>
+          <p className="text-xs text-zinc-600">
+            {invoice.paymentProofUploadedAt ? `Diunggah pada ${new Date(invoice.paymentProofUploadedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB · ` : ""}
+            Estimasi pemeriksaan admin: maksimal 1×24 jam.
+            {!invoice.expiresAt ? " Tagihan sebelum pembaruan batas waktu otomatis tetap diproses." : ""}
+          </p>
+        </>
+      ) : invoice.status === "review_required" ? (
+        <p>Tagihan memerlukan pemeriksaan admin. Jangan membayar ulang sebelum statusnya dipastikan.</p>
+      ) : invoice.status === "cancelled" ? (
+        <p>Tagihan dibatalkan. Jangan gunakan QRIS tagihan ini. Anda dapat membuat tagihan baru melalui Perpanjang Langganan.</p>
+      ) : (
+        <p>Tagihan kedaluwarsa. Jangan gunakan QRIS lama. Jika sudah membayar, hubungi admin; jika belum, buat tagihan baru.</p>
+      )}
     </div> : invoice ? <>
       {method && <button type="button" onClick={() => { setMethod(null); setError(null); }} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline focus-visible:ring-2 focus-visible:ring-blue-600"><ArrowLeft className="h-4 w-4" />Ganti metode pembayaran</button>}
       {!method ? <div className="space-y-3">
@@ -134,7 +151,7 @@ export function SubscriptionPaymentPanel({ invoice, destination, gatewayEnabled,
         {method === "qris" && <p className="text-xs text-zinc-600">Gunakan QR hanya untuk tagihan ini sebelum batas bayar. Batas waktu tagihan tidak membatalkan QR yang sudah tersimpan di perangkat.</p>}
       </div>}
     </> : null}
-    {invoice && payable && !invoice.paymentProofUrl && <button type="button" onClick={() => onCancel(invoice)} disabled={busy} className="text-sm font-semibold text-rose-700 hover:underline focus-visible:ring-2 focus-visible:ring-rose-600 disabled:opacity-50">Batalkan tagihan ini</button>}
+    {invoice && (payable || invoice.status === "pending_verification") && <button type="button" onClick={() => onCancel(invoice)} disabled={busy} className="text-sm font-semibold text-rose-700 hover:underline focus-visible:ring-2 focus-visible:ring-rose-600 disabled:opacity-50">Batalkan tagihan ini</button>}
     {invoice && <InvoiceTimeline invoiceId={invoice.id} status={`${invoice.status}:${!!currentQr}`} />}
   </section>;
 }
