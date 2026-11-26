@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { api } from "../../../utils/api";
 import { Plan } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 function toLocalDateTime(value?: string | null) {
   if (!value) return "";
@@ -111,8 +112,8 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -318,6 +319,6 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

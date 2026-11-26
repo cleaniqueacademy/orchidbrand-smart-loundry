@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { CheckCircle2, XCircle, CreditCard, X, AlertCircle } from "lucide-react";
 import { MarketingWithdrawal } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface ProcessWithdrawalModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export const ProcessWithdrawalModal: React.FC<ProcessWithdrawalModalProps> = ({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen || !withdrawal) return null;
+  if (!withdrawal) return null;
 
   const handleProcessPaid = async () => {
     setSubmitting(true);
@@ -74,8 +75,8 @@ export const ProcessWithdrawalModal: React.FC<ProcessWithdrawalModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -218,7 +219,7 @@ export const ProcessWithdrawalModal: React.FC<ProcessWithdrawalModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };
 

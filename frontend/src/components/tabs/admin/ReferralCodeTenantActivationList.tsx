@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Building2, Search, Check, Power } from "lucide-react";
 import { ReferralCode } from "../../../types";
 import { TenantActivationItem } from "../../../hooks/useReferralCodes";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface ReferralCodeTenantActivationListProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ export const ReferralCodeTenantActivationList: React.FC<
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  if (!isOpen || !code) return null;
+  if (!code) return null;
 
   const filtered = tenants.filter(
     (t) =>
@@ -37,8 +38,8 @@ export const ReferralCodeTenantActivationList: React.FC<
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -125,6 +126,6 @@ export const ReferralCodeTenantActivationList: React.FC<
           </button>
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

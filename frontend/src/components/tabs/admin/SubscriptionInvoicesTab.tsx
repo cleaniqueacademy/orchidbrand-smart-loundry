@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Check,
   Loader2,
-  ChevronDown,
   RotateCcw,
 } from "lucide-react";
 import { paymentStatusLabel } from "../../../utils/paymentStatus";
@@ -24,6 +23,7 @@ import { InvoiceTimeline } from "../subscription/InvoiceTimeline";
 import { ACCOUNT_TIERS, SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 const ACTIVATION_REASON_LABELS: Record<string, string> = {
   ownership_changed: "Kepemilikan cabang berubah",
@@ -303,61 +303,13 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               </button>
               <button
                 type="button"
-                onClick={() => setShowAttentionList((prev) => !prev)}
+                onClick={() => setShowAttentionList(true)}
                 className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100/50 text-amber-900 text-xs font-semibold transition cursor-pointer"
               >
-                {showAttentionList ? "Tutup Daftar" : `Lihat Rincian (${attentionInvoices.length})`}
+                Lihat Rincian ({attentionInvoices.length})
               </button>
             </div>
           </div>
-
-          {showAttentionList && (
-            <div className="space-y-2 pt-2 border-t border-amber-200/80">
-              {attentionInvoices.map((inv) => (
-                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white/80 border border-amber-200 rounded-xl px-3 py-2 text-xs">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900">
-                      #{inv.invoiceNo} · {inv.outletName || "Outlet"} ({inv.userName || inv.ownerName || "-"})
-                    </p>
-                    <p className="text-[11px] text-zinc-600">
-                      {ACTIVATION_REASON_LABELS[inv.activationReason || ""] ||
-                        (inv.status === "paid"
-                          ? "Pembayaran lunas, aktivasi menunggu proses ulang."
-                          : "Tagihan lama/duplikat perlu dibuka kembali (24 jam) atau dibatalkan.")}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {inv.status === "paid" ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={retryingId === inv.id}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold cursor-pointer disabled:opacity-50"
-                          onClick={() => void retryActivation(inv)}
-                        >
-                          {retryingId === inv.id ? "Memproses..." : "Proses Ulang"}
-                        </button>
-                        <button
-                          type="button"
-                          className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold cursor-pointer"
-                          onClick={() => openReviewModal(inv)}
-                        >
-                          Tinjau Aktivasi
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" disabled={reopeningId === inv.id} className="text-blue-700 font-semibold underline cursor-pointer disabled:opacity-50" onClick={() => void reopenInvoice(inv)}>
-                          {reopeningId === inv.id ? "Membuka..." : "Buka 24 Jam"}
-                        </button>
-                        <button type="button" className="text-rose-700 font-semibold underline cursor-pointer" onClick={() => void cancelInvoice(inv)}>Batalkan</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -379,12 +331,10 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
 
           <button
             type="button"
-            onClick={() => setShowRefundPanel((prev) => !prev)}
-            aria-expanded={showRefundPanel}
+            onClick={() => setShowRefundPanel(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-semibold text-zinc-700 transition cursor-pointer"
           >
             <span>Jurnal Refund</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showRefundPanel ? "rotate-180" : ""}`} />
           </button>
 
           <button
@@ -397,45 +347,6 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
           </button>
         </div>
       </div>
-
-      {showRefundPanel && (
-        <div className="p-4 rounded-2xl border border-zinc-200 bg-zinc-50/90 space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-bold text-zinc-900">Jurnal Refund &amp; Pembayaran Ganda</p>
-              <p className="text-[11px] text-zinc-500">Pilih invoice lunas atau perlu review untuk mencatat pengembalian dana / koreksi komisi.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowRefundPanel(false)}
-              className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          {invoices.some((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded") ? (
-            <div className="flex flex-wrap gap-2">
-              {invoices
-                .filter((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded")
-                .map((inv) => (
-                  <button
-                    key={inv.id}
-                    type="button"
-                    onClick={() => openAdjustmentModal(inv)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:bg-blue-50/70 text-xs font-semibold text-zinc-800 transition cursor-pointer"
-                  >
-                    <span className="font-mono">#{inv.invoiceNo}</span>
-                    <span className="text-zinc-400">·</span>
-                    <span className="text-zinc-600">{inv.outletName || "Outlet"}</span>
-                    <span className="text-blue-700">Rp {inv.finalAmount.toLocaleString("id-ID")}</span>
-                  </button>
-                ))}
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-500">Belum ada tagihan lunas yang dapat dicatatkan jurnal refund pada daftar ini.</p>
-          )}
-        </div>
-      )}
       {/* Filter Tabs Status */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
@@ -699,10 +610,116 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
         </div>
       </div>
 
+      {/* Modal Daftar Tagihan Perlu Tindak Lanjut */}
+      <ModalWrapper isOpen={showAttentionList && attentionInvoices.length > 0} onClose={() => setShowAttentionList(false)} maxWidth="max-w-2xl">
+        <div role="dialog" aria-modal="true" aria-label="Daftar tagihan perlu tindak lanjut" className="bg-white rounded-2xl w-full border border-zinc-200 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 bg-amber-50/60">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900">
+                  {attentionInvoices.length} Tagihan Memerlukan Tindak Lanjut Admin
+                </h3>
+                <p className="text-[11px] text-zinc-600">
+                  Aktivasi tertahan atau tagihan lama sebelum batas waktu otomatis.
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setShowAttentionList(false)} className="p-1.5 text-zinc-400 hover:text-zinc-600 rounded-xl hover:bg-zinc-100 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-4 max-h-[65vh] overflow-y-auto space-y-2.5">
+            {attentionInvoices.map((inv) => (
+              <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-zinc-50/80 border border-zinc-200 rounded-xl px-3.5 py-3 text-xs">
+                <div className="min-w-0">
+                  <p className="font-semibold text-zinc-900">
+                    #{inv.invoiceNo} · {inv.outletName || "Outlet"} ({inv.userName || inv.ownerName || "-"})
+                  </p>
+                  <p className="text-[11px] text-zinc-600 mt-0.5">
+                    {ACTIVATION_REASON_LABELS[inv.activationReason || ""] ||
+                      (inv.status === "paid"
+                        ? "Pembayaran lunas, aktivasi menunggu proses ulang."
+                        : "Tagihan lama/duplikat perlu dibuka kembali (24 jam) atau dibatalkan.")}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {inv.status === "paid" ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={retryingId === inv.id}
+                        className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold cursor-pointer disabled:opacity-50"
+                        onClick={() => void retryActivation(inv)}
+                      >
+                        {retryingId === inv.id ? "Memproses..." : "Proses Ulang"}
+                      </button>
+                      <button
+                        type="button"
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold cursor-pointer"
+                        onClick={() => { setShowAttentionList(false); openReviewModal(inv); }}
+                      >
+                        Tinjau Aktivasi
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" disabled={reopeningId === inv.id} className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold cursor-pointer disabled:opacity-50" onClick={() => void reopenInvoice(inv)}>
+                        {reopeningId === inv.id ? "Membuka..." : "Buka 24 Jam"}
+                      </button>
+                      <button type="button" className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold cursor-pointer" onClick={() => void cancelInvoice(inv)}>Batalkan</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ModalWrapper>
+
+      {/* Modal Pilih Tagihan Jurnal Refund */}
+      <ModalWrapper isOpen={showRefundPanel} onClose={() => setShowRefundPanel(false)} maxWidth="max-w-lg">
+        <div role="dialog" aria-modal="true" aria-label="Pilih invoice jurnal refund" className="bg-white rounded-2xl w-full border border-zinc-200 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900">Jurnal Refund &amp; Pembayaran Ganda</h3>
+              <p className="text-[11px] text-zinc-500 mt-0.5">Pilih invoice lunas atau perlu review untuk mencatat pengembalian dana / koreksi komisi.</p>
+            </div>
+            <button type="button" onClick={() => setShowRefundPanel(false)} className="p-1.5 text-zinc-400 hover:text-zinc-600 rounded-xl hover:bg-zinc-100 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+            {invoices.some((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded") ? (
+              invoices
+                .filter((inv) => ["paid", "review_required"].includes(inv.status) && inv.activationStatus !== "refunded")
+                .map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    onClick={() => openAdjustmentModal(inv)}
+                    className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:bg-blue-50/60 text-xs transition cursor-pointer text-left"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono font-bold text-zinc-900">#{inv.invoiceNo}</p>
+                      <p className="text-[11px] text-zinc-500 truncate">{inv.outletName || "Outlet"} · {inv.userName || inv.ownerName || "-"}</p>
+                    </div>
+                    <span className="font-bold text-blue-700 shrink-0">Rp {inv.finalAmount.toLocaleString("id-ID")}</span>
+                  </button>
+                ))
+            ) : (
+              <p className="py-6 text-center text-xs text-zinc-500">Belum ada tagihan lunas yang dapat dicatatkan jurnal refund pada daftar ini.</p>
+            )}
+          </div>
+        </div>
+      </ModalWrapper>
+
       {/* Modal Catat Mutasi / Penerimaan Dana Khusus */}
-      {receiving && (
-        <div role="dialog" aria-modal="true" aria-label={`Catat mutasi dana ${receiving.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 max-w-lg w-full border border-zinc-200 shadow-2xl space-y-4">
+      <ModalWrapper isOpen={!!receiving} onClose={() => !receiptBusy && setReceiving(null)} maxWidth="max-w-lg">
+        {receiving && (
+          <div role="dialog" aria-modal="true" aria-label={`Catat mutasi dana ${receiving.invoiceNo}`} className="bg-white rounded-2xl p-5 w-full border border-zinc-200 shadow-2xl space-y-4">
             <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-zinc-900">Catat Mutasi Dana · #{receiving.invoiceNo}</h3>
@@ -803,13 +820,13 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Modal Preview Bukti Transfer */}
-      {previewImage && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 max-w-xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-3">
+      <ModalWrapper isOpen={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="max-w-xl">
+        {previewImage && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-3">
             <div className="flex justify-between items-center px-2">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                 Foto Bukti Transfer
@@ -830,13 +847,13 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Modal Penolakan Tagihan */}
-      {rejectingInvoice && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+      <ModalWrapper isOpen={!!rejectingInvoice} onClose={() => !submittingReject && setRejectingInvoice(null)} maxWidth="max-w-md">
+        {rejectingInvoice && (
+          <div className="bg-white rounded-2xl p-5 w-full border border-zinc-200 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -907,13 +924,13 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Modal Keputusan Tinjau Aktivasi */}
-      {reviewing && (
-        <div role="dialog" aria-modal="true" aria-label={`Keputusan aktivasi ${reviewing.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4">
+      <ModalWrapper isOpen={!!reviewing} onClose={() => !reviewBusy && setReviewing(null)} maxWidth="max-w-md">
+        {reviewing && (
+          <div role="dialog" aria-modal="true" aria-label={`Keputusan aktivasi ${reviewing.invoiceNo}`} className="bg-white rounded-2xl p-5 w-full border border-zinc-200 shadow-2xl space-y-4">
             <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-zinc-900">Keputusan Aktivasi · #{reviewing.invoiceNo}</h3>
@@ -992,13 +1009,13 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Modal Jurnal Refund / Pembayaran Ganda */}
-      {adjusting && (
-        <div role="dialog" aria-modal="true" aria-label={`Jurnal refund ${adjusting.invoiceNo}`} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 max-w-md w-full border border-zinc-200 shadow-2xl space-y-4">
+      <ModalWrapper isOpen={!!adjusting} onClose={() => !adjustmentBusy && setAdjusting(null)} maxWidth="max-w-md">
+        {adjusting && (
+          <div role="dialog" aria-modal="true" aria-label={`Jurnal refund ${adjusting.invoiceNo}`} className="bg-white rounded-2xl p-5 w-full border border-zinc-200 shadow-2xl space-y-4">
             <div className="flex justify-between items-start border-b border-zinc-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-zinc-900">Jurnal Refund · #{adjusting.invoiceNo}</h3>
@@ -1090,8 +1107,8 @@ export const SubscriptionInvoicesTab: React.FC<SubscriptionInvoicesTabProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
     </div>
   );
 };

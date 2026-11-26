@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { api } from "../../../utils/api";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 const labels: Record<string, string> = {
   created: "Tagihan dibuat",
@@ -53,51 +54,87 @@ export function InvoiceTimeline({ invoiceId, status }: { invoiceId: string; stat
   }, [open, invoiceId, status, reloadKey]);
 
   return (
-    <div className="text-left text-xs text-zinc-600 whitespace-normal mt-1">
+    <>
       <button
         type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex items-center gap-1 py-1 px-2 -ml-2 rounded-lg font-semibold text-blue-700 hover:bg-blue-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 py-1 px-2 -ml-2 mt-0.5 rounded-lg text-[11px] font-semibold text-blue-700 hover:bg-blue-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
       >
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+        <Clock className="w-3 h-3" />
         <span>Riwayat pembayaran</span>
       </button>
 
-      {open && (
-        <div className="mt-1.5 rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
-          {loading ? (
-            <p role="status" className="text-zinc-500">Memuat riwayat…</p>
-          ) : error ? (
-            <div role="alert" className="text-rose-700 flex items-center gap-2 flex-wrap">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => setReloadKey((k) => k + 1)}
-                className="font-semibold underline cursor-pointer"
-              >
-                Coba lagi
-              </button>
+      <ModalWrapper isOpen={open} onClose={() => setOpen(false)} maxWidth="max-w-md">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Riwayat pembayaran invoice"
+          className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900">Riwayat Pembayaran</h3>
+                <p className="text-[11px] text-zinc-500">Jejak status dan aktivasi tagihan</p>
+              </div>
             </div>
-          ) : events.length ? (
-            <ol className="relative border-l border-zinc-300 ml-1.5 pl-3.5 space-y-2.5">
-              {events.map((event) => (
-                <li key={event.id} className="relative">
-                  <span className="absolute -left-[19px] top-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-zinc-50" />
-                  <p className="font-medium text-zinc-800 leading-snug">
-                    {labels[event.eventType] || "Tagihan diperbarui"}
-                  </p>
-                  <time dateTime={event.createdAt} className="text-[11px] text-zinc-500">
-                    {new Date(event.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB
-                  </time>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-zinc-500">Belum ada kejadian tercatat untuk tagihan ini.</p>
-          )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer"
+              title="Tutup"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-5 max-h-[65vh] overflow-y-auto text-xs">
+            {loading ? (
+              <p role="status" className="py-6 text-center text-zinc-500">Memuat riwayat…</p>
+            ) : error ? (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700 flex items-center justify-between gap-2">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="font-semibold underline cursor-pointer shrink-0"
+                >
+                  Coba lagi
+                </button>
+              </div>
+            ) : events.length ? (
+              <ol className="relative border-l border-zinc-200 ml-2 pl-4 space-y-3.5">
+                {events.map((event) => (
+                  <li key={event.id} className="relative">
+                    <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-white" />
+                    <p className="font-semibold text-zinc-900 leading-snug">
+                      {labels[event.eventType] || "Tagihan diperbarui"}
+                    </p>
+                    <time dateTime={event.createdAt} className="text-[11px] text-zinc-500 block mt-0.5">
+                      {new Date(event.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB
+                    </time>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="py-6 text-center text-zinc-500">Belum ada kejadian tercatat untuk tagihan ini.</p>
+            )}
+          </div>
+
+          <div className="px-5 py-3 border-t border-zinc-100 bg-zinc-50/70 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="px-4 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+      </ModalWrapper>
+    </>
   );
 }

@@ -21,6 +21,7 @@ import { useToast } from "../common/ToastContext";
 import { useConfirm } from "../common/ConfirmContext";
 import { authHeaders } from "../../utils/api";
 import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface ServicesTabProps {
   tenantId: string;
@@ -466,9 +467,8 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
       </div>
 
       {/* Modal Add / Edit Service */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <ModalWrapper isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="max-w-md">
+        <div className="bg-white border border-zinc-200 rounded-2xl w-full shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-zinc-100">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-600" />
@@ -624,9 +624,8 @@ export const ServicesTab: React.FC<ServicesTabProps> = ({
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </ModalWrapper>
     </div>
   );
 };

@@ -21,6 +21,7 @@ import { authHeaders } from "../../../utils/api";
 import { ReferralCodeFormModal } from "./ReferralCodeFormModal";
 import { ReferralCodeShareBox } from "./ReferralCodeShareBox";
 import { ReferralCodeTenantActivationList } from "./ReferralCodeTenantActivationList";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface ReferralCodesTabProps {
   currentUser?: User;
@@ -519,9 +520,9 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser,
       />
 
       {/* Stats Drawer / Modal */}
-      {statsCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full p-6 space-y-4">
+      <ModalWrapper isOpen={!!statsCode} onClose={() => setStatsCode(null)} maxWidth="max-w-md">
+        {statsCode && (
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400">Statistik Performa</span>
@@ -575,13 +576,13 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser,
               <div className="py-4 text-center text-xs text-slate-400">Data statistik belum tersedia</div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Modal Daftar Tenant Terdaftar Berdasarkan Kode Referral */}
-      {trackedTenantsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4">
+      <ModalWrapper isOpen={!!trackedTenantsModal} onClose={() => setTrackedTenantsModal(null)} maxWidth="max-w-xl">
+        {trackedTenantsModal && (
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
@@ -662,8 +663,8 @@ export const ReferralCodesTab: React.FC<ReferralCodesTabProps> = ({ currentUser,
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
     </div>
   );
 };

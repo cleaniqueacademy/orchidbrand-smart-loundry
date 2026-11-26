@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { DollarSign, AlertCircle, CheckCircle, CreditCard, X } from "lucide-react";
 import { MarketingProfile } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface WithdrawalRequestModalProps {
   isOpen: boolean;
@@ -87,8 +88,8 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -262,7 +263,7 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };
 

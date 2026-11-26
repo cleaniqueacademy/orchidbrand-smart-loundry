@@ -32,6 +32,7 @@ import {
   Gem,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
+import { ModalWrapper } from "../common/ModalWrapper";
 import { Customer, Order, Role, Tenant, DateFilterPreset } from "../../types";
 import { ShadcnDataTable, ColumnDef } from "../common/ShadcnDataTable";
 import { EmptyStateWalkthrough } from "../common/EmptyStateWalkthrough";
@@ -879,9 +880,9 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       {/* ========================================================================= */}
       {/* 4. MODAL DETAIL & RIWAYAT PESANAN LENGKAP PELANGGAN                       */}
       {/* ========================================================================= */}
-      {selectedCustomerForDetail && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-3xl rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <ModalWrapper isOpen={!!selectedCustomerForDetail} onClose={() => setSelectedCustomerForDetail(null)} maxWidth="max-w-3xl">
+        {selectedCustomerForDetail && (
+          <div className="bg-white w-full rounded-2xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-zinc-200 bg-gradient-to-r from-zinc-50 to-white flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1170,8 +1171,8 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
     </div>
   );
 };

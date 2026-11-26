@@ -254,5 +254,40 @@ describe("subscription routes integration tests", () => {
     const sumBody = await sumRes.json();
     expect(sumBody.data.referralCodeUsed).toBe(MARKETING_SEEDS[0].code);
   });
+
+  it("GET /api/subscription/invoices?status=review_required - menyertakan invoice paid dengan activationStatus pending_review", async () => {
+    const legacyId = `inv-rev-${Date.now()}`;
+    await db.insert(subscriptionInvoices).values({
+      id: legacyId,
+      invoiceNo: `INV-REV-${Date.now()}`,
+      tenantId: testTenantId,
+      userId: testUserId,
+      durationMonths: 1,
+      originalAmount: 60000,
+      discountAmount: 0,
+      finalAmount: 60000,
+      status: "paid",
+      activationStatus: "pending_review",
+      activationReason: "expired_or_legacy_invoice",
+      entitlementTier: "pro",
+    });
+
+    try {
+      const res = await app.request("/api/subscription/invoices?status=review_required", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      const foundPending = body.data.find((inv: any) => inv.id === legacyId);
+      const foundActive = body.data.find((inv: any) => inv.id === createdInvoiceId);
+      expect(foundPending).toBeDefined();
+      expect(foundPending.entitlementTier).toBe("pro");
+      expect(foundPending.activationStatus).toBe("pending_review");
+      expect(foundActive).toBeUndefined();
+    } finally {
+      await db.delete(subscriptionInvoices).where(eq(subscriptionInvoices.id, legacyId));
+    }
+  });
 });
 

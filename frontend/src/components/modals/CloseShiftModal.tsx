@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, CheckCircle2, AlertTriangle, AlertCircle, Calculator, Clock, Store } from "lucide-react";
 import { CashierShift } from "../../types";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen || !currentShift) return null;
+  if (!currentShift) return null;
 
   const startingCash = currentShift.startingCash || 0;
   const systemCash = currentShift.systemCashTotal || 0;
@@ -55,8 +56,8 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="w-full bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden">
         {/* Header */}
         <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
           <div className="flex items-center gap-3">
@@ -224,6 +225,6 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

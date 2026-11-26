@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Tag, Percent, DollarSign, Calendar, Users, CheckCircle2 } from "lucide-react";
 import { ReferralCode, MarketingProfile } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface ReferralCodeFormModalProps {
   isOpen: boolean;
@@ -105,8 +106,8 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -336,6 +337,6 @@ export const ReferralCodeFormModal: React.FC<ReferralCodeFormModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Check, Tag, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { api } from "../../../utils/api";
 import { Plan, SubscriptionInvoice } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface RenewSubscriptionModalProps {
   isOpen: boolean;
@@ -116,8 +117,8 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-100">
           <div>
@@ -157,7 +158,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
                 <span>Memuat paket...</span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+              <div className={`grid grid-cols-1 gap-2.5 sm:gap-3 ${plansList.length > 1 ? "sm:grid-cols-2" : ""}`}>
                 {plansList.map((plan) => {
                   const isSelected = selectedPlanId === plan.id;
                   return (
@@ -200,24 +201,27 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
             <label className="block text-xs font-bold text-zinc-800 mb-2">
               Durasi Perpanjangan
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { months: 1, label: "1 periode (30 hari)" },
-                { months: 3, label: "3 periode (90 hari)" },
-                { months: 6, label: "6 periode (180 hari)" },
-                { months: 12, label: "12 periode (360 hari)" },
+                { months: 1, title: "1 Periode", sub: "30 hari" },
+                { months: 3, title: "3 Periode", sub: "90 hari" },
+                { months: 6, title: "6 Periode", sub: "180 hari" },
+                { months: 12, title: "12 Periode", sub: "360 hari" },
               ].map((item) => (
                 <button
                   key={item.months}
                   type="button"
                   onClick={() => setDurationMonths(item.months)}
-                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  className={`py-2.5 px-2 rounded-xl text-xs border transition-all cursor-pointer text-center ${
                     durationMonths === item.months
                       ? "border-blue-600 bg-blue-600 text-white shadow-xs"
                       : "border-zinc-200 hover:bg-zinc-50 bg-white text-zinc-700"
                   }`}
                 >
-                  {item.label}
+                  <span className="block font-bold leading-tight">{item.title}</span>
+                  <span className={`block text-[10px] mt-0.5 ${durationMonths === item.months ? "text-blue-100" : "text-zinc-500"}`}>
+                    {item.sub}
+                  </span>
                 </button>
               ))}
             </div>
@@ -280,6 +284,6 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

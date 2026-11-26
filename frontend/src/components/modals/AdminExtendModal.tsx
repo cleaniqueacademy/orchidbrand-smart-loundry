@@ -14,6 +14,7 @@ import {
 import { ACCOUNT_TIERS, Tenant } from "../../types";
 import { authHeaders, uploadFile } from "../../utils/api";
 import { useToast } from "../common/ToastContext";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface AdminExtendModalProps {
   isOpen: boolean;
@@ -48,7 +49,7 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
     return () => controller.abort();
   }, [isOpen, tenant?.id, selectedPlan]);
 
-  if (!isOpen || !tenant) return null;
+  if (!tenant) return null;
 
   const hasReferral = (quote?.referralDiscountPerMonth ?? 0) > 0;
   const pricePerMonth = quote?.finalPrice ?? 0;
@@ -98,8 +99,8 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-zinc-200 space-y-5">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-zinc-200 space-y-5">
         {/* Header Modal */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div>
@@ -276,6 +277,6 @@ export const AdminExtendModal: React.FC<AdminExtendModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

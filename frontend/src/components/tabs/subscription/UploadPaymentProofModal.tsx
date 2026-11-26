@@ -3,6 +3,7 @@ import { X, Upload, AlertCircle, Loader2, Zap } from "lucide-react";
 import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { api, uploadFile } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface UploadPaymentProofModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
 
   useEffect(()=>()=>{if(previewUrl?.startsWith("blob:"))URL.revokeObjectURL(previewUrl);},[previewUrl]);
   useEffect(()=>{if(isOpen){setSelectedFile(null);setPreviewUrl(null);setErrorMsg(null);}},[isOpen,invoice?.id]);
-  if (!isOpen || !invoice) return null;
+  if (!invoice) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,8 +82,8 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-100">
           <div>
@@ -184,7 +185,7 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
             </div>
             <a
               href={`https://wa.me/6281223406368?text=${encodeURIComponent(
-                `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan outlet:\n• No. Invoice: *#${invoice.invoiceNo}*\n• Outlet: *${invoice.outletName || "Cabang"}*\n• Total: *Rp ${invoice.finalAmount.toLocaleString("id-ID")}*\n• Durasi: *${invoice.durationMonths} Bulan*\n\nBukti transfer sudah saya upload. Tolong dibantu percepat approval (Booster) ya. Terima kasih!`
+                `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan outlet:\n• No. Invoice: *#${invoice.invoiceNo}*\n• Outlet: *${invoice.outletName || "Cabang"}*\n• Total: *Rp ${invoice.finalAmount.toLocaleString("id-ID")}*\n• Durasi: *${invoice.durationMonths} periode (${invoice.durationMonths * 30} hari)*\n\nBukti transfer sudah saya upload. Tolong dibantu percepat approval (Booster) ya. Terima kasih!`
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -196,6 +197,6 @@ export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = (
           </div>
         </form>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

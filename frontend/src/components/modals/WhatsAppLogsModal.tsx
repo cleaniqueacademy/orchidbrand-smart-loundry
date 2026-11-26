@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, CheckCircle2, AlertCircle, Clock, Smartphone, MessageSquare } from "lucide-react";
 import { WhatsAppLog } from "../../types";
 import { authHeaders } from "../../utils/api";
+import { ModalWrapper } from "../common/ModalWrapper";
 
 interface WhatsAppLogsModalProps {
   isOpen: boolean;
@@ -48,11 +49,9 @@ export const WhatsAppLogsModal: React.FC<WhatsAppLogsModalProps> = ({
     fetchLogs();
   }, [isOpen, orderId, tenantId]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[85vh]">
+    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="w-full bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50 shrink-0">
           <div className="flex items-center gap-3">
@@ -166,6 +165,6 @@ export const WhatsAppLogsModal: React.FC<WhatsAppLogsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 };

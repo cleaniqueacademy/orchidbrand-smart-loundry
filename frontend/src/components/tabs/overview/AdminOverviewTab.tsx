@@ -32,6 +32,7 @@ import {
   generateBranchPerformance,
 } from "../../../utils/dashboardPeriodUtils";
 import { formatCurrency } from "../../../utils/formatUtils";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface AdminOverviewTabProps {
   stats: CashflowStats;
@@ -1036,9 +1037,9 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       </div>
 
       {/* Modal Preview Bukti Struk */}
-      {previewProofUrl && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 max-w-lg w-full border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+      <ModalWrapper isOpen={!!previewProofUrl} onClose={() => setPreviewProofUrl(null)} maxWidth="max-w-lg">
+        {previewProofUrl && (
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 w-full border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
               <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 Bukti Pembayaran / Struk Transfer
@@ -1059,8 +1060,8 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
     </div>
   );
 };

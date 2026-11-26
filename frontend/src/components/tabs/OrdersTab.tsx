@@ -20,6 +20,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import WhatsAppIcon from "../common/WhatsAppIcon";
+import { ModalWrapper } from "../common/ModalWrapper";
 import { Order, OrderStatus, DateFilterPreset, Role, Tenant } from "../../types";
 import {
   ShadcnDataTable,
@@ -775,9 +776,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       />
 
       {/* Modal Pelunasan Cepat Kasir */}
-      {quickPayOrder && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-in fade-in duration-100">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+      <ModalWrapper isOpen={!!quickPayOrder} onClose={() => setQuickPayOrder(null)} maxWidth="max-w-sm">
+        {quickPayOrder && (
+          <div className="bg-white rounded-2xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-3">
               <div>
                 <h4 className="font-extrabold text-sm text-slate-950">Pelunasan Tagihan</h4>
@@ -868,8 +869,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
     </div>
   );
 };

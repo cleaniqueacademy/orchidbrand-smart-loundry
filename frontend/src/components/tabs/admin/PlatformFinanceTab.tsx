@@ -23,6 +23,7 @@ import { api } from "../../../utils/api";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
 import { SubscriptionInvoicesTab } from "./SubscriptionInvoicesTab";
+import { ModalWrapper } from "../../common/ModalWrapper";
 
 interface PlatformCashflowRecord {
   id: string;
@@ -448,9 +449,8 @@ export const PlatformFinanceTab: React.FC = () => {
   )}
 
       {/* Modal Tambah Pengeluaran Platform */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 space-y-4">
+      <ModalWrapper isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="max-w-md">
+        <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-zinc-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
               <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-rose-600" />
@@ -555,9 +555,8 @@ export const PlatformFinanceTab: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </ModalWrapper>
     </div>
   );
 };
