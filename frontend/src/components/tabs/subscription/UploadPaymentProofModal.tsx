@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { X, Upload, AlertCircle, Loader2, Zap } from "lucide-react";
-import WhatsAppIcon from "../../common/WhatsAppIcon";
+import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { Loader2, X } from "lucide-react";
 import { api, uploadFile } from "../../../utils/api";
 import { SubscriptionInvoice } from "../../../types";
 import { ModalWrapper } from "../../common/ModalWrapper";
@@ -9,194 +8,145 @@ interface UploadPaymentProofModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoice: SubscriptionInvoice | null;
-  onSuccess: () => void;
+  onSuccess: (invoice: SubscriptionInvoice) => void;
 }
 
-export const UploadPaymentProofModal: React.FC<UploadPaymentProofModalProps> = ({
-  isOpen,
-  onClose,
-  invoice,
-  onSuccess,
-}) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+export function UploadPaymentProofModal({ isOpen, onClose, invoice, onSuccess }: UploadPaymentProofModalProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dialogId = useId();
+  const fileId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(()=>()=>{if(previewUrl?.startsWith("blob:"))URL.revokeObjectURL(previewUrl);},[previewUrl]);
-  useEffect(()=>{if(isOpen){setSelectedFile(null);setPreviewUrl(null);setErrorMsg(null);}},[isOpen,invoice?.id]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const trigger = document.activeElement;
+    setFile(null);
+    setProofUrl(null);
+    setError(null);
+    if (fileRef.current) {
+      fileRef.current.value = "";
+      fileRef.current.focus();
+    }
+    return () => {
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+    };
+  }, [isOpen, invoice?.id]);
+
+  useEffect(() => {
+    if (!isOpen || !file || !file.type.startsWith("image/")) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, isOpen]);
+
   if (!invoice) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg("Ukuran file maksimal 5 MB.");
-      return;
-    }
-
-    setSelectedFile(file);
-    const objUrl = URL.createObjectURL(file);
-    setPreviewUrl(objUrl);
-    setErrorMsg(null);
+  const close = () => {
+    if (!saving) onClose();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFile) {
-      setErrorMsg("Pilih berkas bukti transfer untuk penyimpanan privat.");
+  const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = event.currentTarget.files?.[0];
+    setProofUrl(null);
+    setError(null);
+    if (!selected) {
+      setFile(null);
       return;
     }
+    if (selected.size > 5 * 1024 * 1024) {
+      setError("Ukuran bukti maksimal 5 MB.");
+      setFile(null);
+      event.currentTarget.value = "";
+      return;
+    }
+    if (!/\.(jpe?g|png|webp|pdf)$/i.test(selected.name)) {
+      setError("Pilih JPG, PNG, WEBP, atau PDF.");
+      setFile(null);
+      event.currentTarget.value = "";
+      return;
+    }
+    setFile(selected);
+  };
 
-    setLoading(true);
-    setErrorMsg(null);
+  const keepFocusInside = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const controls = dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)");
+    const first = controls?.[0];
+    const last = controls?.[controls.length - 1];
+    if (!first || !last || first === last ||
+        (event.shiftKey && document.activeElement === first) ||
+        (!event.shiftKey && document.activeElement === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    }
+  };
 
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!file || saving) return;
+    setSaving(true);
+    setError(null);
     try {
-      let finalProofUrl = "";
-
-      if (selectedFile) {
-        const uploadRes = await uploadFile(selectedFile, "payments");
-        if (!uploadRes.success || !uploadRes.data?.url) {
-          throw new Error(uploadRes.message || "Gagal mengunggah file ke server.");
-        }
-        finalProofUrl = uploadRes.data.url;
+      let url = proofUrl;
+      if (!url) {
+        const upload = await uploadFile(file, "payments");
+        if (!upload.success || !upload.data?.url) throw new Error(upload.message || "Bukti gagal diunggah.");
+        url = upload.data.url;
+        // Reuse the private file if linking it to the invoice must be retried.
+        setProofUrl(url);
       }
-
-      const res = await api.post<{ success: boolean; message?: string }>(
-        `/api/subscription/invoices/${invoice.id}/proof`,
-        { proofUrl: finalProofUrl }
+      const result = await api.post<{ success: boolean; message?: string }>(
+        "/api/subscription/invoices/" + encodeURIComponent(invoice.id) + "/proof",
+        { proofUrl: url }
       );
-
-      if (res.success) {
-        onSuccess();
-        onClose();
-      } else {
-        setErrorMsg(res.message || "Gagal mengunggah bukti pembayaran.");
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Terjadi kesalahan saat mengunggah bukti.");
+      if (!result.success) throw new Error(result.message || "Bukti gagal dikirim.");
+      onClose();
+      onSuccess(invoice);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Bukti gagal dikirim. Coba lagi.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-100">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900">
-              Unggah Bukti Transfer
-            </h3>
-            <span className="text-xs text-zinc-500 block mt-0.5">
-              Invoice #{invoice.invoiceNo} • Rp {invoice.finalAmount.toLocaleString("id-ID")}
-            </span>
+    <ModalWrapper isOpen={isOpen} onClose={close} maxWidth="max-w-md">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={dialogId} onKeyDown={keepFocusInside} className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white sm:max-h-[calc(100dvh-2rem)]">
+        <header className="flex items-start justify-between gap-3 border-b border-zinc-200 p-4 sm:p-5">
+          <div className="min-w-0">
+            <h3 id={dialogId} className="text-base font-bold text-zinc-900">Unggah Bukti</h3>
+            <p className="mt-1 break-all text-xs text-zinc-600">#{invoice.invoiceNo}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
+          <button type="button" aria-label="Tutup" disabled={saving} onClick={close} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50">
+            <X aria-hidden="true" className="h-5 w-5" />
           </button>
-        </div>
+        </header>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Area File Upload */}
-          <div>
-            <label className="block text-xs font-bold text-zinc-800 mb-2">
-              Foto Struk / Tangkapan Layar Bukti Transfer
-            </label>
-            <div className="border-2 border-dashed border-zinc-200 hover:border-blue-500 rounded-xl p-5 text-center transition-all bg-zinc-50/50">
-              {previewUrl ? (
-                <div className="space-y-3">
-                  {selectedFile?.type === "application/pdf" ? <p className="text-sm">PDF: {selectedFile.name}</p> : <img
-                    src={previewUrl}
-                    alt="Preview Bukti"
-                    className="max-h-48 mx-auto rounded-xl shadow-xs border border-zinc-200 object-contain"
-                  />}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewUrl(null);
-                      setSelectedFile(null);
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:underline font-semibold cursor-pointer"
-                  >
-                    Ganti Foto
-                  </button>
-                </div>
-              ) : (
-                <label className="cursor-pointer flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-2 shadow-2xs">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-800">
-                    Klik untuk pilih gambar
-                  </span>
-                  <span className="text-[11px] text-zinc-400 mt-0.5">
-                    Format JPG, PNG, WEBP, atau PDF (maks. 5MB)
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center justify-between gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-100 transition cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
-            >
-              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>Kirim Bukti Pembayaran</span>
-            </button>
-          </div>
-
-          {/* Booster WhatsApp Button */}
-          <div className="pt-3 border-t border-zinc-100 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-zinc-500">
-              <span>Ingin aktivasi instan tanpa menunggu?</span>
-              <span className="font-bold text-emerald-600 flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> Booster Prioritas
-              </span>
-            </div>
-            <a
-              href={`https://wa.me/6281223406368?text=${encodeURIComponent(
-                `Halo Admin Cleanique, saya ingin konfirmasi perpanjangan langganan outlet:\n• No. Invoice: *#${invoice.invoiceNo}*\n• Outlet: *${invoice.outletName || "Cabang"}*\n• Total: *Rp ${invoice.finalAmount.toLocaleString("id-ID")}*\n• Durasi: *${invoice.durationMonths} periode (${invoice.durationMonths * 30} hari)*\n\nBukti transfer sudah saya upload. Tolong dibantu percepat approval (Booster) ya. Terima kasih!`
-              )}`}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl py-2.5 font-bold text-xs shadow-xs transition cursor-pointer"
-            >
-              <WhatsAppIcon className="w-4 h-4" />
-              <span>⚡ Booster Chat WhatsApp Admin</span>
-            </a>
-          </div>
+        <form onSubmit={submit} className="space-y-3 p-4 sm:p-5" aria-busy={saving}>
+          <label htmlFor={fileId} className="block text-sm font-medium text-zinc-900">Bukti pembayaran</label>
+          <input ref={fileRef} id={fileId} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" disabled={saving} onChange={selectFile} aria-describedby={fileId + "-hint"} className="block w-full min-w-0 truncate rounded-lg border border-zinc-200 text-sm text-zinc-700 file:mr-2 file:min-h-10 file:border-0 file:bg-zinc-100 file:px-3 file:font-medium file:text-zinc-900 hover:file:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50" />
+          <p id={fileId + "-hint"} className="text-xs text-zinc-600">JPG, PNG, WEBP, atau PDF · Maks. 5 MB</p>
+          {preview && <img src={preview} alt="Pratinjau bukti pembayaran" className="mx-auto max-h-36 max-w-full rounded-lg object-contain" />}
+          {error && <p role="alert" className="rounded-lg bg-rose-50 p-2 text-sm text-rose-800">{error}</p>}
+          <button type="submit" disabled={!file || saving} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-50">
+            {saving && <Loader2 aria-hidden="true" className="h-4 w-4 motion-safe:animate-spin" />}
+            {saving ? "Mengirim…" : "Kirim Bukti"}
+          </button>
         </form>
       </div>
     </ModalWrapper>
   );
-};
+}

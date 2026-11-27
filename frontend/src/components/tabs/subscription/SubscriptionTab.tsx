@@ -13,12 +13,11 @@ import {
   Loader2,
   Check,
   CheckCircle2,
-  Zap,
+  ChevronDown,
 } from "lucide-react";
-import WhatsAppIcon from "../../common/WhatsAppIcon";
 import { paymentStatusLabel } from "../../../utils/paymentStatus";
 import { api } from "../../../utils/api";
-import { SubscriptionSummary, SubscriptionInvoice } from "../../../types";
+import { PlatformSettings, SubscriptionSummary, SubscriptionInvoice } from "../../../types";
 import { useToast } from "../../common/ToastContext";
 import { useConfirm } from "../../common/ConfirmContext";
 import { RenewSubscriptionModal } from "./RenewSubscriptionModal";
@@ -37,11 +36,18 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [midtransEnabled, setMidtransEnabled] = useState(false);
+  const [adminPhone, setAdminPhone] = useState("6281223406368");
   const [paymentBusy, setPaymentBusy] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     api.get<{ success: boolean; data: { enabled: boolean } }>("/api/payments/midtrans/config", { signal: controller.signal })
       .then(result => { if (!controller.signal.aborted && result.success) setMidtransEnabled(result.data.enabled); }).catch(() => {});
+    api.get<{ success: boolean; data?: Pick<PlatformSettings, "supportPhone"> }>("/api/platform-settings/public", { signal: controller.signal })
+      .then(result => {
+        if (controller.signal.aborted || !result.success) return;
+        const phone = result.data?.supportPhone?.replace(/\D/g, "").replace(/^0/, "62");
+        if (phone && /^[1-9]\d{7,14}$/.test(phone)) setAdminPhone(phone);
+      }).catch(() => {});
     return () => controller.abort();
   }, []);
   const checkoutMidtrans = async (invoice: SubscriptionInvoice) => {
@@ -447,6 +453,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
           key={checkoutInvoice?.id || "pending"}
           invoice={(checkoutInvoice && (invoices.find(inv => inv.id === checkoutInvoice.id) || checkoutInvoice)) || summary?.pendingInvoice || invoices.find(inv => ["unpaid", "rejected"].includes(inv.status)) || null}
           destination={summary?.platformBank}
+          adminPhone={adminPhone}
           gatewayEnabled={midtransEnabled}
           busy={paymentBusy !== null}
           onUpload={handleOpenUpload}
@@ -457,170 +464,114 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
       </div>
 
       {/* 4. Tabel Riwayat Invoice (Identik dengan Sistem ShadcnDataTable / ReportLedgerTable) */}
-      <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm space-y-4">
-        {/* Booster Banner for Pending Invoices */}
-        {invoices.some((i) => i.status === "pending_verification") && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-sky-500/10 border border-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
-                <Zap className="w-5 h-5 text-amber-300 fill-amber-300" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-zinc-900 text-xs sm:text-sm">
-                    Pengajuan Perpanjangan Sedang Ditinjau Admin
-                  </h4>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                    Menunggu Approval
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-600 mt-0.5">
-                  Ingin masa aktif langsung aktif sekarang tanpa menunggu? Klik tombol Booster untuk verifikasi kilat via WhatsApp Admin.
-                </p>
-              </div>
-            </div>
-            {(() => {
-              const pendingInv = invoices.find((i) => i.status === "pending_verification");
-              return (
-                <a
-                  href={`https://wa.me/6281223406368?text=${encodeURIComponent(
-                    `Halo Admin Cleanique, saya dari outlet *${summary?.outletName || "Cabang"}* ingin konfirmasi pengajuan perpanjangan langganan (Invoice *#${pendingInv?.invoiceNo || "-"}*, Total *Rp ${(pendingInv?.finalAmount || 0).toLocaleString("id-ID")}*). Bukti pembayaran sudah kami unggah. Tolong bantu percepat verifikasi (Booster) ya. Terima kasih!`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-xs transition shrink-0 cursor-pointer"
-                >
-                  <WhatsAppIcon className="w-4 h-4" />
-                  <span>⚡ Booster Chat Admin</span>
-                </a>
-              );
-            })()}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-          <div>
-            <h3 className="text-sm font-bold text-zinc-900">
-              Riwayat Tagihan &amp; Invoice Langganan
-            </h3>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Daftar seluruh transaksi perpanjangan masa aktif outlet
-            </p>
+      <details className="group rounded-2xl border border-zinc-200 bg-white">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-zinc-900 focus-visible:ring-2 focus-visible:ring-blue-600 [&::-webkit-details-marker]:hidden sm:px-5">
+          Riwayat tagihan
+          <ChevronDown aria-hidden="true" className="h-4 w-4 text-zinc-600 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-2 border-t border-zinc-100 px-4 pb-4 pt-2 sm:px-5 sm:pb-5">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={loading}
+              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50"
+              aria-label="Muat ulang riwayat"
+            >
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={fetchData}
-            className="p-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-500 hover:text-zinc-800 transition cursor-pointer"
-            title="Muat Ulang Data Tagihan"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="border border-zinc-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[650px]">
-              <thead className="bg-zinc-50 border-b border-zinc-200 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                <tr>
-                  <th className="py-2.5 px-3.5 whitespace-nowrap">No. Invoice</th>
-                  <th className="py-2.5 px-3.5 whitespace-nowrap">Tanggal</th>
-                  <th className="py-2.5 px-3.5 whitespace-nowrap">Durasi</th>
-                  <th className="py-2.5 px-3.5 whitespace-nowrap">Total Biaya</th>
-                  <th className="py-2.5 px-3.5 whitespace-nowrap">Status</th>
-                  <th className="py-2.5 px-3.5 text-right whitespace-nowrap">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {invoices.length === 0 ? (
+          <div className="border border-zinc-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[650px]">
+                <thead className="bg-zinc-50 border-b border-zinc-200 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-zinc-400">
-                      Belum ada riwayat tagihan langganan.
-                    </td>
+                    <th className="py-2.5 px-3.5 whitespace-nowrap">No. Invoice</th>
+                    <th className="py-2.5 px-3.5 whitespace-nowrap">Tanggal</th>
+                    <th className="py-2.5 px-3.5 whitespace-nowrap">Durasi</th>
+                    <th className="py-2.5 px-3.5 whitespace-nowrap">Total Biaya</th>
+                    <th className="py-2.5 px-3.5 whitespace-nowrap">Status</th>
+                    <th className="py-2.5 px-3.5 text-right whitespace-nowrap">Aksi</th>
                   </tr>
-                ) : (
-                  invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-zinc-50/80 transition-colors">
-                      <td className="py-2.5 px-3.5 font-mono font-bold text-zinc-900 whitespace-nowrap">
-                        #{inv.invoiceNo}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-zinc-500 whitespace-nowrap">
-                        {new Date(inv.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-2.5 px-3.5 font-medium text-zinc-700 whitespace-nowrap">
-                        {inv.durationMonths} periode ({inv.durationMonths * 30} hari)
-                      </td>
-                      <td className="py-2.5 px-3.5 font-bold text-zinc-900 font-mono whitespace-nowrap">
-                        Rp {inv.finalAmount.toLocaleString("id-ID")}
-                        {(inv.promotionDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Promo: -Rp {inv.promotionDiscountAmount?.toLocaleString("id-ID")}</div>}
-                        {(inv.referralDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Referral: -Rp {inv.referralDiscountAmount?.toLocaleString("id-ID")}</div>}
-                      </td>
-                      <td className="py-2.5 px-3.5 min-w-[140px]">
-                        {getStatusBadge(inv)}
-                        {inv.activationStatus === "refunded" && <p className="text-[11px] text-zinc-600 mt-1">Dana dikembalikan; langganan tidak diaktifkan.</p>}
-                        {inv.activationStatus === "pending_review" && <p className="text-[11px] text-amber-800 mt-1">Pembayaran tercatat; aktivasi menunggu review admin.</p>}
-                        {["unpaid","rejected"].includes(inv.status) && <div className="text-[10px] mt-1 text-zinc-500">{inv.expiresAt ? `Batas bayar: ${new Date(inv.expiresAt).toLocaleString("id-ID",{timeZone:"Asia/Jakarta"})} WIB` : "Invoice lama: hubungi admin untuk review"}</div>}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                        {midtransEnabled && <>
-                          {["unpaid", "rejected"].includes(inv.status) && <button type="button" disabled={paymentBusy === inv.id || !inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()} onClick={() => void checkoutMidtrans(inv)} className="border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Bayar via Midtrans</button>}
-                          <button type="button" disabled={paymentBusy === inv.id} onClick={() => void reconcileMidtrans(inv)} className="border rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Periksa status</button>
-                        </>}
-
-                        {inv.status === "unpaid" || inv.status === "rejected" ? (
-                          <button
-                            type="button"
-                            onClick={() => openCheckout(inv)}
-                            disabled={!inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()}
-                            className="h-8 px-3 rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>Pilih pembayaran</span>
-                          </button>
-                        ) : inv.status === "pending_verification" ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-amber-700 font-semibold text-[11px] bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                              Menunggu Approval
-                            </span>
-                            <a
-                              href={`https://wa.me/6281223406368?text=${encodeURIComponent(
-                                `Halo Admin Cleanique, saya dari outlet *${inv.outletName || summary?.outletName || "Cabang"}* ingin konfirmasi perpanjangan langganan (Invoice *#${inv.invoiceNo}*, Nominal *Rp ${inv.finalAmount.toLocaleString("id-ID")}*). Bukti sudah di-upload. Tolong dibantu booster aktivasi ya. Terima kasih!`
-                              )}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="h-8 px-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11px] font-bold shadow-2xs transition inline-flex items-center gap-1 cursor-pointer"
-                              title="Booster verifikasi cepat dengan chat WhatsApp Admin"
-                            >
-                              <WhatsAppIcon className="w-3.5 h-3.5" />
-                              <span>⚡ Booster WA</span>
-                            </a>
-                          </div>
-                        ) : inv.status === "paid" ? (
-                          inv.activationStatus === "pending_review" ? (
-                            <span className="text-amber-700 font-semibold text-xs">Menunggu review admin</span>
-                          ) : inv.activationStatus === "refunded" ? (
-                            <span className="text-zinc-600 font-semibold text-xs">Dana dikembalikan</span>
-                          ) : (
-                            <span className="text-emerald-700 font-semibold text-xs">Terverifikasi &amp; Aktif</span>
-                          )
-                        ) : inv.status === "cancelled" ? (
-                          <span className="text-zinc-500 font-semibold text-xs">Dibatalkan</span>
-                        ) : (
-                          <span className="text-zinc-600 font-semibold text-xs">Hubungi admin jika sudah membayar</span>
-                        )}
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {invoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-zinc-400">
+                        Belum ada riwayat tagihan langganan.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    invoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-zinc-50/80 transition-colors">
+                        <td className="py-2.5 px-3.5 font-mono font-bold text-zinc-900 whitespace-nowrap">
+                          #{inv.invoiceNo}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-zinc-500 whitespace-nowrap">
+                          {new Date(inv.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2.5 px-3.5 font-medium text-zinc-700 whitespace-nowrap">
+                          {inv.durationMonths} periode ({inv.durationMonths * 30} hari)
+                        </td>
+                        <td className="py-2.5 px-3.5 font-bold text-zinc-900 font-mono whitespace-nowrap">
+                          Rp {inv.finalAmount.toLocaleString("id-ID")}
+                          {(inv.promotionDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Promo: -Rp {inv.promotionDiscountAmount?.toLocaleString("id-ID")}</div>}
+                          {(inv.referralDiscountAmount ?? 0) > 0 && <div className="text-[10px] text-emerald-700 font-normal">Referral: -Rp {inv.referralDiscountAmount?.toLocaleString("id-ID")}</div>}
+                        </td>
+                        <td className="py-2.5 px-3.5 min-w-[140px]">
+                          {getStatusBadge(inv)}
+                          {inv.activationStatus === "refunded" && <p className="text-[11px] text-zinc-600 mt-1">Dana dikembalikan; langganan tidak diaktifkan.</p>}
+                          {inv.activationStatus === "pending_review" && <p className="text-[11px] text-amber-800 mt-1">Pembayaran tercatat; aktivasi menunggu review admin.</p>}
+                          {["unpaid","rejected"].includes(inv.status) && <div className="text-[10px] mt-1 text-zinc-500">{inv.expiresAt ? `Batas bayar: ${new Date(inv.expiresAt).toLocaleString("id-ID",{timeZone:"Asia/Jakarta"})} WIB` : "Invoice lama: hubungi admin untuk review"}</div>}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                          {midtransEnabled && <>
+                            {["unpaid", "rejected"].includes(inv.status) && <button type="button" disabled={paymentBusy === inv.id || !inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()} onClick={() => void checkoutMidtrans(inv)} className="border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Bayar via Midtrans</button>}
+                            <button type="button" disabled={paymentBusy === inv.id} onClick={() => void reconcileMidtrans(inv)} className="border rounded-lg px-3 py-2 text-xs mr-2 disabled:opacity-50">Periksa status</button>
+                          </>}
+
+                          {inv.status === "unpaid" || inv.status === "rejected" ? (
+                            <button
+                              type="button"
+                              onClick={() => openCheckout(inv)}
+                              disabled={!inv.expiresAt || Date.parse(inv.expiresAt) <= Date.now()}
+                              className="h-8 px-3 rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Pilih pembayaran</span>
+                            </button>
+                          ) : inv.status === "pending_verification" ? (
+                            <button type="button" onClick={() => openCheckout(inv)} className="min-h-9 rounded-lg px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-600">
+                              Lihat status
+                            </button>
+                          ) : inv.status === "paid" ? (
+                            inv.activationStatus === "pending_review" ? (
+                              <span className="text-amber-700 font-semibold text-xs">Menunggu review admin</span>
+                            ) : inv.activationStatus === "refunded" ? (
+                              <span className="text-zinc-600 font-semibold text-xs">Dana dikembalikan</span>
+                            ) : (
+                              <span className="text-emerald-700 font-semibold text-xs">Terverifikasi &amp; Aktif</span>
+                            )
+                          ) : inv.status === "cancelled" ? (
+                            <span className="text-zinc-500 font-semibold text-xs">Dibatalkan</span>
+                          ) : (
+                            <span className="text-zinc-600 font-semibold text-xs">Hubungi admin jika sudah membayar</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       {/* Modals */}
       <RenewSubscriptionModal
@@ -639,7 +590,12 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ tenantId }) =>
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         invoice={selectedInvoice}
-        onSuccess={fetchData}
+        onSuccess={(invoice) => {
+          const submitted: SubscriptionInvoice = { ...invoice, status: "pending_verification" };
+          setInvoices(current => current.map(item => item.id === submitted.id ? submitted : item));
+          openCheckout(submitted);
+          void fetchData();
+        }}
       />
 
       {/* Modal Kode Referral */}
